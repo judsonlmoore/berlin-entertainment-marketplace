@@ -9,6 +9,7 @@ export type ActorContext = {
   isPlatformStaff: boolean;
   approvalState: ApprovalState | null;
   roles: readonly MarketplaceRole[];
+  activeRoleMode: MarketplaceRole | null;
   venueMemberships: readonly {
     venueId: string;
     role: VenueMembershipRole;
@@ -99,16 +100,22 @@ export function can(
 
     case "discover.entertainers":
       // Venues (and staff) browse acts — never peer entertainers as the primary mode.
+      // For dual-role users, respect their active mode.
       return (
         actor.isPlatformStaff ||
-        (hasPrivateAccess(actor) && isActiveVenueOperator(actor))
+        (hasPrivateAccess(actor) && 
+          isActiveVenueOperator(actor) && 
+          (actor.activeRoleMode === "venue" || actor.activeRoleMode === null))
       );
 
     case "discover.venues":
       // Entertainers (and staff) browse venues/opportunities.
+      // For dual-role users, respect their active mode.
       return (
         actor.isPlatformStaff ||
-        (hasPrivateAccess(actor) && actor.roles.includes("entertainer"))
+        (hasPrivateAccess(actor) && 
+          actor.roles.includes("entertainer") && 
+          (actor.activeRoleMode === "entertainer" || actor.activeRoleMode === null))
       );
 
     case "entertainer.manage_own_profile":

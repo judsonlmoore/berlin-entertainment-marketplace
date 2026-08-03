@@ -123,6 +123,25 @@
     "ctaApply": "Bewerbung starten",
     "ctaProfile": "Weiter zu Profilen"
   },
+  "roleSelection": {
+    "title": "Wählen Sie Ihre Rolle",
+    "body": "Um ein fokussiertes Onboarding-Erlebnis zu schaffen, teilen Sie uns zunächst mit, ob Sie als Künstler oder Veranstalter beitreten. Sie können später von Ihrem Profil aus die andere Rolle beantragen.",
+    "entertainer": "Ich bin ein Künstler",
+    "venue": "Ich bin ein Veranstalter",
+    "entertainerDesc": "Künstler, Musiker und kleine Acts, die Buchungen suchen",
+    "venueDesc": "Veranstaltungsorte und Betreiber, die Gelegenheiten veröffentlichen und Acts buchen",
+    "continue": "Weiter",
+    "required": "Bitte wählen Sie eine Rolle aus, um fortzufahren"
+  },
+  "roleMode": {
+    "switchTo": "Zu {role}-Modus wechseln",
+    "currentMode": "Aktueller Modus: {role}",
+    "entertainerMode": "Künstler",
+    "venueMode": "Veranstalter",
+    "explainer": "Sie haben sowohl Künstler- als auch Veranstalterrollen. Wechseln Sie, um die richtige Entdeckung und Funktionen zu sehen.",
+    "applyForSecondRole": "Beantragen Sie die {role}-Rolle",
+    "applyExplainer": "Sie haben derzeit nur die {currentRole}-Rolle. Um auf {targetRole}-Funktionen zuzugreifen, reichen Sie eine Bewerbung für diese Rolle ein."
+  },
   "profile": {
     "title": "Profile",
     "eyebrow": "Dual-Role-Profile",

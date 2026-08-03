@@ -41,6 +41,7 @@ export default async function ApplyPage({ params }: Props) {
               locale={locale as "en" | "de"}
               defaultName={session.user.name ?? ""}
               defaultEmail={session.user.email ?? ""}
+              existingRoles={session.user.roles}
             />
           </div>
         ) : (

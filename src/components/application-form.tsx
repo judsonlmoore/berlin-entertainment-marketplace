@@ -10,9 +10,10 @@ type Props = {
   locale: "en" | "de";
   defaultName: string;
   defaultEmail: string;
+  existingRoles?: readonly string[];
 };
 
-export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
+export function ApplicationForm({ locale, defaultName, defaultEmail, existingRoles = [] }: Props) {
   const t = useTranslations("apply");
   const errors = useTranslations("errors");
   const ui = useTranslations("ui");
@@ -20,6 +21,7 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const roles = existingRoles as readonly string[];
 
   return (
     <form
@@ -78,18 +80,40 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
 
       <fieldset className="grid gap-2">
         <legend>{t("rolesLabel")}</legend>
+        <p className="text-sm text-[var(--text-muted)]">
+          {roles.length > 0
+            ? "Select additional roles to apply for:"
+            : "Select at least one role:"}
+        </p>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
             name="roles"
             value="entertainer"
-            defaultChecked
+            defaultChecked={roles.includes("entertainer")}
+            disabled={roles.includes("entertainer")}
           />
           <span>{t("roleEntertainer")}</span>
+          {roles.includes("entertainer") && (
+            <span className="text-xs text-[var(--text-muted)]">
+              (already active)
+            </span>
+          )}
         </label>
         <label className="flex items-center gap-2">
-          <input type="checkbox" name="roles" value="venue" />
+          <input
+            type="checkbox"
+            name="roles"
+            value="venue"
+            disabled={roles.includes("venue")}
+            defaultChecked={roles.includes("venue")}
+          />
           <span>{t("roleVenue")}</span>
+          {roles.includes("venue") && (
+            <span className="text-xs text-[var(--text-muted)]">
+              (already active)
+            </span>
+          )}
         </label>
       </fieldset>
 

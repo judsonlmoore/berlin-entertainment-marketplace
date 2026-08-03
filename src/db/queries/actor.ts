@@ -46,6 +46,7 @@ export async function getActorContext(
     approvalState:
       (account?.approvalState as ApprovalState | undefined) ?? null,
     roles: roles.map((role) => role.role as MarketplaceRole),
+    activeRoleMode: (user.activeRoleMode as MarketplaceRole | undefined) ?? null,
     venueMemberships: memberships.map((membership) => ({
       venueId: membership.venueId,
       role: membership.role as VenueMembershipRole,
