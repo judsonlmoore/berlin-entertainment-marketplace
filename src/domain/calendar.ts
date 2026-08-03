@@ -32,7 +32,13 @@ export function isBlockingCalendarState(
   holdExpiresAt: Date | null,
   now: Date = new Date(),
 ): boolean {
-  if (state === "confirmed" || state === "requested") return true;
+  if (
+    state === "confirmed" ||
+    state === "requested" ||
+    state === "unavailable"
+  ) {
+    return true;
+  }
   return isHoldBlocking(state, holdExpiresAt, now);
 }
 

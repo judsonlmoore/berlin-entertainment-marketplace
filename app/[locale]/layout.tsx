@@ -2,10 +2,9 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { routing } from "@/src/i18n/routing";
 import { CookieConsentBanner } from "@/src/components/cookie-consent";
-
-export const dynamic = "force-dynamic";
+import { DocumentLang } from "@/src/components/document-lang";
+import { routing } from "@/src/i18n/routing";
 
 type Props = {
   children: ReactNode;
@@ -27,6 +26,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider messages={messages}>
+      <DocumentLang locale={locale} />
       <CookieConsentBanner />
       {children}
     </NextIntlClientProvider>

@@ -47,7 +47,7 @@ export class UnconfiguredESignProvider implements ESignProvider {
 
 /**
  * Local/demo adapter. Does not create legally binding documents.
- * Enabled when ESIGN_PROVIDER=sandbox.
+ * Enabled only when ESIGN_PROVIDER=sandbox outside production.
  */
 export class SandboxESignProvider implements ESignProvider {
   readonly name = "sandbox";
@@ -77,11 +77,24 @@ export class SandboxESignProvider implements ESignProvider {
     signatureHeader: string | null,
   ): Promise<ESignWebhookEvent> {
     const secret = process.env.ESIGN_WEBHOOK_SECRET;
-    if (secret && signatureHeader !== secret) {
+    if (!secret) {
+      throw new Error("E-sign webhook secret is required");
+    }
+    if (signatureHeader !== secret) {
       throw new Error("Invalid e-sign webhook signature");
     }
     const parsed = JSON.parse(rawBody) as Partial<ESignWebhookEvent>;
-    if (!parsed.providerEnvelopeId || !parsed.type || !parsed.eventHash) {
+    const allowedTypes = new Set([
+      "envelope.completed",
+      "signer.completed",
+      "envelope.voided",
+    ]);
+    if (
+      !parsed.providerEnvelopeId ||
+      !parsed.type ||
+      !parsed.eventHash ||
+      !allowedTypes.has(parsed.type)
+    ) {
       throw new Error("Invalid e-sign webhook payload");
     }
     return {
@@ -93,8 +106,18 @@ export class SandboxESignProvider implements ESignProvider {
   }
 }
 
+function allowSandboxProvider(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return false;
+  }
+  const configured = process.env.ESIGN_PROVIDER;
+  return (
+    configured === "sandbox" || !configured || configured === "unconfigured"
+  );
+}
+
 export function getESignProvider(): ESignProvider {
-  if (process.env.ESIGN_PROVIDER === "sandbox") {
+  if (process.env.ESIGN_PROVIDER === "sandbox" && allowSandboxProvider()) {
     return new SandboxESignProvider();
   }
   return new UnconfiguredESignProvider();
@@ -102,11 +125,7 @@ export function getESignProvider(): ESignProvider {
 
 /** Prefer sandbox locally so agreement flow is demoable without external keys. */
 export function getESignProviderForGeneration(): ESignProvider {
-  if (
-    process.env.ESIGN_PROVIDER === "sandbox" ||
-    !process.env.ESIGN_PROVIDER ||
-    process.env.ESIGN_PROVIDER === "unconfigured"
-  ) {
+  if (allowSandboxProvider()) {
     return new SandboxESignProvider();
   }
   return getESignProvider();

@@ -1,3 +1,4 @@
+import { AppError } from "./errors";
 import { hasMarketplaceAccess, type ApprovalState } from "./approval";
 
 export type MarketplaceRole = "entertainer" | "venue";
@@ -14,6 +15,15 @@ export type ActorContext = {
     status: "active" | "invited" | "removed";
   }[];
 };
+
+/** Profile drafting before staff approval (not rejected/suspended). */
+function canDraftProfiles(actor: ActorContext): boolean {
+  return (
+    actor.approvalState === "applied" ||
+    actor.approvalState === "invited" ||
+    actor.approvalState === "approved"
+  );
+}
 
 export type Permission =
   | "marketplace.discover"
@@ -102,21 +112,16 @@ export function can(
       );
 
     case "entertainer.manage_own_profile":
-      return (
-        actor.roles.includes("entertainer") &&
-        actor.approvalState !== "suspended"
-      );
+      return actor.roles.includes("entertainer") && canDraftProfiles(actor);
 
     case "venue.create":
-      return (
-        actor.roles.includes("venue") && actor.approvalState !== "suspended"
-      );
+      return actor.roles.includes("venue") && canDraftProfiles(actor);
 
     case "venue.manage":
       return (
         Boolean(resource?.venueId) &&
         isActiveVenueMember(actor, resource!.venueId!, ["owner"]) &&
-        actor.approvalState !== "suspended"
+        canDraftProfiles(actor)
       );
 
     case "venue.operate":
@@ -179,6 +184,6 @@ export function assertCan(
   resource?: { venueId?: string },
 ): void {
   if (!can(actor, permission, resource)) {
-    throw new Error(`Forbidden: ${permission}`);
+    throw new AppError("forbidden", `Forbidden: ${permission}`);
   }
 }

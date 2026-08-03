@@ -1,13 +1,14 @@
 "use server";
 
+import { type ActionResult, toActionError } from "@/src/actions/_shared";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
+import { upsertPreferredContact } from "@/src/db/queries/contacts";
 import {
   auditEvents,
-  contactMethods,
   marketplaceAccounts,
   userRoles,
 } from "@/src/db/schema/marketplace";
@@ -26,9 +27,6 @@ const applicationSchema = z.object({
   termsAccepted: z.literal(true),
   locale: z.enum(["en", "de"]).default("en"),
 });
-
-export type ActionResult =
-  { ok: true } | { ok: false; code: string; message: string };
 
 export async function submitMarketplaceApplication(
   input: z.infer<typeof applicationSchema>,
@@ -108,12 +106,11 @@ export async function submitMarketplaceApplication(
         })),
       );
 
-      await tx.insert(contactMethods).values({
+      await upsertPreferredContact(tx, {
         ownerType: "user",
         ownerId: session.user.id,
         kind: "email",
-        valueEncrypted: parsed.data.contactEmail,
-        isPreferred: true,
+        value: parsed.data.contactEmail,
       });
 
       await tx.insert(auditEvents).values({
@@ -132,9 +129,6 @@ export async function submitMarketplaceApplication(
     revalidatePath(`/${parsed.data.locale}/admin`);
     return { ok: true };
   } catch (error) {
-    if (error instanceof AppError) {
-      return { ok: false, code: error.code, message: error.message };
-    }
-    throw error;
+    return toActionError(error);
   }
 }

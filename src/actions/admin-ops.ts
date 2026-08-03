@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, toActionError } from "@/src/actions/_shared";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -19,15 +20,6 @@ import {
   opportunities,
   riderFiles,
 } from "@/src/db/schema/marketplace";
-
-export type ActionResult =
-  | {
-      ok: true;
-      expired?: number;
-      expiredHolds?: number;
-      expiredRequests?: number;
-    }
-  | { ok: false; code: string; message: string };
 
 const expireSchema = z.object({
   locale: z.enum(["en", "de"]).default("en"),
@@ -80,10 +72,7 @@ export async function runHoldExpiry(
       expiredRequests: requestResult.expired,
     };
   } catch (error) {
-    if (error instanceof AppError) {
-      return { ok: false, code: error.code, message: error.message };
-    }
-    throw error;
+    return toActionError(error);
   }
 }
 
@@ -153,10 +142,7 @@ export async function moderateOpportunity(
     );
     return { ok: true };
   } catch (error) {
-    if (error instanceof AppError) {
-      return { ok: false, code: error.code, message: error.message };
-    }
-    throw error;
+    return toActionError(error);
   }
 }
 
@@ -212,9 +198,6 @@ export async function quarantineRiderFile(
     revalidatePath(`/${parsed.data.locale}/admin`);
     return { ok: true };
   } catch (error) {
-    if (error instanceof AppError) {
-      return { ok: false, code: error.code, message: error.message };
-    }
-    throw error;
+    return toActionError(error);
   }
 }

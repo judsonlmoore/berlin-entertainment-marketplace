@@ -79,15 +79,7 @@ export default async function HomePage({ params }: Props) {
         />
         <div
           aria-hidden="true"
-          className="absolute inset-0 bg-[var(--rail)]/55"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-r from-[var(--rail)]/90 via-[var(--rail)]/55 to-[var(--rail)]/20"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-gradient-to-t from-[var(--rail)]/70 via-transparent to-[var(--rail)]/25"
+          className="absolute inset-0 bg-[var(--rail)]/70"
         />
 
         <div className="shell relative flex min-h-[min(88vh,44rem)] items-end pt-16 pb-14 sm:items-center sm:pt-20 sm:pb-20">

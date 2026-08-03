@@ -1,11 +1,14 @@
 "use server";
 
+import {
+  type ActionResult,
+  requireActor,
+  toActionError,
+} from "@/src/actions/_shared";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { getActorContext } from "@/src/db/queries/actor";
 import { findOverlappingBlockingEntries } from "@/src/db/queries/calendar";
 import {
   auditEvents,
@@ -21,28 +24,6 @@ import {
 } from "@/src/domain/calendar";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
-
-export type ActionResult =
-  { ok: true; id?: string } | { ok: false; code: string; message: string };
-
-function toActionError(error: unknown): ActionResult {
-  if (error instanceof AppError) {
-    return { ok: false, code: error.code, message: error.message };
-  }
-  throw error;
-}
-
-async function requireActor() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new AppError("unauthorized", "Sign in required");
-  }
-  const actor = await getActorContext(session.user.id);
-  if (!actor) {
-    throw new AppError("unauthorized", "Sign in required");
-  }
-  return { session, actor };
-}
 
 async function assertOwnsResource(
   actorUserId: string,
@@ -128,8 +109,15 @@ export async function upsertAvailability(
         throw new AppError("validation", "Holds require an expiry time");
       }
       holdExpiresAt = new Date(parsed.data.holdExpiresAt);
-      if (holdExpiresAt <= startsAt) {
-        throw new AppError("validation", "Hold expiry must be after start");
+      const now = new Date();
+      if (holdExpiresAt <= now) {
+        throw new AppError("validation", "Hold expiry must be in the future");
+      }
+      if (holdExpiresAt > startsAt) {
+        throw new AppError(
+          "validation",
+          "Hold expiry must be on or before the entry start",
+        );
       }
     }
 
@@ -143,14 +131,8 @@ export async function upsertAvailability(
         startsAt,
         endsAt,
       });
-      const hard = conflicts.filter(
-        (row) => row.state === "confirmed" || row.state === "requested",
-      );
-      if (hard.length > 0) {
-        throw new AppError(
-          "conflict",
-          "Overlaps a requested or confirmed calendar block",
-        );
+      if (conflicts.length > 0) {
+        throw new AppError("conflict", "Overlaps a blocking calendar entry");
       }
     }
 

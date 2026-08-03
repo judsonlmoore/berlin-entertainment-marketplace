@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, toActionError } from "@/src/actions/_shared";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -21,9 +22,6 @@ const changeApprovalSchema = z.object({
   reason: z.string().trim().min(1).max(1000),
   locale: z.enum(["en", "de"]).default("en"),
 });
-
-export type ActionResult =
-  { ok: true } | { ok: false; code: string; message: string };
 
 export async function changeApprovalState(
   input: z.infer<typeof changeApprovalSchema>,
@@ -96,9 +94,6 @@ export async function changeApprovalState(
     revalidatePath(`/${parsed.data.locale}/marketplace`);
     return { ok: true };
   } catch (error) {
-    if (error instanceof AppError) {
-      return { ok: false, code: error.code, message: error.message };
-    }
-    throw error;
+    return toActionError(error);
   }
 }

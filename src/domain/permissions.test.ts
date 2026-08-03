@@ -78,11 +78,23 @@ describe("permissions", () => {
     ).toBe(false);
   });
 
-  it("allows venue role holders to create venues when not suspended", () => {
+  it("allows venue role holders to create venues before rejection/suspension", () => {
     expect(can(actor({ roles: ["venue"] }), "venue.create")).toBe(true);
     expect(
       can(
+        actor({ roles: ["venue"], approvalState: "applied" }),
+        "venue.create",
+      ),
+    ).toBe(true);
+    expect(
+      can(
         actor({ roles: ["venue"], approvalState: "suspended" }),
+        "venue.create",
+      ),
+    ).toBe(false);
+    expect(
+      can(
+        actor({ roles: ["venue"], approvalState: "rejected" }),
         "venue.create",
       ),
     ).toBe(false);

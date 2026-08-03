@@ -135,6 +135,7 @@ export async function findOverlappingBlockingEntries(input: {
         or(
           eq(calendarEntries.state, "confirmed"),
           eq(calendarEntries.state, "requested"),
+          eq(calendarEntries.state, "unavailable"),
           eq(calendarEntries.state, "tentative_hold"),
         ),
       ),

@@ -52,11 +52,19 @@ export async function GET(_request: Request, { params }: Props) {
   }
 
   const isOwner = profile.userId === session.user.id;
-  if (!isOwner && !can(actor, "discover.entertainers")) {
-    return NextResponse.json(
-      { ok: false, error: "forbidden" },
-      { status: 403 },
-    );
+  if (!isOwner) {
+    if (!can(actor, "discover.entertainers")) {
+      return NextResponse.json(
+        { ok: false, error: "forbidden" },
+        { status: 403 },
+      );
+    }
+    if (profile.publicationState !== "approved") {
+      return NextResponse.json(
+        { ok: false, error: "not_found" },
+        { status: 404 },
+      );
+    }
   }
 
   if (!isFileStoreConfigured()) {

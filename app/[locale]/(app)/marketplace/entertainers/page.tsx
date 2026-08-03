@@ -4,6 +4,7 @@ import {
   DiscoveryPagination,
 } from "@/src/components/discovery-filters";
 import { Monogram } from "@/src/components/ui/monogram";
+import { formatEur } from "@/src/lib/format";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import {
@@ -21,14 +22,6 @@ type Props = {
 
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
-}
-
-function formatEur(cents: number, locale: string) {
-  return new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
 }
 
 export default async function EntertainersDiscoveryPage({

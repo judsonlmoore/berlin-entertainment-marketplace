@@ -33,9 +33,10 @@ describe("calendar domain", () => {
     ).toBe(true);
   });
 
-  it("treats confirmed and requested as blocking", () => {
+  it("treats confirmed, requested, and unavailable as blocking", () => {
     expect(isBlockingCalendarState("confirmed", null)).toBe(true);
     expect(isBlockingCalendarState("requested", null)).toBe(true);
+    expect(isBlockingCalendarState("unavailable", null)).toBe(true);
     expect(isBlockingCalendarState("available", null)).toBe(false);
   });
 

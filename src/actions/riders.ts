@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, toActionError } from "@/src/actions/_shared";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -20,17 +21,6 @@ import {
 } from "@/src/domain/rider";
 import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
-
-export type ActionResult =
-  | { ok: true; id?: string; uploadUrl?: string; key?: string }
-  | { ok: false; code: string; message: string };
-
-function toActionError(error: unknown): ActionResult {
-  if (error instanceof AppError) {
-    return { ok: false, code: error.code, message: error.message };
-  }
-  throw error;
-}
 
 const registerSchema = z.object({
   entertainerProfileId: z.string().uuid(),

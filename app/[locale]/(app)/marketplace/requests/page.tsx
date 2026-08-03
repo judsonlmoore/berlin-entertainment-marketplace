@@ -5,6 +5,7 @@ import {
   WithdrawDirectRequestButton,
 } from "@/src/components/direct-request-actions";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { formatEur } from "@/src/lib/format";
 import {
   listDirectRequestsForEntertainer,
   listDirectRequestsForVenues,
@@ -13,14 +14,6 @@ import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = { params: Promise<{ locale: string }> };
-
-function formatEur(cents: number, locale: string) {
-  return new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 export default async function DirectRequestsPage({ params }: Props) {
   const { locale } = await params;

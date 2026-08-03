@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1785777402139,
-      "tag": "0000_broken_colleen_wing",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1785781931651,
-      "tag": "0001_booking_terms_propose_accept",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1785820000000,
-      "tag": "0002_marketplace_requirements_enrichment",
+      "when": 1785798239859,
+      "tag": "0000_salon_baseline",
       "breakpoints": true
     }
   ]

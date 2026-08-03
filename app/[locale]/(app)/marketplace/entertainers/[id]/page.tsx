@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { DirectRequestForm } from "@/src/components/direct-request-form";
+import { formatEur } from "@/src/lib/format";
 import { YouTubeEmbed } from "@/src/components/youtube-embed";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
@@ -11,14 +12,6 @@ import { Link } from "@/src/i18n/navigation";
 type Props = {
   params: Promise<{ locale: string; id: string }>;
 };
-
-function formatEur(cents: number, locale: string) {
-  return new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 export default async function EntertainerDetailPage({ params }: Props) {
   const { locale, id } = await params;

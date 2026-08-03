@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, toActionError } from "@/src/actions/_shared";
 import { and, asc, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -20,17 +21,7 @@ import {
 } from "@/src/domain/portfolio";
 import { can } from "@/src/domain/permissions";
 
-export type ActionResult =
-  { ok: true; id?: string } | { ok: false; code: string; message: string };
-
 const localeSchema = z.enum(["en", "de"]).default("en");
-
-function toActionError(error: unknown): ActionResult {
-  if (error instanceof AppError) {
-    return { ok: false, code: error.code, message: error.message };
-  }
-  throw error;
-}
 
 async function requireEntertainerOwner(entertainerProfileId: string) {
   const session = await auth();

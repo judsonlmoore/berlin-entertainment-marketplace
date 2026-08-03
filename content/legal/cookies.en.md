@@ -10,7 +10,7 @@ Cookies are small text files stored on your device when you visit a website. The
 
 ## How We Use Cookies
 
-Salon uses cookies for essential functionality, security, analytics, and user experience improvements. You can control non-essential cookies through our cookie consent banner.
+Salon currently uses cookies for essential functionality and security. Optional analytics and marketing cookies are not enabled. You can review preferences through our cookie consent banner.
 
 ### Strictly Necessary Cookies
 
@@ -22,14 +22,11 @@ These cookies are required for the platform to function. They cannot be disabled
 
 ### Analytics Cookies
 
-With your consent, we use analytics cookies to understand how visitors use Salon. This helps us improve the platform and user experience.
-
-- **_ga, _gid, _gat** — Google Analytics cookies track user interactions, page views, and traffic sources
-- **_clck, _clsk, CLID** — Microsoft Clarity helps us understand user behavior through session recordings and heatmaps
+Salon does not currently set analytics cookies. If a privacy-reviewed analytics provider is added later, this page will list those cookies and consent will be required first.
 
 ### Marketing Cookies
 
-Marketing cookies may be used in the future to deliver relevant advertisements. These are currently not active but can be enabled with your consent.
+Salon does not currently set marketing cookies.
 
 ## Manage Your Cookie Preferences
 

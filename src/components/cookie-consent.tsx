@@ -79,34 +79,6 @@ function buildTranslations(locale: string, t: CookieCopy) {
           title: t.analyticsTitle,
           description: t.analyticsDescription,
           linkedCategory: "analytics",
-          cookieTable: {
-            headers: {
-              name: t.cookieName,
-              domain: t.cookieDomain,
-              expiration: t.cookieExpiration,
-              description: t.cookieDescription,
-            },
-            body: [
-              {
-                name: "_ga",
-                domain: "salon.berlin",
-                expiration: locale === "de" ? "2 Jahre" : "2 years",
-                description: t.gaCookieDesc,
-              },
-              {
-                name: "_gid",
-                domain: "salon.berlin",
-                expiration: locale === "de" ? "24 Stunden" : "24 hours",
-                description: t.gidCookieDesc,
-              },
-              {
-                name: "_clck",
-                domain: "salon.berlin",
-                expiration: locale === "de" ? "1 Jahr" : "1 year",
-                description: t.clarityCookieDesc,
-              },
-            ],
-          },
         },
         {
           title: t.marketingTitle,
@@ -156,9 +128,8 @@ function updateConsentMode(categories: string[]) {
 }
 
 /**
- * GDPR-compliant cookie consent banner with Google Consent Mode v2 support.
- * Manages consent for analytics_storage, ad_storage, ad_user_data, ad_personalization,
- * functionality_storage, personalization_storage, and security_storage.
+ * Necessary-only consent banner. Optional categories stay denied/read-only until
+ * analytics or marketing integrations are actually provisioned.
  */
 export function CookieConsentBanner() {
   const locale = useLocale();
@@ -211,29 +182,15 @@ export function CookieConsentBanner() {
           },
           analytics: {
             enabled: false,
-            readOnly: false,
-            autoClear: {
-              cookies: [
-                {
-                  name: /^(_ga|_gid|_gat)/,
-                },
-              ],
-            },
+            readOnly: true,
           },
           marketing: {
             enabled: false,
-            readOnly: false,
-            autoClear: {
-              cookies: [
-                {
-                  name: /^(_fbp|_fbc|fr)/,
-                },
-              ],
-            },
+            readOnly: true,
           },
           functionality: {
             enabled: false,
-            readOnly: false,
+            readOnly: true,
           },
         },
         language: {

@@ -98,16 +98,62 @@ function asStoredContacts(
   rows: {
     id: string;
     kind: "email" | "phone" | "other";
-    valueEncrypted: string;
+    value: string;
     isPreferred: boolean;
   }[],
 ): StoredContactMethod[] {
   return rows.map((row) => ({
     id: row.id,
     kind: row.kind,
-    valueEncrypted: row.valueEncrypted,
+    value: row.value,
     isPreferred: row.isPreferred,
   }));
+}
+
+async function listUnlockedContactMethodIds(input: {
+  viewerUserId: string;
+  entertainerProfileId?: string;
+  venueId?: string;
+}): Promise<string[]> {
+  const db = getDb();
+
+  if (input.entertainerProfileId) {
+    const rows = await db
+      .select({ id: contactUnlocks.contactMethodId })
+      .from(contactUnlocks)
+      .innerJoin(
+        contactMethods,
+        eq(contactMethods.id, contactUnlocks.contactMethodId),
+      )
+      .where(
+        and(
+          eq(contactUnlocks.unlockedForUserId, input.viewerUserId),
+          eq(contactMethods.ownerType, "entertainer"),
+          eq(contactMethods.ownerId, input.entertainerProfileId),
+        ),
+      );
+    return rows.map((row) => row.id);
+  }
+
+  if (input.venueId) {
+    const rows = await db
+      .select({ id: contactUnlocks.contactMethodId })
+      .from(contactUnlocks)
+      .innerJoin(
+        contactMethods,
+        eq(contactMethods.id, contactUnlocks.contactMethodId),
+      )
+      .where(
+        and(
+          eq(contactUnlocks.unlockedForUserId, input.viewerUserId),
+          eq(contactMethods.ownerType, "venue"),
+          eq(contactMethods.ownerId, input.venueId),
+        ),
+      );
+    return rows.map((row) => row.id);
+  }
+
+  return [];
 }
 
 function entertainerFilterConditions(filters: EntertainerFilters) {
@@ -298,54 +344,6 @@ export async function listEntertainerCategoryFacets(limit = 8) {
   return rows.map((row) => row.category).filter(Boolean);
 }
 
-async function hasContactUnlockForViewer(input: {
-  viewerUserId: string;
-  entertainerProfileId?: string;
-  venueId?: string;
-}): Promise<boolean> {
-  const db = getDb();
-
-  if (input.entertainerProfileId) {
-    const [row] = await db
-      .select({ id: contactUnlocks.id })
-      .from(contactUnlocks)
-      .innerJoin(
-        contactMethods,
-        eq(contactMethods.id, contactUnlocks.contactMethodId),
-      )
-      .where(
-        and(
-          eq(contactUnlocks.unlockedForUserId, input.viewerUserId),
-          eq(contactMethods.ownerType, "entertainer"),
-          eq(contactMethods.ownerId, input.entertainerProfileId),
-        ),
-      )
-      .limit(1);
-    return Boolean(row);
-  }
-
-  if (input.venueId) {
-    const [row] = await db
-      .select({ id: contactUnlocks.id })
-      .from(contactUnlocks)
-      .innerJoin(
-        contactMethods,
-        eq(contactMethods.id, contactUnlocks.contactMethodId),
-      )
-      .where(
-        and(
-          eq(contactUnlocks.unlockedForUserId, input.viewerUserId),
-          eq(contactMethods.ownerType, "venue"),
-          eq(contactMethods.ownerId, input.venueId),
-        ),
-      )
-      .limit(1);
-    return Boolean(row);
-  }
-
-  return false;
-}
-
 export async function getDiscoverableEntertainerDetail(input: {
   entertainerProfileId: string;
   viewerUserId: string;
@@ -366,7 +364,7 @@ export async function getDiscoverableEntertainerDetail(input: {
     .select({
       id: contactMethods.id,
       kind: contactMethods.kind,
-      valueEncrypted: contactMethods.valueEncrypted,
+      value: contactMethods.value,
       isPreferred: contactMethods.isPreferred,
     })
     .from(contactMethods)
@@ -377,11 +375,15 @@ export async function getDiscoverableEntertainerDetail(input: {
       ),
     );
 
-  const unlocked = await hasContactUnlockForViewer({
+  const unlockedMethodIds = await listUnlockedContactMethodIds({
     viewerUserId: input.viewerUserId,
     entertainerProfileId: profile.id,
   });
-  const contacts = projectContactMethods(asStoredContacts(methods), unlocked);
+  const contacts = projectContactMethods(
+    asStoredContacts(methods),
+    unlockedMethodIds,
+  );
+  const unlocked = unlockedMethodIds.length > 0;
 
   let portfolio: PortfolioDiscoveryItem[] | null = null;
   if (input.includePortfolio) {
@@ -438,7 +440,7 @@ export async function getDiscoverableVenueDetail(input: {
     .select({
       id: contactMethods.id,
       kind: contactMethods.kind,
-      valueEncrypted: contactMethods.valueEncrypted,
+      value: contactMethods.value,
       isPreferred: contactMethods.isPreferred,
     })
     .from(contactMethods)
@@ -449,11 +451,15 @@ export async function getDiscoverableVenueDetail(input: {
       ),
     );
 
-  const unlocked = await hasContactUnlockForViewer({
+  const unlockedMethodIds = await listUnlockedContactMethodIds({
     viewerUserId: input.viewerUserId,
     venueId: venue.id,
   });
-  const contacts = projectContactMethods(asStoredContacts(methods), unlocked);
+  const contacts = projectContactMethods(
+    asStoredContacts(methods),
+    unlockedMethodIds,
+  );
+  const unlocked = unlockedMethodIds.length > 0;
 
   return {
     id: venue.id,

@@ -10,7 +10,7 @@ Cookies sind kleine Textdateien, die auf Ihrem Gerät gespeichert werden, wenn S
 
 ## Wie wir Cookies verwenden
 
-Salon verwendet Cookies für wesentliche Funktionen, Sicherheit, Analysen und Verbesserungen der Benutzererfahrung. Sie können nicht wesentliche Cookies über unser Cookie-Einwilligungsbanner steuern.
+Salon verwendet derzeit Cookies für wesentliche Funktionen und Sicherheit. Optionale Analyse- und Marketing-Cookies sind nicht aktiv. Sie können Einstellungen über unser Cookie-Einwilligungsbanner prüfen.
 
 ### Unbedingt erforderliche Cookies
 
@@ -22,14 +22,11 @@ Diese Cookies sind für die Funktion der Plattform erforderlich. Sie können nic
 
 ### Analyse-Cookies
 
-Mit Ihrer Einwilligung verwenden wir Analyse-Cookies, um zu verstehen, wie Besucher Salon nutzen. Dies hilft uns, die Plattform und Benutzererfahrung zu verbessern.
-
-- **_ga, _gid, _gat** — Google Analytics-Cookies verfolgen Benutzerinteraktionen, Seitenaufrufe und Traffic-Quellen
-- **_clck, _clsk, CLID** — Microsoft Clarity hilft uns, das Nutzerverhalten durch Sitzungsaufzeichnungen und Heatmaps zu verstehen
+Salon setzt derzeit keine Analyse-Cookies. Falls später ein datenschutzgeprüfter Analyse-Anbieter hinzukommt, werden diese Cookies hier aufgeführt und eine Einwilligung eingeholt.
 
 ### Marketing-Cookies
 
-Marketing-Cookies können in Zukunft verwendet werden, um relevante Werbung bereitzustellen. Diese sind derzeit nicht aktiv, können aber mit Ihrer Einwilligung aktiviert werden.
+Salon setzt derzeit keine Marketing-Cookies.
 
 ## Cookie-Einstellungen verwalten
 

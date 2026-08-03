@@ -1,14 +1,17 @@
 "use server";
 
+import {
+  type ActionResult,
+  requireActor,
+  toActionError,
+} from "@/src/actions/_shared";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { getActorContext } from "@/src/db/queries/actor";
+import { upsertPreferredContact } from "@/src/db/queries/contacts";
 import {
   auditEvents,
-  contactMethods,
   entertainerProfiles,
   venueMemberships,
   venueSpaces,
@@ -21,9 +24,6 @@ import {
   canStaffTransitionProfile,
   type ProfilePublicationState,
 } from "@/src/domain/profile-publication";
-
-export type ActionResult =
-  { ok: true; id?: string } | { ok: false; code: string; message: string };
 
 const localeSchema = z.enum(["en", "de"]).default("en");
 
@@ -145,25 +145,6 @@ function optionalNullableText(value?: string) {
   return trimmed ? trimmed : null;
 }
 
-async function requireActor() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new AppError("unauthorized", "Sign in required");
-  }
-  const actor = await getActorContext(session.user.id);
-  if (!actor) {
-    throw new AppError("unauthorized", "Sign in required");
-  }
-  return { session, actor };
-}
-
-function toActionError(error: unknown): ActionResult {
-  if (error instanceof AppError) {
-    return { ok: false, code: error.code, message: error.message };
-  }
-  throw error;
-}
-
 export async function upsertEntertainerProfile(
   input: z.infer<typeof entertainerSchema>,
 ): Promise<ActionResult> {
@@ -234,12 +215,11 @@ export async function upsertEntertainerProfile(
         profileId = created?.id;
       }
 
-      await tx.insert(contactMethods).values({
+      await upsertPreferredContact(tx, {
         ownerType: "entertainer",
         ownerId: profileId ?? session.user.id,
         kind: "email",
-        valueEncrypted: parsed.data.contactEmail,
-        isPreferred: true,
+        value: parsed.data.contactEmail,
       });
 
       await tx.insert(auditEvents).values({
@@ -371,12 +351,18 @@ export async function createVenue(
         status: "active",
       });
 
-      await tx.insert(contactMethods).values({
+      await tx.insert(venueSpaces).values({
+        venueId: created.id,
+        name: `${created.name} — Main room`,
+        capacity: created.capacity,
+        productionResources: {},
+      });
+
+      await upsertPreferredContact(tx, {
         ownerType: "venue",
         ownerId: created.id,
         kind: "email",
-        valueEncrypted: parsed.data.contactEmail,
-        isPreferred: true,
+        value: parsed.data.contactEmail,
       });
 
       await tx.insert(auditEvents).values({
@@ -453,12 +439,11 @@ export async function updateVenue(
         })
         .where(eq(venues.id, venueId));
 
-      await tx.insert(contactMethods).values({
+      await upsertPreferredContact(tx, {
         ownerType: "venue",
         ownerId: venueId,
         kind: "email",
-        valueEncrypted: parsed.data.contactEmail,
-        isPreferred: true,
+        value: parsed.data.contactEmail,
       });
 
       await tx.insert(auditEvents).values({

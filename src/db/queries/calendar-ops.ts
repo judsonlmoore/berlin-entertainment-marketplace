@@ -8,7 +8,7 @@ import {
   getPrimaryVenueSpaceId,
 } from "@/src/db/queries/calendar";
 
-/** Rejects overlapping confirmed/requested blocks for both booking resources. */
+/** Rejects overlapping blocking calendar entries for both booking resources. */
 export async function assertNoHardCalendarConflict(input: {
   entertainerProfileId: string;
   venueId: string;
@@ -51,14 +51,15 @@ export async function assertNoHardCalendarConflict(input: {
     ...(input.now ? { now: input.now } : {}),
   });
 
-  const hard = [...entertainerConflicts, ...venueConflicts].filter(
-    (row) => row.state === "confirmed" || row.state === "requested",
-  );
-  if (hard.length > 0) {
+  if (entertainerConflicts.length + venueConflicts.length > 0) {
     throw new AppError(
       "conflict",
       "Calendar conflict blocks this booking action",
-      { conflictIds: hard.map((row) => row.id) },
+      {
+        conflictIds: [...entertainerConflicts, ...venueConflicts].map(
+          (row) => row.id,
+        ),
+      },
     );
   }
 
@@ -66,8 +67,8 @@ export async function assertNoHardCalendarConflict(input: {
 }
 
 /**
- * Idempotent hold expiry: expired tentative holds stop blocking on read already;
- * reconciliation converts them to unavailable and returns the count.
+ * Idempotent hold expiry: expired holds stop blocking on read already;
+ * reconciliation clears them back to available with a single conditional update.
  */
 export async function expireStaleHolds(input?: {
   now?: Date;
@@ -75,31 +76,22 @@ export async function expireStaleHolds(input?: {
 }) {
   const now = input?.now ?? new Date();
   const db = getDb();
-  const stale = await db
-    .select()
-    .from(calendarEntries)
+  const expiredRows = await db
+    .update(calendarEntries)
+    .set({
+      state: "available",
+      holdExpiresAt: null,
+      updatedAt: now,
+      sourceType: "hold_expiry",
+    })
     .where(
       and(
         eq(calendarEntries.state, "tentative_hold"),
         isNotNull(calendarEntries.holdExpiresAt),
         lte(calendarEntries.holdExpiresAt, now),
       ),
-    );
+    )
+    .returning({ id: calendarEntries.id });
 
-  let expired = 0;
-  for (const entry of stale) {
-    await db
-      .update(calendarEntries)
-      .set({
-        state: "unavailable",
-        holdExpiresAt: null,
-        updatedAt: now,
-        sourceType: entry.sourceType ?? "hold_expiry",
-        sourceId: entry.sourceId ?? entry.id,
-      })
-      .where(eq(calendarEntries.id, entry.id));
-    expired += 1;
-  }
-
-  return { expired, checkedAt: now };
+  return { expired: expiredRows.length, checkedAt: now };
 }
