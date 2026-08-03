@@ -31,7 +31,7 @@ export default async function NotificationSettingsPage({ params }: Props) {
 
   const session = await auth();
   if (!session?.user?.id) {
-    return redirect("/sign-in");
+    return redirect({ href: "/sign-in", locale: locale as "en" | "de" });
   }
 
   const preferences = await getUserNotificationPreferences(session.user.id);

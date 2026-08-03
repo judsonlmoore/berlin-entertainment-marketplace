@@ -50,7 +50,7 @@ const templates: Record<
   NotificationTemplate
 > = {
   booking_request_received: {
-    getTitle: (locale, params) => {
+    getTitle: (locale) => {
       return locale === "de"
         ? `Neue Buchungsanfrage erhalten`
         : `New booking request received`;

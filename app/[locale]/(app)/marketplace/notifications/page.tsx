@@ -29,7 +29,7 @@ export default async function NotificationsPage({ params }: Props) {
 
   const session = await auth();
   if (!session?.user?.id) {
-    return redirect("/sign-in");
+    return redirect({ href: "/sign-in", locale: locale as "en" | "de" });
   }
 
   const notifications = await getUserNotifications({

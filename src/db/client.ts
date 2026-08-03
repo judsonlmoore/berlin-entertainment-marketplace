@@ -37,6 +37,10 @@ export function getDb(): Database {
 }
 
 /**
- * Convenience export for most queries
+ * Convenience export for most queries (lazy initialization)
  */
-export const db = getDb();
+export const db = new Proxy({} as Database, {
+  get(target, prop) {
+    return getDb()[prop as keyof Database];
+  },
+});
