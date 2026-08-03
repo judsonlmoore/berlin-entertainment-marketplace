@@ -13,6 +13,9 @@ coverage/
 
 # Vercel and local tooling state.
 .vercel/
+.vite/
+.vinext/
+.wrangler/
 .DS_Store
 *.log
 

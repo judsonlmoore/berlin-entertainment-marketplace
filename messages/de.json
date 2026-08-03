@@ -1,0 +1,88 @@
+{
+  "brand": {
+    "name": "Salon",
+    "tagline": "Ein privater Berliner Marktplatz für Venues und kleinformatige Acts."
+  },
+  "nav": {
+    "home": "Start",
+    "apply": "Bewerben",
+    "signIn": "Anmelden",
+    "signOut": "Abmelden",
+    "marketplace": "Marktplatz",
+    "onboarding": "Onboarding",
+    "admin": "Admin",
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen"
+  },
+  "home": {
+    "headline": "Kuratierte Bookings für Berliner Nächte",
+    "body": "Salon verbindet freigegebene Venues und Acts in einem nachvollziehbaren Booking-Flow. Öffentliche Besucher können Zugang beantragen; private Entdeckung bleibt Mitgliedern vorbehalten.",
+    "ctaApply": "Zugang beantragen",
+    "ctaSignIn": "Mitglieder-Login"
+  },
+  "apply": {
+    "title": "Marktplatz-Zugang beantragen",
+    "body": "Erzählen Sie uns, wer Sie sind und wie Sie in Berlin arbeiten. Das Team prüft jede Bewerbung, bevor privater Marktplatz-Zugang gewährt wird.",
+    "nameLabel": "Vollständiger Name",
+    "rolesLabel": "Marktplatz-Rollen",
+    "roleEntertainer": "Act / Entertainer",
+    "roleVenue": "Venue-Betreiber",
+    "berlinLabel": "Berlin-Bezug",
+    "noteLabel": "Hinweise für das Team",
+    "contactEmailLabel": "Bevorzugte Kontakt-E-Mail",
+    "termsLabel": "Ich bestätige die Nutzungsbedingungen und Datenschutzhinweise",
+    "submit": "Bewerbung senden",
+    "success": "Bewerbung eingegangen. Nach dem Login können Sie den Prüfstatus sehen.",
+    "signedOutHint": "Bitte zuerst anmelden, damit wir die Bewerbung Ihrem Konto zuordnen können."
+  },
+  "signIn": {
+    "title": "Anmelden",
+    "body": "Die Anmeldung bestätigt den E-Mail-Besitz. Die Marktplatz-Freigabe ist eine separate Team-Entscheidung.",
+    "github": "Mit GitHub fortfahren",
+    "google": "Mit Google fortfahren",
+    "dev": "Entwicklungs-Login (nur lokal)",
+    "devNotice": "Der Entwicklungs-Login ist in dieser Nicht-Produktionsumgebung aktiv und kann in Produktion nie laufen.",
+    "unconfigured": "Es sind noch keine Auth.js-Provider konfiguriert. Setzen Sie OAuth-Credentials oder AUTH_DEV_LOGIN=true für die lokale Entwicklung."
+  },
+  "onboarding": {
+    "title": "Onboarding-Status",
+    "approvalLabel": "Freigabestatus",
+    "rolesLabel": "Rollen",
+    "noAccount": "Mit diesem Konto ist noch keine Marktplatz-Bewerbung verknüpft.",
+    "ctaApply": "Bewerbung starten"
+  },
+  "marketplace": {
+    "title": "Privater Marktplatz",
+    "body": "Freigegebene Mitglieder entdecken hier Venues, Acts und Opportunities.",
+    "denied": "Privater Marktplatz-Zugang erfordert ein freigegebenes Konto."
+  },
+  "admin": {
+    "title": "Team-Prüfung",
+    "body": "Konten-Freigaben mit begründetem Audit-Eintrag ändern.",
+    "denied": "Nur für Plattform-Team.",
+    "empty": "Noch keine Marktplatz-Konten.",
+    "reasonLabel": "Begründung",
+    "update": "Freigabe aktualisieren",
+    "currentState": "Aktueller Status"
+  },
+  "privacy": {
+    "title": "Datenschutz",
+    "body": "Salon speichert Profil- und Booking-Daten für den privaten Marktplatz. Kontaktdaten bleiben verborgen, bis Shortlist oder angenommene Direct Request. Aufbewahrung, Export und Löschung werden vor dem Pilot mit Rechtsberatung finalisiert."
+  },
+  "terms": {
+    "title": "Nutzungsbedingungen",
+    "body": "Salon ist ein Koordinationsmarktplatz, kein Zahlungsdienstleister und keine Kanzlei. Booking-Vereinbarungen nutzen deutschen Steuerungstext mit englischer Convenience-Übersetzung. Live-Rechtstexte brauchen Freigabe durch Counsel vor Produktion."
+  },
+  "status": {
+    "applied": "Beworben",
+    "invited": "Eingeladen",
+    "approved": "Freigegeben",
+    "suspended": "Gesperrt"
+  },
+  "errors": {
+    "unauthorized": "Anmeldung erforderlich.",
+    "forbidden": "Keine Berechtigung für diese Aktion.",
+    "validation": "Bitte Formular prüfen und erneut versuchen.",
+    "invalid_transition": "Diese Freigabe-Änderung ist nicht erlaubt."
+  }
+}
