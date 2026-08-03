@@ -1,26 +1,25 @@
 "use server";
 
+import {
+  type ActionResult,
+  requireActor,
+  toActionError,
+} from "@/src/actions/_shared";
 import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { getActorContext } from "@/src/db/queries/actor";
-import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
 import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
 import { expireOverdueDirectRequests } from "@/src/db/queries/direct-requests";
+import { settleMatchAcceptance } from "@/src/db/queries/match-settlement";
 import {
   auditEvents,
   bookingTerms,
   bookings,
-  contactMethods,
-  contactUnlocks,
   directRequests,
   entertainerProfiles,
-  venueMemberships,
   venues,
 } from "@/src/db/schema/marketplace";
-import { selectPreferredContact } from "@/src/domain/contact-projection";
 import {
   canEntertainerTransitionDirectRequest,
   canVenueTransitionDirectRequest,
@@ -31,28 +30,6 @@ import { nextTermsVersion } from "@/src/domain/booking";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
 import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
-
-export type ActionResult =
-  { ok: true; id?: string } | { ok: false; code: string; message: string };
-
-function toActionError(error: unknown): ActionResult {
-  if (error instanceof AppError) {
-    return { ok: false, code: error.code, message: error.message };
-  }
-  throw error;
-}
-
-async function requireActor() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new AppError("unauthorized", "Sign in required");
-  }
-  const actor = await getActorContext(session.user.id);
-  if (!actor) {
-    throw new AppError("unauthorized", "Sign in required");
-  }
-  return { session, actor };
-}
 
 const sendSchema = z.object({
   venueId: z.string().uuid(),
@@ -253,98 +230,19 @@ export async function respondToDirectRequest(input: {
           ),
         });
 
-        const entertainerContacts = await tx
-          .select()
-          .from(contactMethods)
-          .where(
-            and(
-              eq(contactMethods.ownerType, "entertainer"),
-              eq(contactMethods.ownerId, request.entertainerProfileId),
-            ),
-          );
-        const preferredEntertainer = selectPreferredContact(
-          entertainerContacts.map((c) => ({
-            id: c.id,
-            kind: c.kind,
-            valueEncrypted: c.valueEncrypted,
-            isPreferred: c.isPreferred,
-          })),
-        );
-
-        const venueOperators = await tx
-          .select({ userId: venueMemberships.userId })
-          .from(venueMemberships)
-          .where(
-            and(
-              eq(venueMemberships.venueId, request.venueId),
-              eq(venueMemberships.status, "active"),
-            ),
-          );
-
-        if (preferredEntertainer) {
-          for (const operator of venueOperators) {
-            await tx.insert(contactUnlocks).values({
-              ...(booking?.id ? { bookingId: booking.id } : {}),
-              directRequestId: request.id,
-              unlockedForUserId: operator.userId,
-              contactMethodId: preferredEntertainer.id,
-              reason: "direct_request_accepted",
-            });
-          }
-        }
-
-        const venueContacts = await tx
-          .select()
-          .from(contactMethods)
-          .where(
-            and(
-              eq(contactMethods.ownerType, "venue"),
-              eq(contactMethods.ownerId, request.venueId),
-            ),
-          );
-        const preferredVenue = selectPreferredContact(
-          venueContacts.map((c) => ({
-            id: c.id,
-            kind: c.kind,
-            valueEncrypted: c.valueEncrypted,
-            isPreferred: c.isPreferred,
-          })),
-        );
-        if (preferredVenue) {
-          await tx.insert(contactUnlocks).values({
+        await settleMatchAcceptance(tx, {
+          entertainerProfileId: request.entertainerProfileId,
+          entertainerUserId: profile.userId,
+          venueId: request.venueId,
+          startsAt: request.startsAt,
+          endsAt: request.endsAt,
+          reason: "direct_request_accepted",
+          origin: {
             ...(booking?.id ? { bookingId: booking.id } : {}),
             directRequestId: request.id,
-            unlockedForUserId: profile.userId,
-            contactMethodId: preferredVenue.id,
-            reason: "direct_request_accepted",
-          });
-        }
-
-        if (booking) {
-          const { spaceId } = await assertNoHardCalendarConflict({
-            entertainerProfileId: request.entertainerProfileId,
-            venueId: request.venueId,
-            startsAt: request.startsAt,
-            endsAt: request.endsAt,
-            excludeBookingId: booking.id,
-          });
-          await upsertBookingCalendarEntry(tx, {
-            ownerType: "entertainer",
-            ownerId: request.entertainerProfileId,
-            startsAt: request.startsAt,
-            endsAt: request.endsAt,
-            state: "requested",
-            bookingId: booking.id,
-          });
-          await upsertBookingCalendarEntry(tx, {
-            ownerType: "venue_space",
-            ownerId: spaceId,
-            startsAt: request.startsAt,
-            endsAt: request.endsAt,
-            state: "requested",
-            bookingId: booking.id,
-          });
-        }
+          },
+          ...(booking?.id ? { excludeBookingId: booking.id } : {}),
+        });
       }
 
       await tx.insert(auditEvents).values({
@@ -630,98 +528,19 @@ export async function venueRespondToDirectRequestChanges(input: {
           ),
         });
 
-        const entertainerContacts = await tx
-          .select()
-          .from(contactMethods)
-          .where(
-            and(
-              eq(contactMethods.ownerType, "entertainer"),
-              eq(contactMethods.ownerId, request.entertainerProfileId),
-            ),
-          );
-        const preferredEntertainer = selectPreferredContact(
-          entertainerContacts.map((c) => ({
-            id: c.id,
-            kind: c.kind,
-            valueEncrypted: c.valueEncrypted,
-            isPreferred: c.isPreferred,
-          })),
-        );
-
-        const venueOperators = await tx
-          .select({ userId: venueMemberships.userId })
-          .from(venueMemberships)
-          .where(
-            and(
-              eq(venueMemberships.venueId, request.venueId),
-              eq(venueMemberships.status, "active"),
-            ),
-          );
-
-        if (preferredEntertainer) {
-          for (const operator of venueOperators) {
-            await tx.insert(contactUnlocks).values({
-              ...(booking?.id ? { bookingId: booking.id } : {}),
-              directRequestId: request.id,
-              unlockedForUserId: operator.userId,
-              contactMethodId: preferredEntertainer.id,
-              reason: "direct_request_accepted",
-            });
-          }
-        }
-
-        const venueContacts = await tx
-          .select()
-          .from(contactMethods)
-          .where(
-            and(
-              eq(contactMethods.ownerType, "venue"),
-              eq(contactMethods.ownerId, request.venueId),
-            ),
-          );
-        const preferredVenue = selectPreferredContact(
-          venueContacts.map((c) => ({
-            id: c.id,
-            kind: c.kind,
-            valueEncrypted: c.valueEncrypted,
-            isPreferred: c.isPreferred,
-          })),
-        );
-        if (preferredVenue) {
-          await tx.insert(contactUnlocks).values({
+        await settleMatchAcceptance(tx, {
+          entertainerProfileId: request.entertainerProfileId,
+          entertainerUserId: profile.userId,
+          venueId: request.venueId,
+          startsAt: request.startsAt,
+          endsAt: request.endsAt,
+          reason: "direct_request_accepted",
+          origin: {
             ...(booking?.id ? { bookingId: booking.id } : {}),
             directRequestId: request.id,
-            unlockedForUserId: profile.userId,
-            contactMethodId: preferredVenue.id,
-            reason: "direct_request_accepted",
-          });
-        }
-
-        if (booking) {
-          const { spaceId } = await assertNoHardCalendarConflict({
-            entertainerProfileId: request.entertainerProfileId,
-            venueId: request.venueId,
-            startsAt: request.startsAt,
-            endsAt: request.endsAt,
-            excludeBookingId: booking.id,
-          });
-          await upsertBookingCalendarEntry(tx, {
-            ownerType: "entertainer",
-            ownerId: request.entertainerProfileId,
-            startsAt: request.startsAt,
-            endsAt: request.endsAt,
-            state: "requested",
-            bookingId: booking.id,
-          });
-          await upsertBookingCalendarEntry(tx, {
-            ownerType: "venue_space",
-            ownerId: spaceId,
-            startsAt: request.startsAt,
-            endsAt: request.endsAt,
-            state: "requested",
-            bookingId: booking.id,
-          });
-        }
+          },
+          ...(booking?.id ? { excludeBookingId: booking.id } : {}),
+        });
       }
 
       await tx.insert(auditEvents).values({

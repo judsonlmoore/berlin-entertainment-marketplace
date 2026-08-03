@@ -19,8 +19,6 @@ import {
   bookingStateEnum,
   calendarEntryStateEnum,
   calendarOwnerTypeEnum,
-  calendarSyncProviderEnum,
-  calendarSyncStatusEnum,
   contactKindEnum,
   contactOwnerTypeEnum,
   depositStatusEnum,
@@ -89,7 +87,8 @@ export const contactMethods = pgTable(
     ownerType: contactOwnerTypeEnum("owner_type").notNull(),
     ownerId: text("owner_id").notNull(),
     kind: contactKindEnum("kind").notNull(),
-    valueEncrypted: text("value_encrypted").notNull(),
+    /** Plaintext at app layer; rely on Neon encryption at rest. */
+    value: text("value").notNull(),
     isPreferred: boolean("is_preferred").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -100,6 +99,11 @@ export const contactMethods = pgTable(
   },
   (table) => [
     index("contact_methods_owner_idx").on(table.ownerType, table.ownerId),
+    uniqueIndex("contact_methods_owner_kind_uidx").on(
+      table.ownerType,
+      table.ownerId,
+      table.kind,
+    ),
   ],
 );
 
@@ -551,60 +555,94 @@ export const calendarEntries = pgTable(
       "calendar_entries_window_chk",
       sql`${table.endsAt} > ${table.startsAt}`,
     ),
+    check(
+      "calendar_entries_hold_expiry_chk",
+      sql`(${table.state} <> 'tentative_hold') OR (${table.holdExpiresAt} IS NOT NULL)`,
+    ),
   ],
 );
 
-export const agreementTemplates = pgTable("agreement_templates", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  locale: text("locale").notNull(),
-  version: text("version").notNull(),
-  legalReviewStatus: text("legal_review_status").notNull().default("draft"),
-  body: text("body").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-});
+export const agreementTemplates = pgTable(
+  "agreement_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    locale: text("locale").notNull(),
+    version: text("version").notNull(),
+    legalReviewStatus: text("legal_review_status").notNull().default("draft"),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("agreement_templates_locale_version_uidx").on(
+      table.locale,
+      table.version,
+    ),
+  ],
+);
 
-export const agreements = pgTable("agreements", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  bookingId: uuid("booking_id")
-    .notNull()
-    .references(() => bookings.id, { onDelete: "cascade" }),
-  bookingTermsId: uuid("booking_terms_id")
-    .notNull()
-    .references(() => bookingTerms.id),
-  germanTemplateVersion: text("german_template_version").notNull(),
-  englishTemplateVersion: text("english_template_version").notNull(),
-  provider: text("provider"),
-  providerEnvelopeId: text("provider_envelope_id"),
-  status: text("status").notNull().default("draft"),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-});
+export const agreements = pgTable(
+  "agreements",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    bookingTermsId: uuid("booking_terms_id")
+      .notNull()
+      .references(() => bookingTerms.id),
+    germanTemplateVersion: text("german_template_version").notNull(),
+    englishTemplateVersion: text("english_template_version").notNull(),
+    /** Immutable rendered bodies captured at generation time. */
+    germanBody: text("german_body").notNull(),
+    englishBody: text("english_body").notNull(),
+    provider: text("provider"),
+    providerEnvelopeId: text("provider_envelope_id"),
+    status: text("status").notNull().default("draft"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("agreements_booking_uidx").on(table.bookingId),
+    uniqueIndex("agreements_provider_envelope_uidx").on(
+      table.providerEnvelopeId,
+    ),
+  ],
+);
 
-export const signatures = pgTable("signatures", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  agreementId: uuid("agreement_id")
-    .notNull()
-    .references(() => agreements.id, { onDelete: "cascade" }),
-  signerUserId: text("signer_user_id")
-    .notNull()
-    .references(() => users.id),
-  partyRole: text("party_role").notNull(),
-  providerReference: text("provider_reference"),
-  status: text("status").notNull().default("pending"),
-  signedAt: timestamp("signed_at", { withTimezone: true, mode: "date" }),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-});
+export const signatures = pgTable(
+  "signatures",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    agreementId: uuid("agreement_id")
+      .notNull()
+      .references(() => agreements.id, { onDelete: "cascade" }),
+    signerUserId: text("signer_user_id")
+      .notNull()
+      .references(() => users.id),
+    partyRole: text("party_role").notNull(),
+    providerReference: text("provider_reference"),
+    status: text("status").notNull().default("pending"),
+    signedAt: timestamp("signed_at", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("signatures_agreement_signer_uidx").on(
+      table.agreementId,
+      table.signerUserId,
+    ),
+  ],
+);
 
 export const depositStatusEvents = pgTable("deposit_status_events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -663,39 +701,5 @@ export const portfolioItems = pgTable(
       table.entertainerProfileId,
       table.sortOrder,
     ),
-  ],
-);
-
-export const calendarConnections = pgTable(
-  "calendar_connections",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    ownerType: calendarOwnerTypeEnum("owner_type").notNull(),
-    ownerId: uuid("owner_id").notNull(),
-    provider: calendarSyncProviderEnum("provider").notNull(),
-    status: calendarSyncStatusEnum("status").notNull().default("disconnected"),
-    externalAccountLabel: text("external_account_label"),
-    lastSyncAt: timestamp("last_sync_at", {
-      withTimezone: true,
-      mode: "date",
-    }),
-    lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("calendar_connections_owner_provider_uidx").on(
-      table.ownerType,
-      table.ownerId,
-      table.provider,
-    ),
-    index("calendar_connections_user_idx").on(table.userId),
   ],
 );

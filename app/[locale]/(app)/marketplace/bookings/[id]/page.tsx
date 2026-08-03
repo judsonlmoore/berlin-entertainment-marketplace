@@ -9,6 +9,7 @@ import {
   SignAgreementButton,
 } from "@/src/components/booking-actions";
 import { BookingLifecycleTrack } from "@/src/components/booking-lifecycle-track";
+import { formatEur, toDatetimeLocal } from "@/src/lib/format";
 import { BookingTermsForm } from "@/src/components/booking-terms-form";
 import { Avatar } from "@/src/components/ui/monogram";
 import { StatusLabel } from "@/src/components/ui/status-label";
@@ -33,19 +34,6 @@ import { Link } from "@/src/i18n/navigation";
 type Props = {
   params: Promise<{ locale: string; id: string }>;
 };
-
-function formatEur(cents: number, locale: string) {
-  return new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
-
-function toDatetimeLocal(date: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 export default async function BookingDetailPage({ params }: Props) {
   const { locale, id } = await params;

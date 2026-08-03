@@ -5,13 +5,12 @@ import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import {
-  ensureDefaultVenueSpace,
   listCalendarEntriesInRange,
   listCalendarResourcesForUser,
 } from "@/src/db/queries/calendar";
-import { expireStaleHolds } from "@/src/db/queries/calendar-ops";
 import { isHoldBlocking } from "@/src/domain/calendar";
 import { can } from "@/src/domain/permissions";
+import { toDatetimeLocal } from "@/src/lib/format";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = {
@@ -27,11 +26,6 @@ function monthBounds(year: number, monthIndex: number) {
   const start = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0));
   const end = new Date(Date.UTC(year, monthIndex + 1, 1, 0, 0, 0));
   return { start, end };
-}
-
-function toDatetimeLocal(date: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function stateTone(
@@ -61,7 +55,6 @@ export default async function CalendarPage({ params, searchParams }: Props) {
 
   const query = await searchParams;
   const now = new Date();
-  await expireStaleHolds({ now });
   const year = Number(first(query.year)) || now.getFullYear();
   const month = Number(first(query.month));
   const monthIndex =
@@ -69,10 +62,6 @@ export default async function CalendarPage({ params, searchParams }: Props) {
       ? month - 1
       : now.getMonth();
 
-  const resourcesData = await listCalendarResourcesForUser(access.actor.userId);
-  for (const venue of resourcesData.venuesNeedingSpace) {
-    await ensureDefaultVenueSpace(venue.venueId, venue.venueName);
-  }
   const refreshed = await listCalendarResourcesForUser(access.actor.userId);
 
   const resources = [

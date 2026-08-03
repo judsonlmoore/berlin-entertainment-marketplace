@@ -5,9 +5,12 @@ import {
   canAccessRiderFile,
   getRiderFileForDownload,
 } from "@/src/db/queries/rider-access";
+import { hasMarketplaceAccess } from "@/src/domain/approval";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
 
 type Props = { params: Promise<{ id: string }> };
+
+const DOWNLOADABLE_SCAN_STATES = new Set(["clean", "awaiting_blob"]);
 
 /** Authorized rider download — short-lived read URL, never permanent public links. */
 export async function GET(_request: Request, { params }: Props) {
@@ -33,12 +36,39 @@ export async function GET(_request: Request, { params }: Props) {
       { status: 401 },
     );
   }
+  if (
+    !actor.isPlatformStaff &&
+    (actor.approvalState === null || !hasMarketplaceAccess(actor.approvalState))
+  ) {
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
+  }
 
   const rider = await getRiderFileForDownload(id);
   if (!rider) {
     return NextResponse.json(
       { ok: false, error: "not_found" },
       { status: 404 },
+    );
+  }
+
+  const isOwner = rider.ownerUserId === session.user.id;
+  if (
+    !actor.isPlatformStaff &&
+    !isOwner &&
+    !DOWNLOADABLE_SCAN_STATES.has(rider.scanStatus)
+  ) {
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
+  }
+  if (!actor.isPlatformStaff && isOwner && rider.scanStatus === "quarantined") {
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
     );
   }
 

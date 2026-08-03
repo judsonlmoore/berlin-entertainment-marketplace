@@ -122,6 +122,10 @@ export async function findPendingRequest(input: {
   });
 }
 
+/**
+ * Idempotent expiry: claim overdue rows with a conditional UPDATE so concurrent
+ * cron/admin runs cannot double-count or write duplicate audits.
+ */
 export async function expireOverdueDirectRequests(input?: {
   actorUserId?: string | null;
   now?: Date;
@@ -129,29 +133,23 @@ export async function expireOverdueDirectRequests(input?: {
   const db = getDb();
   const now = input?.now ?? new Date();
 
-  const overdue = await db
-    .select({ id: directRequests.id, state: directRequests.state })
-    .from(directRequests)
+  if (!canSystemTransitionDirectRequest("requested", "expired")) {
+    return { expired: 0, checkedAt: now };
+  }
+
+  const claimed = await db
+    .update(directRequests)
+    .set({ state: "expired", updatedAt: now })
     .where(
       and(
         eq(directRequests.state, "requested"),
         lte(directRequests.responseDeadlineAt, now),
       ),
-    );
+    )
+    .returning({ id: directRequests.id });
 
-  let expired = 0;
-  for (const row of overdue) {
-    if (
-      !canSystemTransitionDirectRequest(row.state as "requested", "expired")
-    ) {
-      continue;
-    }
-
+  for (const row of claimed) {
     await db.transaction(async (tx) => {
-      await tx
-        .update(directRequests)
-        .set({ state: "expired", updatedAt: now })
-        .where(eq(directRequests.id, row.id));
       await tx
         .update(bookings)
         .set({ state: "expired", updatedAt: now })
@@ -167,14 +165,13 @@ export async function expireOverdueDirectRequests(input?: {
         subjectType: "direct_request",
         subjectId: row.id,
         metadata: {
-          from: row.state,
+          from: "requested",
           to: "expired",
           reason: "response_deadline",
         },
       });
     });
-    expired += 1;
   }
 
-  return { expired, checkedAt: now };
+  return { expired: claimed.length, checkedAt: now };
 }

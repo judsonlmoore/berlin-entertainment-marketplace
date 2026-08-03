@@ -10,6 +10,7 @@ import {
   WithdrawButton,
 } from "@/src/components/application-actions";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { formatEur } from "@/src/lib/format";
 import {
   getApplicationForEntertainer,
   getOpportunityDetail,
@@ -23,14 +24,6 @@ import { isOpportunityAcceptingApplications } from "@/src/domain/opportunity";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = { params: Promise<{ locale: string; id: string }> };
-
-function formatEur(cents: number, locale: string) {
-  return new Intl.NumberFormat(locale === "de" ? "de-DE" : "en-GB", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 export default async function OpportunityDetailPage({ params }: Props) {
   const { locale, id } = await params;

@@ -12,6 +12,7 @@ import {
   opportunities,
   userRoles,
   venueMemberships,
+  venueSpaces,
   venues,
 } from "../src/db/schema/marketplace";
 
@@ -137,7 +138,7 @@ async function main() {
         ownerType: "entertainer",
         ownerId: entertainerProfile.id,
         kind: "email",
-        valueEncrypted: entertainerEmail,
+        value: entertainerEmail,
         isPreferred: true,
       });
     }
@@ -176,10 +177,28 @@ async function main() {
         role: "owner",
         status: "active",
       });
+      await db.insert(venueSpaces).values({
+        venueId: venue.id,
+        name: `${venue.name} — Main room`,
+        capacity: venue.capacity,
+        productionResources: {},
+      });
     }
   }
 
   if (venue) {
+    const existingSpace = await db.query.venueSpaces.findFirst({
+      where: eq(venueSpaces.venueId, venue.id),
+    });
+    if (!existingSpace) {
+      await db.insert(venueSpaces).values({
+        venueId: venue.id,
+        name: `${venue.name} — Main room`,
+        capacity: venue.capacity,
+        productionResources: {},
+      });
+    }
+
     const existingVenueContact = await db.query.contactMethods.findFirst({
       where: and(
         eq(contactMethods.ownerType, "venue"),
@@ -191,7 +210,7 @@ async function main() {
         ownerType: "venue",
         ownerId: venue.id,
         kind: "email",
-        valueEncrypted: venueEmail,
+        value: venueEmail,
         isPreferred: true,
       });
     }

@@ -9,8 +9,6 @@ import {
   signatures,
   venues,
 } from "@/src/db/schema/marketplace";
-import { renderAgreementDocuments } from "@/src/domain/agreement";
-import { getLatestSandboxTemplates } from "@/src/db/queries/agreements";
 
 export async function listBookingsForActor(input: {
   userId: string;
@@ -113,45 +111,19 @@ export async function getBookingDetail(bookingId: string) {
         .orderBy(signatures.createdAt)
     : [];
 
-  let rendered: {
-    germanBody: string;
-    englishBody: string;
-  } | null = null;
-  if (agreement) {
-    const termsRow = terms.find((row) => row.id === agreement.bookingTermsId);
-    const templates = await getLatestSandboxTemplates();
-    if (termsRow && templates.german && templates.english) {
-      const docs = renderAgreementDocuments({
-        germanTemplate: templates.german,
-        englishTemplate: templates.english,
-        terms: {
-          actName: booking.actName,
-          venueName: booking.venueName,
-          startsAtIso: termsRow.startsAt.toISOString(),
-          endsAtIso: termsRow.endsAt.toISOString(),
-          timezone: termsRow.timezone,
-          feeCents: termsRow.feeCents,
-          currency: termsRow.currency,
-          performanceFormat: termsRow.performanceFormat,
-          cancellationTerms: termsRow.cancellationTerms,
-          productionObligations: termsRow.productionObligations,
-          depositTerms: termsRow.depositTerms,
-          termsVersion: termsRow.version,
-        },
-      });
-      rendered = {
-        germanBody: docs.germanBody,
-        englishBody: docs.englishBody,
-      };
-    }
-  }
-
   return {
     booking,
     terms,
     depositEvents,
     agreement: agreement
-      ? { ...agreement, signatures: signatureRows, rendered }
+      ? {
+          ...agreement,
+          signatures: signatureRows,
+          rendered: {
+            germanBody: agreement.germanBody,
+            englishBody: agreement.englishBody,
+          },
+        }
       : null,
   };
 }

@@ -17,6 +17,7 @@ const ui = Outfit({
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
+      lang="en"
       className={`${display.variable} ${ui.variable}`}
       suppressHydrationWarning
     >

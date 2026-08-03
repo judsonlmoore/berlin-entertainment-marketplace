@@ -1,5 +1,6 @@
 "use server";
 
+import { type ActionResult, toActionError } from "@/src/actions/_shared";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -11,16 +12,6 @@ import { auditEvents, venueMemberships } from "@/src/db/schema/marketplace";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
 import { canRemoveMembership } from "@/src/domain/venue-membership";
-
-export type ActionResult =
-  { ok: true; id?: string } | { ok: false; code: string; message: string };
-
-function toActionError(error: unknown): ActionResult {
-  if (error instanceof AppError) {
-    return { ok: false, code: error.code, message: error.message };
-  }
-  throw error;
-}
 
 const inviteSchema = z.object({
   venueId: z.string().uuid(),

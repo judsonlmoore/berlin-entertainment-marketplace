@@ -23,7 +23,7 @@ export function DateTile({
       className={`flex size-16 shrink-0 flex-col items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] ${className}`}
     >
       <span className="eyebrow text-[0.6rem]">{month}</span>
-      <span className="display tabular text-2xl leading-none">{day}</span>
+      <span className="tabular text-2xl leading-none font-semibold">{day}</span>
     </div>
   );
 }

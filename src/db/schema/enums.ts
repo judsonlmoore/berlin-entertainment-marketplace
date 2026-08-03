@@ -67,18 +67,6 @@ export const portfolioItemKindEnum = pgEnum("portfolio_item_kind", [
   "youtube",
 ]);
 
-export const calendarSyncProviderEnum = pgEnum("calendar_sync_provider", [
-  "google",
-  "microsoft",
-  "ical",
-]);
-
-export const calendarSyncStatusEnum = pgEnum("calendar_sync_status", [
-  "disconnected",
-  "connected",
-  "error",
-]);
-
 export const bookingStateEnum = pgEnum("booking_state", [
   "requested",
   "applied",

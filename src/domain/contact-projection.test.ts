@@ -8,40 +8,44 @@ const methods = [
   {
     id: "c1",
     kind: "email" as const,
-    valueEncrypted: "secret@example.com",
+    value: "secret@example.com",
     isPreferred: true,
   },
   {
     id: "c2",
     kind: "phone" as const,
-    valueEncrypted: "+493011111",
+    value: "+493011111",
     isPreferred: false,
   },
 ];
 
 describe("contact projection", () => {
-  it("omits contact values when not unlocked", () => {
-    expect(projectContactMethods(methods, false)).toBeNull();
+  it("omits contact values when nothing is unlocked", () => {
+    expect(projectContactMethods(methods, null)).toBeNull();
+    expect(projectContactMethods(methods, [])).toBeNull();
   });
 
-  it("reveals contact values only when unlocked", () => {
-    expect(projectContactMethods(methods, true)).toEqual([
+  it("reveals only the unlocked contact methods", () => {
+    expect(projectContactMethods(methods, ["c1"])).toEqual([
       {
         id: "c1",
         kind: "email",
         value: "secret@example.com",
         isPreferred: true,
       },
-      {
-        id: "c2",
-        kind: "phone",
-        value: "+493011111",
-        isPreferred: false,
-      },
     ]);
   });
 
   it("selects the preferred contact method", () => {
     expect(selectPreferredContact(methods)?.id).toBe("c1");
+  });
+
+  it("breaks ties deterministically by id", () => {
+    expect(
+      selectPreferredContact([
+        { id: "b", kind: "email", value: "b@example.com", isPreferred: true },
+        { id: "a", kind: "phone", value: "+49111", isPreferred: true },
+      ])?.id,
+    ).toBe("a");
   });
 });
