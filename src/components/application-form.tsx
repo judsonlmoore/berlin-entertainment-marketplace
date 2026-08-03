@@ -72,7 +72,7 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
           name="name"
           required
           defaultValue={defaultName}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
 
@@ -99,7 +99,7 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
           name="berlinConnection"
           required
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
 
@@ -108,7 +108,7 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
         <textarea
           name="applicationNote"
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
 
@@ -119,7 +119,7 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
           type="email"
           required
           defaultValue={defaultEmail}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
 

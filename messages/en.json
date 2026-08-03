@@ -45,6 +45,9 @@
     "terms": "Terms",
     "primary": "Primary",
     "mobile": "Mobile",
+    "menu": "Navigation menu",
+    "openMenu": "Open navigation menu",
+    "closeMenu": "Close navigation menu",
     "switchLocale": "Switch language to {locale}"
   },
   "ui": {

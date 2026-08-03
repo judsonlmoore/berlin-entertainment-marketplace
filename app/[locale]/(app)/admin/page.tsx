@@ -94,7 +94,7 @@ export default async function AdminPage({ params }: Props) {
       {ops ? (
         <div className="grid gap-6">
           <div>
-            <h2 className="display text-2xl">{t("opsTitle")}</h2>
+            <h2 className="page-title text-xl">{t("opsTitle")}</h2>
             <p className="mt-2 text-sm text-[var(--text-muted)]">
               {t("opsBody")}
             </p>
@@ -247,7 +247,7 @@ export default async function AdminPage({ params }: Props) {
 
       {can(actor, "admin.review_accounts") ? (
         <div>
-          <h2 className="display text-2xl">{t("accountsTitle")}</h2>
+          <h2 className="page-title text-xl">{t("accountsTitle")}</h2>
           <div className="mt-4 grid gap-4">
             {accounts.length === 0 ? (
               <p className="panel p-6">{t("empty")}</p>
@@ -279,7 +279,7 @@ export default async function AdminPage({ params }: Props) {
 
       {can(actor, "admin.review_profiles") ? (
         <div>
-          <h2 className="display text-2xl">{t("profilesTitle")}</h2>
+          <h2 className="page-title text-xl">{t("profilesTitle")}</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
             {t("profilesBody")}
           </p>

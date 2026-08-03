@@ -78,7 +78,7 @@ export function DirectRequestForm({
         <select
           name="venueId"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
           defaultValue={venues[0]?.id}
         >
           {venues.map((venue) => (
@@ -95,7 +95,7 @@ export function DirectRequestForm({
             name="startsAt"
             type="datetime-local"
             required
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -104,7 +104,7 @@ export function DirectRequestForm({
             name="endsAt"
             type="datetime-local"
             required
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -113,7 +113,7 @@ export function DirectRequestForm({
         <input
           name="formatCategory"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -123,7 +123,7 @@ export function DirectRequestForm({
           type="number"
           min={0}
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -131,7 +131,7 @@ export function DirectRequestForm({
         <textarea
           name="notes"
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (

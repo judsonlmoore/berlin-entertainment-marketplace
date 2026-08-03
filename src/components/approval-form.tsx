@@ -63,7 +63,7 @@ export function ApprovalForm({
         <select
           name="nextState"
           defaultValue={currentState === "applied" ? "approved" : "suspended"}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         >
           {APPROVAL_STATES.filter((state) => state !== currentState).map(
             (state) => (
@@ -79,7 +79,7 @@ export function ApprovalForm({
         <input
           name="reason"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (

@@ -106,7 +106,7 @@ export function VenueSpacesEditor({ locale, venueId, spaces }: Props) {
           required
           defaultValue={editing?.name ?? ""}
           placeholder={t("venueSpaceName")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <input
           name="capacity"
@@ -115,20 +115,20 @@ export function VenueSpacesEditor({ locale, venueId, spaces }: Props) {
           required
           defaultValue={editing?.capacity ?? 50}
           placeholder={t("capacity")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <input
           name="stageDimensions"
           defaultValue={editing?.stageDimensions ?? ""}
           placeholder={t("venueSpaceStageDimensions")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <textarea
           name="accessibilityNotes"
           rows={2}
           defaultValue={editing?.accessibilityNotes ?? ""}
           placeholder={t("accessibilityNotes")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <div className="flex flex-wrap gap-2">
           <Button

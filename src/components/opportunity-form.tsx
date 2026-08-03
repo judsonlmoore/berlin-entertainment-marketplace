@@ -81,7 +81,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
         <input
           name="title"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -91,7 +91,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
             name="startsAt"
             type="datetime-local"
             required
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -100,7 +100,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
             name="endsAt"
             type="datetime-local"
             required
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -109,14 +109,14 @@ export function OpportunityForm({ locale, venueId }: Props) {
         <input
           name="formatCategory"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("expectedAudience")}</span>
         <input
           name="expectedAudience"
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -126,7 +126,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
             name="budgetMinEur"
             type="number"
             min={0}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -135,7 +135,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
             name="budgetMaxEur"
             type="number"
             min={0}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -146,7 +146,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
             name="actSizeMin"
             type="number"
             min={1}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -155,7 +155,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
             name="actSizeMax"
             type="number"
             min={1}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -164,7 +164,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
         <input
           name="applicationDeadline"
           type="datetime-local"
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -172,7 +172,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
         <textarea
           name="productionContext"
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -180,7 +180,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
         <textarea
           name="notes"
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (

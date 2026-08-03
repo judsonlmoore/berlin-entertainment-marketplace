@@ -84,7 +84,7 @@ export default async function ProfilePage({ params }: Props) {
   const entertainerPanel = showEntertainer ? (
     <div className="panel p-6">
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h2 className="display text-2xl">{t("entertainerTitle")}</h2>
+        <h2 className="page-title text-xl">{t("entertainerTitle")}</h2>
         {entertainerProfile ? (
           <StatusLabel>
             {publication(entertainerProfile.publicationState as "draft")}
@@ -172,7 +172,7 @@ export default async function ProfilePage({ params }: Props) {
   const venuePanel = showVenue ? (
     <div className="panel grid gap-6 p-6">
       <div>
-        <h2 className="display text-2xl">{t("venuesTitle")}</h2>
+        <h2 className="page-title text-xl">{t("venuesTitle")}</h2>
         <p className="mt-2 text-sm text-[var(--text-muted)]">
           {t("venuesBody")}
         </p>

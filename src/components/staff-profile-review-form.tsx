@@ -70,7 +70,7 @@ export function StaffProfileReviewForm({
           defaultValue={
             currentState === "submitted" ? "approved" : "changes_requested"
           }
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         >
           {PROFILE_PUBLICATION_STATES.filter(
             (state) => state !== currentState,
@@ -86,7 +86,7 @@ export function StaffProfileReviewForm({
         <input
           name="reason"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (

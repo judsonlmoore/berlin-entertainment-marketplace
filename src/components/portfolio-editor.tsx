@@ -191,12 +191,12 @@ export function PortfolioEditor({
           type="url"
           required
           placeholder="https://"
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <input
           name="linkCaption"
           placeholder={t("portfolioCaption")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <Button
           type="submit"
@@ -244,12 +244,12 @@ export function PortfolioEditor({
           type="url"
           required
           placeholder="https://www.youtube.com/watch?v="
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <input
           name="youtubeCaption"
           placeholder={t("portfolioCaption")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <Button
           type="submit"
@@ -298,17 +298,17 @@ export function PortfolioEditor({
           type="file"
           accept="image/jpeg,image/png,image/webp"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <input
           name="imageCaption"
           placeholder={t("portfolioCaption")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <input
           name="imageAlt"
           placeholder={t("portfolioAlt")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
+          className="field text-sm"
         />
         <Button
           type="submit"

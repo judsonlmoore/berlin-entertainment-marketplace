@@ -101,7 +101,7 @@ export default async function VenuesDiscoveryPage({
                 />
                 <div className="grid gap-2 p-4">
                   <StatusLabel tone="info">{venue.venueType}</StatusLabel>
-                  <h2 className="display text-2xl leading-tight">
+                  <h2 className="page-title text-xl leading-tight">
                     {venue.name}
                   </h2>
                   <p className="text-sm text-[var(--text-muted)]">

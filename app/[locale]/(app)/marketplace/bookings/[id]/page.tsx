@@ -57,7 +57,7 @@ export default async function BookingDetailPage({ params }: Props) {
   if (!access.ok || !can(access.actor, "booking.view")) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("title")}</h1>
+        <h1 className="page-title text-3xl">{t("title")}</h1>
         <p className="mt-4">{market("denied")}</p>
       </section>
     );
@@ -178,7 +178,7 @@ export default async function BookingDetailPage({ params }: Props) {
           <Avatar name={booking.actName} size={48} />
           <Avatar name={booking.venueName} size={48} />
         </div>
-        <h1 className="display mt-3 text-4xl">
+        <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">
           {booking.actName} · {booking.venueName}
         </h1>
         <p className="mt-2 text-[var(--text-muted)]">

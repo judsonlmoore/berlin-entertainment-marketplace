@@ -32,7 +32,7 @@ export default async function DirectRequestsPage({ params }: Props) {
   if (!access.ok) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("title")}</h1>
+        <h1 className="page-title text-3xl">{t("title")}</h1>
         <p className="mt-4">{market("denied")}</p>
       </section>
     );
@@ -63,13 +63,13 @@ export default async function DirectRequestsPage({ params }: Props) {
         <p className="text-sm">
           <Link href="/marketplace">{market("back")}</Link>
         </p>
-        <h1 className="display mt-3 text-4xl">{t("title")}</h1>
+        <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">{t("title")}</h1>
         <p className="mt-3 text-[var(--muted)]">{t("body")}</p>
       </div>
 
       {can(access.actor, "direct_request.respond") ? (
         <div className="panel grid gap-3 p-6">
-          <h2 className="display text-2xl">{t("incomingTitle")}</h2>
+          <h2 className="page-title text-xl">{t("incomingTitle")}</h2>
           {incoming.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">{t("emptyIncoming")}</p>
           ) : null}
@@ -114,7 +114,7 @@ export default async function DirectRequestsPage({ params }: Props) {
 
       {operableVenueIds.length > 0 ? (
         <div className="panel grid gap-3 p-6">
-          <h2 className="display text-2xl">{t("outgoingTitle")}</h2>
+          <h2 className="page-title text-xl">{t("outgoingTitle")}</h2>
           {outgoing.length === 0 ? (
             <p className="text-sm text-[var(--muted)]">{t("emptyOutgoing")}</p>
           ) : null}

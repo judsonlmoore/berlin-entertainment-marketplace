@@ -85,7 +85,7 @@ export function ApplyForm({
           required={!initial?.isDraft}
           rows={4}
           defaultValue={initial?.message}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
@@ -97,7 +97,7 @@ export function ApplyForm({
             min={0}
             required={!initial?.isDraft}
             defaultValue={initial?.quoteMinEur ?? undefined}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -108,7 +108,7 @@ export function ApplyForm({
             min={0}
             required={!initial?.isDraft}
             defaultValue={initial?.quoteMaxEur ?? undefined}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -221,7 +221,7 @@ export function RequestClarificationForm({
           name="body"
           required
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (
@@ -289,7 +289,7 @@ export function ReplyClarificationForm({
           name="body"
           required
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (

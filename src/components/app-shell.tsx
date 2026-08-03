@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/src/i18n/navigation";
 import { LocaleSwitcher } from "@/src/components/locale-switcher";
@@ -29,7 +37,7 @@ function isActive(pathname: string, match: string) {
 }
 
 type Props = {
-  children: React.ReactNode;
+  children: ReactNode;
   userName: string;
   approvalLabel: string;
   isStaff: boolean;
@@ -53,6 +61,106 @@ function breadcrumbKeyFromPath(
   return "marketplace";
 }
 
+function MenuIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="size-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
+      {open ? (
+        <>
+          <path d="M6 6l12 12" />
+          <path d="M18 6L6 18" />
+        </>
+      ) : (
+        <>
+          <path d="M4 7h16" />
+          <path d="M4 12h16" />
+          <path d="M4 17h16" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function RailNav({
+  items,
+  pathname,
+  userName,
+  approvalLabel,
+  navId,
+  onNavigate,
+}: {
+  items: NavItem[];
+  pathname: string;
+  userName: string;
+  approvalLabel: string;
+  navId?: string;
+  onNavigate?: () => void;
+}) {
+  const t = useTranslations("nav");
+
+  return (
+    <>
+      <Link
+        href="/marketplace"
+        className="display text-3xl font-medium no-underline"
+        onClick={onNavigate}
+      >
+        Salon
+      </Link>
+      <p className="mt-2 text-xs tracking-[0.14em] text-[var(--rail-muted)] uppercase">
+        Berlin
+      </p>
+      <nav
+        id={navId}
+        aria-label={t("primary")}
+        className="mt-10 grid flex-1 content-start gap-1 overflow-y-auto"
+      >
+        {items.map((item) => {
+          const active = isActive(pathname, item.match);
+          return (
+            <Link
+              key={`${item.labelKey}-${item.href}`}
+              href={item.href}
+              onClick={onNavigate}
+              className={`min-h-11 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium no-underline ${
+                active
+                  ? "bg-[var(--rail-active)] text-white"
+                  : "text-[var(--rail-muted)] hover:text-white"
+              }`}
+            >
+              {t(item.labelKey)}
+            </Link>
+          );
+        })}
+      </nav>
+      <div className="mt-auto border-t border-white/10 pt-4">
+        <div className="flex items-center gap-3">
+          <Avatar name={userName} size={40} />
+          <div className="min-w-0">
+            <p className="truncate text-sm text-white">{userName}</p>
+            <p className="text-xs text-[var(--rail-muted)]">{approvalLabel}</p>
+          </div>
+        </div>
+        <form action={signOutAction} className="mt-3">
+          <PendingSubmitButton
+            variant="ghost"
+            className="w-full justify-start text-[var(--rail-muted)]"
+          >
+            {t("signOut")}
+          </PendingSubmitButton>
+        </form>
+      </div>
+    </>
+  );
+}
+
 export function AppShell({
   children,
   userName,
@@ -65,6 +173,13 @@ export function AppShell({
   const t = useTranslations("nav");
   const pathname = usePathname();
   const breadcrumbKey = breadcrumbKeyFromPath(pathname);
+  const drawerTitleId = useId();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
 
   const discoverItems: NavItem[] = [];
   if (canDiscoverEntertainers && canDiscoverVenues) {
@@ -145,65 +260,127 @@ export function AppShell({
     .filter((item) => bottomKeys.has(item.labelKey))
     .slice(0, 5);
 
+  useEffect(() => {
+    closeMenu();
+  }, [pathname, closeMenu]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    const firstLink = drawerRef.current?.querySelector<HTMLElement>(
+      "a, button",
+    );
+    firstLink?.focus();
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [menuOpen, closeMenu]);
+
   return (
     <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="hidden bg-[var(--rail)] text-[var(--primary-foreground)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:px-5 lg:py-6">
-        <Link href="/marketplace" className="display text-3xl no-underline">
-          Salon
-        </Link>
-        <p className="mt-2 text-xs tracking-[0.14em] text-[var(--rail-muted)] uppercase">
-          Berlin
-        </p>
-        <nav aria-label={t("primary")} className="mt-10 grid gap-1">
-          {items.map((item) => {
-            const active = isActive(pathname, item.match);
-            return (
-              <Link
-                key={`${item.labelKey}-${item.href}`}
-                href={item.href}
-                className={`min-h-11 px-3 py-2.5 text-sm no-underline ${
-                  active
-                    ? "bg-[var(--rail-active)] text-white"
-                    : "text-[var(--rail-muted)] hover:text-white"
-                }`}
-              >
-                {t(item.labelKey)}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="mt-auto border-t border-white/10 pt-4">
-          <div className="flex items-center gap-3">
-            <Avatar name={userName} size={40} />
-            <div className="min-w-0">
-              <p className="truncate text-sm text-white">{userName}</p>
-              <p className="text-xs text-[var(--rail-muted)]">
-                {approvalLabel}
-              </p>
-            </div>
-          </div>
-          <form action={signOutAction} className="mt-3">
-            <PendingSubmitButton
-              variant="ghost"
-              className="w-full justify-start text-[var(--rail-muted)]"
-            >
-              {t("signOut")}
-            </PendingSubmitButton>
-          </form>
-        </div>
+        <RailNav
+          items={items}
+          pathname={pathname}
+          userName={userName}
+          approvalLabel={approvalLabel}
+        />
       </aside>
+
+      <div
+        className={`fixed inset-0 z-40 lg:hidden ${
+          menuOpen ? "pointer-events-auto" : "pointer-events-none"
+        }`}
+        aria-hidden={!menuOpen}
+      >
+        <button
+          type="button"
+          tabIndex={menuOpen ? 0 : -1}
+          className={`absolute inset-0 bg-[var(--rail)]/50 transition-opacity duration-200 motion-reduce:transition-none ${
+            menuOpen ? "opacity-100" : "opacity-0"
+          }`}
+          aria-label={t("closeMenu")}
+          onClick={() => {
+            closeMenu();
+            menuButtonRef.current?.focus();
+          }}
+        />
+        <div
+          ref={drawerRef}
+          id="mobile-nav-drawer"
+          role="dialog"
+          aria-modal={menuOpen}
+          aria-labelledby={drawerTitleId}
+          inert={menuOpen ? undefined : true}
+          className={`absolute inset-y-0 left-0 flex w-[min(20rem,88vw)] flex-col bg-[var(--rail)] px-5 py-6 text-[var(--primary-foreground)] shadow-xl transition-transform duration-200 ease-out motion-reduce:transition-none ${
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <p id={drawerTitleId} className="sr-only">
+              {t("menu")}
+            </p>
+            <button
+              type="button"
+              tabIndex={menuOpen ? 0 : -1}
+              onClick={() => {
+                closeMenu();
+                menuButtonRef.current?.focus();
+              }}
+              className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] text-white"
+              aria-label={t("closeMenu")}
+            >
+              <MenuIcon open />
+            </button>
+          </div>
+          <RailNav
+            items={items}
+            pathname={pathname}
+            userName={userName}
+            approvalLabel={approvalLabel}
+            onNavigate={closeMenu}
+          />
+        </div>
+      </div>
 
       <div className="flex min-h-screen flex-col pb-20 lg:pb-0">
         <header className="sticky top-0 z-20 border-b border-[var(--rule)] bg-[var(--surface)]">
           <div className="flex min-h-[72px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
-            <p className="text-xs tracking-[0.14em] text-[var(--text-muted)] uppercase">
-              {`Salon / ${t(breadcrumbKey)}`}
-            </p>
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                ref={menuButtonRef}
+                type="button"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] text-[var(--ink)] lg:hidden"
+                aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
+                aria-expanded={menuOpen}
+                aria-controls="mobile-nav-drawer"
+                onClick={toggleMenu}
+              >
+                <MenuIcon open={menuOpen} />
+              </button>
+              <p className="truncate text-xs tracking-[0.14em] text-[var(--text-muted)] uppercase">
+                {`Salon / ${t(breadcrumbKey)}`}
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <LocaleSwitcher className="border-[var(--rule)]" />
               <Link
                 href="/profile"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center border border-[var(--rule)] no-underline lg:hidden"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] no-underline lg:hidden"
                 aria-label={t("profile")}
               >
                 <Avatar name={userName} size={28} />
@@ -227,7 +404,7 @@ export function AppShell({
                 <li key={`${item.labelKey}-${item.href}`}>
                   <Link
                     href={item.href}
-                    className={`flex min-h-14 flex-col items-center justify-center px-1 text-center text-[0.65rem] no-underline ${
+                    className={`flex min-h-14 flex-col items-center justify-center px-1 text-center text-[0.65rem] font-medium no-underline ${
                       active
                         ? "text-[var(--primary)]"
                         : "text-[var(--text-muted)]"

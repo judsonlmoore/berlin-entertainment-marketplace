@@ -105,13 +105,13 @@ export function DiscoveryFilterBar({
         <div className="flex flex-wrap gap-2">
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center bg-[var(--primary)] px-4 text-sm text-[var(--primary-foreground)]"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)]"
           >
             {t("search")}
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center border border-[var(--rule)] px-4 text-sm lg:hidden"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-4 text-sm font-semibold lg:hidden"
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
           >
@@ -286,7 +286,7 @@ export function DiscoveryFilterBar({
           )}
           <button
             type="submit"
-            className="inline-flex min-h-11 items-center justify-center bg-[var(--primary)] px-4 text-sm text-[var(--primary-foreground)] sm:col-span-2 lg:col-span-4"
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] sm:col-span-2 lg:col-span-4"
           >
             {t("applyFilters")}
           </button>
@@ -355,7 +355,7 @@ export function DiscoveryPagination({
         {page < pageCount ? (
           <Link
             href={hrefFor(page + 1)}
-            className="inline-flex min-h-11 items-center bg-[var(--primary)] px-4 text-sm text-[var(--primary-foreground)] no-underline"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
           >
             {t("nextPage")}
           </Link>

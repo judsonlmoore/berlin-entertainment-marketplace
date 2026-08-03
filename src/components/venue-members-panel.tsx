@@ -47,7 +47,7 @@ export function VenueMembersPanel({
 
   return (
     <section className="grid gap-4">
-      <h2 className="display text-2xl">{t("title")}</h2>
+      <h2 className="page-title text-xl">{t("title")}</h2>
 
       {pendingInvite ? (
         <Button
@@ -154,7 +154,7 @@ export function VenueMembersPanel({
               name="email"
               type="email"
               required
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -162,7 +162,7 @@ export function VenueMembersPanel({
             <select
               name="role"
               defaultValue="member"
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             >
               <option value="member">{t("roleMember")}</option>
               <option value="owner">{t("roleOwner")}</option>

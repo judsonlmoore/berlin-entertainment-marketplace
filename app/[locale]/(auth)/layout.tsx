@@ -25,10 +25,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AuthLayout({ children }: Props) {
   const session = await auth();
+  const signedIn = Boolean(session?.user);
+  const needsApplication =
+    signedIn &&
+    !session?.user?.isPlatformStaff &&
+    session?.user?.approvalState !== "approved";
 
   return (
     <div className="min-h-screen bg-[var(--canvas)]">
-      <PublicHeader signedIn={Boolean(session?.user)} showApplyCta />
+      <PublicHeader signedIn={signedIn} showApplyCta={needsApplication} />
       <main className="shell py-8 sm:py-12">{children}</main>
     </div>
   );

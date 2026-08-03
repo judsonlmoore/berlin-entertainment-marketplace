@@ -20,7 +20,7 @@ export function DateTile({
 
   return (
     <div
-      className={`flex size-16 shrink-0 flex-col items-center justify-center border border-[var(--rule)] bg-[var(--surface)] ${className}`}
+      className={`flex size-16 shrink-0 flex-col items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] ${className}`}
     >
       <span className="eyebrow text-[0.6rem]">{month}</span>
       <span className="display tabular text-2xl leading-none">{day}</span>
@@ -43,11 +43,13 @@ export function PageHeader({
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div>
         {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-        <h1 className="display mt-2 text-[clamp(2rem,4vw,3.5rem)] leading-tight">
+        <h1 className="page-title mt-2 text-[clamp(1.75rem,2.5vw,2.25rem)]">
           {title}
         </h1>
         {body ? (
-          <p className="mt-3 max-w-2xl text-[var(--text-muted)]">{body}</p>
+          <p className="mt-3 max-w-2xl text-sm font-medium text-[var(--text-muted)] sm:text-base">
+            {body}
+          </p>
         ) : null}
       </div>
       {action}

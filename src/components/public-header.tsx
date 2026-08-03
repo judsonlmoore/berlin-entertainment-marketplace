@@ -6,20 +6,24 @@ import { signOutAction } from "@/src/actions/auth";
 
 type Props = {
   signedIn: boolean;
+  /** Only relevant when signed in — apply requires an account. */
   showApplyCta?: boolean;
 };
 
-export async function PublicHeader({ signedIn, showApplyCta = true }: Props) {
+export async function PublicHeader({
+  signedIn,
+  showApplyCta = true,
+}: Props) {
   const t = await getTranslations("nav");
   const brand = await getTranslations("brand");
 
   return (
-    <header className="border-b border-[var(--rule)] bg-[var(--canvas)]">
+    <header className="border-b border-[var(--rule)] bg-[var(--surface)]">
       <div className="shell flex min-h-[72px] items-center justify-between gap-4 py-4">
         <Link href="/" className="flex items-center gap-2 no-underline">
           <span
             aria-hidden="true"
-            className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--ink)] text-sm text-[var(--primary-foreground)]"
+            className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--rail)] text-sm font-semibold text-[var(--primary-foreground)]"
           >
             S
           </span>
@@ -39,7 +43,7 @@ export async function PublicHeader({ signedIn, showApplyCta = true }: Props) {
             <>
               <Link
                 href="/marketplace"
-                className="min-h-11 px-3 py-2 text-sm no-underline"
+                className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] px-3 py-2 text-sm font-semibold no-underline"
               >
                 {t("marketplace")}
               </Link>
@@ -48,23 +52,23 @@ export async function PublicHeader({ signedIn, showApplyCta = true }: Props) {
                   {t("signOut")}
                 </PendingSubmitButton>
               </form>
+              {showApplyCta ? (
+                <Link
+                  href="/apply"
+                  className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
+                >
+                  {t("applyAccess")}
+                </Link>
+              ) : null}
             </>
           ) : (
             <Link
               href="/sign-in"
-              className="min-h-11 px-3 py-2 text-sm no-underline"
+              className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
             >
               {t("signIn")}
             </Link>
           )}
-          {showApplyCta ? (
-            <Link
-              href="/apply"
-              className="inline-flex min-h-11 items-center bg-[var(--primary)] px-4 py-2.5 text-sm text-[var(--primary-foreground)] no-underline"
-            >
-              {t("applyAccess")}
-            </Link>
-          ) : null}
         </nav>
       </div>
     </header>

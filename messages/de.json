@@ -45,6 +45,9 @@
     "terms": "Nutzungsbedingungen",
     "primary": "Hauptnavigation",
     "mobile": "Mobile Navigation",
+    "menu": "Navigationsmenü",
+    "openMenu": "Navigationsmenü öffnen",
+    "closeMenu": "Navigationsmenü schließen",
     "switchLocale": "Sprache wechseln zu {locale}"
   },
   "ui": {

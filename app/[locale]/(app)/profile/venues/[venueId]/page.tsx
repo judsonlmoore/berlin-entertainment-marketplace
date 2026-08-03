@@ -70,7 +70,7 @@ export default async function VenueDetailPage({ params }: Props) {
         <p className="text-sm">
           <Link href="/profile">{t("backToProfiles")}</Link>
         </p>
-        <h1 className="display mt-3 text-4xl">{venue.name}</h1>
+        <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">{venue.name}</h1>
         <p className="mt-2 text-[var(--muted)]">{venue.district}</p>
       </div>
 
@@ -132,7 +132,7 @@ export default async function VenueDetailPage({ params }: Props) {
       {canManageOpportunities ? (
         <div className="panel grid gap-6 p-6">
           <div>
-            <h2 className="display text-2xl">
+            <h2 className="page-title text-xl">
               {opportunitiesT("venueSectionTitle")}
             </h2>
             <ul className="mt-3 grid gap-2">

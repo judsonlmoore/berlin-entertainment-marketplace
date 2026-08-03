@@ -20,7 +20,7 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
   if (!access.ok) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("venuesTitle")}</h1>
+        <h1 className="page-title text-3xl">{t("venuesTitle")}</h1>
         <p className="mt-4">{t("denied")}</p>
       </section>
     );
@@ -29,7 +29,7 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
   if (!(await canViewVenueDiscoveryDetail(access.actor, id))) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("venuesTitle")}</h1>
+        <h1 className="page-title text-3xl">{t("venuesTitle")}</h1>
         <p className="mt-4">{t("roleDeniedVenues")}</p>
       </section>
     );
@@ -53,7 +53,7 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
       <p className="text-sm">
         <Link href="/marketplace/venues">{t("backToVenues")}</Link>
       </p>
-      <h1 className="display mt-3 text-4xl">{venue.name}</h1>
+      <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">{venue.name}</h1>
       <p className="mt-2 text-[var(--muted)]">
         {venue.district} · {venue.venueType}
       </p>

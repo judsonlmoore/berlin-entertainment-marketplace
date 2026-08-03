@@ -19,7 +19,7 @@ export default async function OnboardingPage({ params }: Props) {
   if (!session?.user) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("title")}</h1>
+        <h1 className="page-title text-3xl">{t("title")}</h1>
         <p className="mt-4">
           <Link href="/sign-in">{nav("signIn")}</Link>
         </p>
@@ -48,7 +48,7 @@ export default async function OnboardingPage({ params }: Props) {
 
   return (
     <section className="mx-auto max-w-xl">
-      <h1 className="display text-4xl">{t("title")}</h1>
+      <h1 className="page-title text-3xl">{t("title")}</h1>
       <div className="panel mt-8 grid gap-3 p-6">
         {account ? (
           <>

@@ -45,8 +45,8 @@ export default async function MarketplacePage({ params }: Props) {
   if (!access.ok) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("title")}</h1>
-        <p className="mt-4">{t("denied")}</p>
+        <h1 className="page-title text-3xl">{t("title")}</h1>
+        <p className="mt-4 font-medium text-[var(--text-muted)]">{t("denied")}</p>
       </section>
     );
   }
@@ -100,15 +100,17 @@ export default async function MarketplacePage({ params }: Props) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Eyebrow>{dateEyebrow}</Eyebrow>
-          <h1 className="display mt-2 text-[clamp(2.25rem,4vw,4rem)] leading-tight">
+          <h1 className="page-title mt-2 text-[clamp(1.75rem,2.5vw,2.25rem)]">
             {t("greeting", { name })}
           </h1>
-          <p className="mt-3 max-w-2xl text-[var(--text-muted)]">{t("body")}</p>
+          <p className="mt-3 max-w-2xl text-sm font-medium text-[var(--text-muted)] sm:text-base">
+            {t("body")}
+          </p>
         </div>
         {metrics.canPostOpportunity && metrics.firstVenueId ? (
           <Link
             href={`/profile/venues/${metrics.firstVenueId}`}
-            className="inline-flex min-h-11 items-center bg-[var(--primary)] px-4 text-sm text-[var(--primary-foreground)] no-underline"
+            className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
           >
             {t("postOpportunity")}
           </Link>
@@ -141,10 +143,10 @@ export default async function MarketplacePage({ params }: Props) {
           ] as const
         ).map(([label, value, hint]) => (
           <div key={label} className="panel p-4">
-            <p className="text-xs tracking-[0.12em] text-[var(--text-muted)] uppercase">
+            <p className="text-xs font-medium tracking-[0.12em] text-[var(--text-muted)] uppercase">
               {label}
             </p>
-            <p className="display tabular mt-2 text-4xl leading-none">
+            <p className="page-title tabular mt-2 text-3xl leading-none sm:text-4xl">
               {value}
             </p>
             <p className="mt-2 text-sm text-[var(--text-muted)]">{hint}</p>
@@ -154,7 +156,7 @@ export default async function MarketplacePage({ params }: Props) {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="panel p-5">
-          <h2 className="display text-2xl">{t("recentApplications")}</h2>
+          <h2 className="page-title text-xl">{t("recentApplications")}</h2>
           {recentApps.length === 0 ? (
             <p className="mt-3 text-sm text-[var(--text-muted)]">
               {t("recentApplicationsEmpty")}
@@ -177,7 +179,7 @@ export default async function MarketplacePage({ params }: Props) {
                   </div>
                   <Link
                     href={`/marketplace/opportunities/${app.opportunityId}`}
-                    className="inline-flex min-h-11 items-center border border-[var(--rule)] px-3 text-sm no-underline"
+                    className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-3 text-sm font-semibold no-underline"
                   >
                     {t("reviewApplication")}
                   </Link>
@@ -188,7 +190,7 @@ export default async function MarketplacePage({ params }: Props) {
         </div>
 
         <div className="panel p-5">
-          <h2 className="display text-2xl">{t("nextBooking")}</h2>
+          <h2 className="page-title text-xl">{t("nextBooking")}</h2>
           {!nextBooking ? (
             <p className="mt-3 text-sm text-[var(--text-muted)]">
               {t("nextBookingEmpty")}
@@ -221,7 +223,7 @@ export default async function MarketplacePage({ params }: Props) {
       {canDiscoverEntertainers ? (
         <div>
           <div className="flex items-end justify-between gap-3">
-            <h2 className="display text-2xl">{t("exploreActs")}</h2>
+            <h2 className="page-title text-xl">{t("exploreActs")}</h2>
             <Link
               href="/marketplace/entertainers"
               className="text-sm text-[var(--primary)]"
@@ -243,8 +245,8 @@ export default async function MarketplacePage({ params }: Props) {
                       <Avatar name={act.actName} size={56} />
                     </div>
                     <div className="p-4">
-                      <p className="display text-xl">{act.actName}</p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      <p className="page-title text-lg">{act.actName}</p>
+                      <p className="mt-1 text-sm font-medium text-[var(--text-muted)]">
                         {act.category} · {act.berlinBase}
                       </p>
                     </div>
@@ -259,7 +261,7 @@ export default async function MarketplacePage({ params }: Props) {
       {canDiscoverVenues ? (
         <div>
           <div className="flex items-end justify-between gap-3">
-            <h2 className="display text-2xl">{t("exploreVenues")}</h2>
+            <h2 className="page-title text-xl">{t("exploreVenues")}</h2>
             <Link
               href="/marketplace/venues"
               className="text-sm text-[var(--primary)]"
@@ -281,8 +283,8 @@ export default async function MarketplacePage({ params }: Props) {
                       <Avatar name={venue.name} size={56} />
                     </div>
                     <div className="p-4">
-                      <p className="display text-xl">{venue.name}</p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                      <p className="page-title text-lg">{venue.name}</p>
+                      <p className="mt-1 text-sm font-medium text-[var(--text-muted)]">
                         {venue.district}
                         {venue.capacity ? ` · ${venue.capacity}` : ""}
                       </p>

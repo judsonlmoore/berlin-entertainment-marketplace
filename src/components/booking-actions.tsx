@@ -110,7 +110,7 @@ export function CancelBookingForm({
           name="reason"
           required
           rows={2}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (
@@ -280,7 +280,7 @@ export function DepositStatusForm({
         <select
           name="status"
           defaultValue={currentStatus}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         >
           <option value="not_required">{t("depositNotRequired")}</option>
           <option value="pending">{t("depositPending")}</option>
@@ -293,7 +293,7 @@ export function DepositStatusForm({
         <span>{t("depositNote")}</span>
         <input
           name="note"
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (

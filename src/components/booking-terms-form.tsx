@@ -81,7 +81,7 @@ export function BookingTermsForm({
             type="datetime-local"
             required
             defaultValue={defaults.startsAtLocal}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -91,7 +91,7 @@ export function BookingTermsForm({
             type="datetime-local"
             required
             defaultValue={defaults.endsAtLocal}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -103,7 +103,7 @@ export function BookingTermsForm({
           min={0}
           required
           defaultValue={defaults.feeEur}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -112,7 +112,7 @@ export function BookingTermsForm({
           name="performanceFormat"
           required
           defaultValue={defaults.performanceFormat}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -122,7 +122,7 @@ export function BookingTermsForm({
           required
           rows={3}
           defaultValue={t("cancellationDefault")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -132,7 +132,7 @@ export function BookingTermsForm({
           required
           rows={3}
           defaultValue={t("productionDefault")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -140,7 +140,7 @@ export function BookingTermsForm({
         <textarea
           name="depositTerms"
           rows={2}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (

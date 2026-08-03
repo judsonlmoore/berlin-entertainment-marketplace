@@ -42,7 +42,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
   if (!access.ok) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("listTitle")}</h1>
+        <h1 className="page-title text-3xl">{t("listTitle")}</h1>
         <p className="mt-4">{market("denied")}</p>
       </section>
     );
@@ -74,7 +74,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
   ) {
     return (
       <section className="mx-auto max-w-xl">
-        <h1 className="display text-4xl">{t("listTitle")}</h1>
+        <h1 className="page-title text-3xl">{t("listTitle")}</h1>
         <p className="mt-4">{market("roleDeniedVenues")}</p>
       </section>
     );
@@ -134,7 +134,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
         <Link href="/marketplace/opportunities">{t("backToList")}</Link>
       </p>
       <div>
-        <h1 className="display text-4xl">{opportunity.title}</h1>
+        <h1 className="page-title text-3xl">{opportunity.title}</h1>
         <p className="mt-2 text-[var(--muted)]">
           {opportunity.venueName} · {opportunity.district} · {opportunity.state}
         </p>
@@ -187,7 +187,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
             state={opportunity.state}
           />
           <div>
-            <h2 className="display text-2xl">{t("applicationsTitle")}</h2>
+            <h2 className="page-title text-xl">{t("applicationsTitle")}</h2>
             <ul className="mt-3 grid gap-3">
               {applications.length === 0 ? (
                 <li className="text-sm text-[var(--muted)]">

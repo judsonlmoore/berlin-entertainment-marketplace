@@ -129,7 +129,7 @@ export function EntertainerProfileForm({
             name="actName"
             required
             defaultValue={defaultValues?.actName}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -138,7 +138,7 @@ export function EntertainerProfileForm({
             name="category"
             required
             defaultValue={defaultValues?.category}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -146,7 +146,7 @@ export function EntertainerProfileForm({
           <input
             name="genres"
             defaultValue={defaultValues?.genres ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -156,7 +156,7 @@ export function EntertainerProfileForm({
             required
             rows={4}
             defaultValue={defaultValues?.description}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -168,7 +168,7 @@ export function EntertainerProfileForm({
               min={1}
               required
               defaultValue={defaultValues?.groupSize ?? 1}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -179,7 +179,7 @@ export function EntertainerProfileForm({
               min={1}
               required
               defaultValue={defaultValues?.durationMinutes ?? 60}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
         </div>
@@ -188,7 +188,7 @@ export function EntertainerProfileForm({
           <input
             name="performanceFormats"
             defaultValue={defaultValues?.performanceFormats ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -197,7 +197,7 @@ export function EntertainerProfileForm({
             name="berlinBase"
             required
             defaultValue={defaultValues?.berlinBase}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -208,7 +208,7 @@ export function EntertainerProfileForm({
             min={0}
             required
             defaultValue={defaultValues?.travelRadiusKm ?? 25}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -225,7 +225,7 @@ export function EntertainerProfileForm({
                   ? Math.round(defaultValues.priceMinCents / 100)
                   : 0
               }
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -241,7 +241,7 @@ export function EntertainerProfileForm({
                   ? Math.round(defaultValues.priceMaxCents / 100)
                   : 0
               }
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
         </div>
@@ -252,7 +252,7 @@ export function EntertainerProfileForm({
             required
             rows={3}
             defaultValue={defaultValues?.technicalRequirements}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -260,7 +260,7 @@ export function EntertainerProfileForm({
           <input
             name="languages"
             defaultValue={defaultValues?.languages ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -269,7 +269,7 @@ export function EntertainerProfileForm({
             name="accessibilityNotes"
             rows={2}
             defaultValue={defaultValues?.accessibilityNotes ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -278,7 +278,7 @@ export function EntertainerProfileForm({
             name="equipmentSupplied"
             rows={2}
             defaultValue={defaultValues?.equipmentSupplied ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -287,7 +287,7 @@ export function EntertainerProfileForm({
             name="websiteUrl"
             type="url"
             defaultValue={defaultValues?.websiteUrl ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <fieldset className="grid gap-2 border border-[var(--rule)] p-3">
@@ -298,7 +298,7 @@ export function EntertainerProfileForm({
               name="socialInstagram"
               type="url"
               defaultValue={social.instagram ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -307,7 +307,7 @@ export function EntertainerProfileForm({
               name="socialFacebook"
               type="url"
               defaultValue={social.facebook ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -316,7 +316,7 @@ export function EntertainerProfileForm({
               name="socialTiktok"
               type="url"
               defaultValue={social.tiktok ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -325,7 +325,7 @@ export function EntertainerProfileForm({
               name="socialSpotify"
               type="url"
               defaultValue={social.spotify ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -334,7 +334,7 @@ export function EntertainerProfileForm({
               name="socialSoundcloud"
               type="url"
               defaultValue={social.soundcloud ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
         </fieldset>
@@ -345,7 +345,7 @@ export function EntertainerProfileForm({
             type="email"
             required
             defaultValue={defaultContactEmail}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         {error ? (

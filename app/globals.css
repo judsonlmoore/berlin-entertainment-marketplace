@@ -1,23 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --canvas: #f4f1e9;
-  --surface: #fcfbf8;
-  --ink: #1c2823;
-  --primary: #2f664f;
-  --primary-foreground: #fcfbf8;
-  --terracotta: #c86549;
+  /* DESIGN.md — crisp cultural-ops */
+  --canvas: #f7f6f3;
+  --surface: #ffffff;
+  --ink: #141816;
+  --primary: #1f5a45;
+  --primary-foreground: #ffffff;
+  --terracotta: #b84a32;
   --blue-soft: #8ea9b7;
   --ochre-soft: #b99a59;
   --rose-soft: #b9786c;
-  --text-muted: #7b817d;
-  --rule: #d9d5cb;
+  --text-muted: #5c635f;
+  --rule: #e4e1da;
   --success-soft: #e3eee5;
   --warning-soft: #f3e8cf;
   --info-soft: #dee7ed;
-  --rail: #1c2823;
+  --danger: #a11f2c;
+  --rail: #121a17;
   --rail-muted: #9aa39e;
-  --rail-active: #2a3832;
+  --rail-active: #1e2a25;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--primary) 35%, transparent);
 
   /* Compatibility aliases used across existing pages */
   --background: var(--canvas);
@@ -43,49 +48,53 @@
   --font-display: var(--font-display);
 }
 
-* {
-  box-sizing: border-box;
-}
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
 
-html {
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
   html {
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
   }
 
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
-}
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  color: var(--ink);
-  background: var(--canvas);
-  font-family: var(--font-ui), system-ui, sans-serif;
-}
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--ink);
+    background: var(--canvas);
+    font-family: var(--font-ui), system-ui, sans-serif;
+    font-weight: 400;
+    line-height: 1.5;
+  }
 
-a {
-  color: inherit;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.18em;
-}
+  a {
+    color: inherit;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.18em;
+  }
 
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
 }
 
 .shell {
@@ -96,20 +105,29 @@ select:focus-visible {
 .panel {
   background: var(--surface);
   border: 1px solid var(--rule);
-  border-radius: 2px;
+  border-radius: var(--radius-md);
 }
 
+/* Brand / hero / monogram accents only — not every page H1 */
 .display {
   font-family: var(--font-display), Georgia, serif;
   letter-spacing: -0.03em;
-  font-weight: 400;
+  font-weight: 550;
+}
+
+/* Authenticated page titles and section heads */
+.page-title {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .eyebrow {
   color: var(--terracotta);
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
@@ -122,17 +140,40 @@ select:focus-visible {
   background: var(--surface);
   color: var(--ink);
   min-height: 44px;
-  padding: 0.625rem 0.75rem;
-  border-radius: 2px;
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-md);
   width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
 }
 
 .field:disabled {
   opacity: 0.6;
 }
 
+.field[aria-invalid="true"],
+.field-error {
+  border-color: var(--danger);
+}
+
 .label {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.35rem;
   font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.label .hint {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.form-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.25rem 0 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
 }

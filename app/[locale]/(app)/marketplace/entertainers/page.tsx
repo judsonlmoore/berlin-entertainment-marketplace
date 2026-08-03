@@ -134,7 +134,7 @@ export default async function EntertainersDiscoveryPage({
                 </Link>
                 <div className="grid flex-1 gap-2 p-4">
                   <StatusLabel tone="info">{act.category}</StatusLabel>
-                  <h2 className="display text-2xl leading-tight">
+                  <h2 className="page-title text-xl leading-tight">
                     <Link
                       href={`/marketplace/entertainers/${act.id}`}
                       className="no-underline"

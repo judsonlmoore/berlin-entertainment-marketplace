@@ -115,7 +115,7 @@ export default async function OpportunitiesPage({ params }: Props) {
                       </span>
                     ) : null}
                   </div>
-                  <h2 className="display mt-2 text-2xl leading-tight">
+                  <h2 className="page-title mt-2 text-xl leading-tight">
                     {row.title}
                   </h2>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">

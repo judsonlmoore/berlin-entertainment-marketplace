@@ -1,15 +1,16 @@
 import type { ReactNode } from "react";
-import { Instrument_Sans, Instrument_Serif } from "next/font/google";
+import { Fraunces, Outfit } from "next/font/google";
 import "./globals.css";
 
-const display = Instrument_Serif({
+const display = Fraunces({
   subsets: ["latin"],
-  weight: "400",
+  weight: ["500", "600"],
   variable: "--font-display",
 });
 
-const ui = Instrument_Sans({
+const ui = Outfit({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-ui",
 });
 

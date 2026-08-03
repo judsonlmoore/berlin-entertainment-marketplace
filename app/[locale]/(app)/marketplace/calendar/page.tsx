@@ -198,7 +198,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
         </button>
       </form>
 
-      <p className="display text-3xl">{monthLabel}</p>
+      <p className="page-title text-2xl">{monthLabel}</p>
 
       <div className="flex flex-wrap gap-2 text-xs">
         {(

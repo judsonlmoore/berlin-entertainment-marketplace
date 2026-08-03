@@ -11,10 +11,10 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClass: Record<Variant, string> = {
   primary:
-    "bg-[var(--primary)] text-[var(--primary-foreground)] border border-[var(--primary)]",
+    "rounded-[var(--radius-md)] bg-[var(--primary)] text-[var(--primary-foreground)] border border-[var(--primary)] font-semibold",
   secondary:
-    "bg-[var(--surface)] text-[var(--ink)] border border-[var(--rule)]",
-  ghost: "bg-transparent text-[var(--ink)] border border-transparent underline",
+    "rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--ink)] border border-[var(--rule)] font-semibold",
+  ghost: "rounded-[var(--radius-md)] bg-transparent text-[var(--ink)] border border-transparent underline font-medium",
 };
 
 export function Button({

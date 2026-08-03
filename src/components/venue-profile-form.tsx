@@ -159,7 +159,7 @@ export function VenueProfileForm({
             name="name"
             required
             defaultValue={defaultValues?.name}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -169,7 +169,7 @@ export function VenueProfileForm({
             required
             rows={3}
             defaultValue={defaultValues?.shortDescription}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -178,7 +178,7 @@ export function VenueProfileForm({
             name="addressLine1"
             required
             defaultValue={defaultValues?.addressLine1}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -186,7 +186,7 @@ export function VenueProfileForm({
           <input
             name="addressLine2"
             defaultValue={defaultValues?.addressLine2 ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -196,7 +196,7 @@ export function VenueProfileForm({
               name="district"
               required
               defaultValue={defaultValues?.district}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -205,7 +205,7 @@ export function VenueProfileForm({
               name="postalCode"
               required
               defaultValue={defaultValues?.postalCode}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
         </div>
@@ -215,7 +215,7 @@ export function VenueProfileForm({
             <input
               name="latitude"
               defaultValue={defaultValues?.latitude ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -223,7 +223,7 @@ export function VenueProfileForm({
             <input
               name="longitude"
               defaultValue={defaultValues?.longitude ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
         </div>
@@ -233,7 +233,7 @@ export function VenueProfileForm({
             name="venueType"
             required
             defaultValue={defaultValues?.venueType}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -243,7 +243,7 @@ export function VenueProfileForm({
             required
             rows={3}
             defaultValue={defaultValues?.audienceDescription}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -255,7 +255,7 @@ export function VenueProfileForm({
               min={1}
               required
               defaultValue={defaultValues?.capacity ?? 50}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -263,7 +263,7 @@ export function VenueProfileForm({
             <input
               name="capacityContext"
               defaultValue={defaultValues?.capacityContext ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
         </div>
@@ -275,7 +275,7 @@ export function VenueProfileForm({
               name="productionNotes"
               rows={2}
               defaultValue={defaultValues?.productionNotes ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <div className="grid gap-2 sm:grid-cols-2">
@@ -284,7 +284,7 @@ export function VenueProfileForm({
               <input
                 name="productionPa"
                 defaultValue={defaultValues?.productionPa ?? ""}
-                className="border border-[var(--line)] bg-transparent px-3 py-2"
+                className="field"
               />
             </label>
             <label className="grid gap-1 text-sm">
@@ -292,7 +292,7 @@ export function VenueProfileForm({
               <input
                 name="productionMixer"
                 defaultValue={defaultValues?.productionMixer ?? ""}
-                className="border border-[var(--line)] bg-transparent px-3 py-2"
+                className="field"
               />
             </label>
             <label className="grid gap-1 text-sm">
@@ -300,7 +300,7 @@ export function VenueProfileForm({
               <input
                 name="productionMics"
                 defaultValue={defaultValues?.productionMics ?? ""}
-                className="border border-[var(--line)] bg-transparent px-3 py-2"
+                className="field"
               />
             </label>
             <label className="grid gap-1 text-sm">
@@ -308,7 +308,7 @@ export function VenueProfileForm({
               <input
                 name="productionLighting"
                 defaultValue={defaultValues?.productionLighting ?? ""}
-                className="border border-[var(--line)] bg-transparent px-3 py-2"
+                className="field"
               />
             </label>
             <label className="grid gap-1 text-sm">
@@ -316,7 +316,7 @@ export function VenueProfileForm({
               <input
                 name="productionBackline"
                 defaultValue={defaultValues?.productionBackline ?? ""}
-                className="border border-[var(--line)] bg-transparent px-3 py-2"
+                className="field"
               />
             </label>
             <label className="grid gap-1 text-sm">
@@ -324,7 +324,7 @@ export function VenueProfileForm({
               <input
                 name="productionPower"
                 defaultValue={defaultValues?.productionPower ?? ""}
-                className="border border-[var(--line)] bg-transparent px-3 py-2"
+                className="field"
               />
             </label>
             <label className="grid gap-1 text-sm">
@@ -332,7 +332,7 @@ export function VenueProfileForm({
               <input
                 name="productionStage"
                 defaultValue={defaultValues?.productionStage ?? ""}
-                className="border border-[var(--line)] bg-transparent px-3 py-2"
+                className="field"
               />
             </label>
           </div>
@@ -343,7 +343,7 @@ export function VenueProfileForm({
             name="houseRules"
             rows={2}
             defaultValue={defaultValues?.houseRules ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -352,7 +352,7 @@ export function VenueProfileForm({
             name="loadInNotes"
             rows={2}
             defaultValue={defaultValues?.loadInNotes ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -361,7 +361,7 @@ export function VenueProfileForm({
             name="accessibilityNotes"
             rows={2}
             defaultValue={defaultValues?.accessibilityNotes ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -370,7 +370,7 @@ export function VenueProfileForm({
             name="websiteUrl"
             type="url"
             defaultValue={defaultValues?.websiteUrl ?? ""}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <fieldset className="grid gap-2 border border-[var(--rule)] p-3">
@@ -381,7 +381,7 @@ export function VenueProfileForm({
               name="socialInstagram"
               type="url"
               defaultValue={social.instagram ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -390,7 +390,7 @@ export function VenueProfileForm({
               name="socialFacebook"
               type="url"
               defaultValue={social.facebook ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
@@ -399,7 +399,7 @@ export function VenueProfileForm({
               name="socialTiktok"
               type="url"
               defaultValue={social.tiktok ?? ""}
-              className="border border-[var(--line)] bg-transparent px-3 py-2"
+              className="field"
             />
           </label>
         </fieldset>
@@ -410,7 +410,7 @@ export function VenueProfileForm({
             type="email"
             required
             defaultValue={defaultContactEmail}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         {error ? (
