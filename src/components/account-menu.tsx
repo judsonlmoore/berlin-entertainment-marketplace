@@ -33,6 +33,7 @@ function ChevronIcon({ open }: { open: boolean }) {
 
 type Props = {
   userName: string;
+  userImage?: string | null | undefined;
   approvalLabel: string;
   items: AccountNavItem[];
   /** Rail/drawer: open upward on dark chrome. Header: compact trigger, open downward. */
@@ -42,6 +43,7 @@ type Props = {
 
 export function AccountMenu({
   userName,
+  userImage,
   approvalLabel,
   items,
   variant = "rail",
@@ -118,7 +120,7 @@ export function AccountMenu({
               }`
         }
       >
-        <Avatar name={userName} size={isRail ? 40 : 28} />
+        <Avatar name={userName} src={userImage} size={isRail ? 40 : 28} />
         {isRail ? (
           <>
             <span className="min-w-0 flex-1">

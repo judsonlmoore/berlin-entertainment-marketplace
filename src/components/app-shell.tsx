@@ -37,6 +37,7 @@ function isActive(pathname: string, match: string) {
 type Props = {
   children: ReactNode;
   userName: string;
+  userImage?: string | null | undefined;
   approvalLabel: string;
   isStaff: boolean;
   isApproved: boolean;
@@ -91,6 +92,7 @@ function RailNav({
   accountItems,
   pathname,
   userName,
+  userImage,
   approvalLabel,
   navId,
   onNavigate,
@@ -99,6 +101,7 @@ function RailNav({
   accountItems: AccountNavItem[];
   pathname: string;
   userName: string;
+  userImage?: string | null | undefined;
   approvalLabel: string;
   navId?: string;
   onNavigate?: () => void;
@@ -140,6 +143,7 @@ function RailNav({
       <div className="mt-auto border-t border-white/10 pt-4">
         <AccountMenu
           userName={userName}
+          userImage={userImage}
           approvalLabel={approvalLabel}
           items={accountItems}
           onNavigate={onNavigate}
@@ -152,6 +156,7 @@ function RailNav({
 export function AppShell({
   children,
   userName,
+  userImage,
   approvalLabel,
   isStaff,
   isApproved,
@@ -284,6 +289,7 @@ export function AppShell({
           accountItems={accountItems}
           pathname={pathname}
           userName={userName}
+          userImage={userImage}
           approvalLabel={approvalLabel}
         />
       </aside>
@@ -339,6 +345,7 @@ export function AppShell({
             accountItems={accountItems}
             pathname={pathname}
             userName={userName}
+            userImage={userImage}
             approvalLabel={approvalLabel}
             onNavigate={closeMenu}
           />
@@ -369,6 +376,7 @@ export function AppShell({
               <div className="lg:hidden">
                 <AccountMenu
                   userName={userName}
+                  userImage={userImage}
                   approvalLabel={approvalLabel}
                   items={accountItems}
                   variant="header"
