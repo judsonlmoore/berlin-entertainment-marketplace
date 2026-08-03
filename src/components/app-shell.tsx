@@ -114,9 +114,6 @@ function RailNav({
       >
         Salon
       </Link>
-      <p className="mt-2 text-xs tracking-[0.14em] text-[var(--rail-muted)] uppercase">
-        Berlin
-      </p>
       <nav
         id={navId}
         aria-label={t("primary")}
@@ -374,7 +371,7 @@ export function AppShell({
                 <MenuIcon open={menuOpen} />
               </button>
               <p className="truncate text-xs tracking-[0.14em] text-[var(--text-muted)] uppercase">
-                {`Salon / ${t(breadcrumbKey)}`}
+                {t(breadcrumbKey)}
               </p>
             </div>
             <div className="flex items-center gap-2">
