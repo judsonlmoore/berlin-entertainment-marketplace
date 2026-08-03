@@ -3,7 +3,9 @@ import { getDb } from "../src/db/client";
 import { users } from "../src/db/schema";
 import {
   auditEvents,
+  bookings,
   contactMethods,
+  directRequests,
   entertainerProfiles,
   marketplaceAccounts,
   opportunities,
@@ -222,6 +224,80 @@ async function main() {
         notes: "Synthetic open opportunity for local testing.",
         state: "open",
       });
+    }
+
+    if (entertainerProfile) {
+      let request:
+        | Awaited<ReturnType<typeof db.query.directRequests.findFirst>>
+        | undefined = await db.query.directRequests.findFirst({
+        where: and(
+          eq(directRequests.venueId, venue.id),
+          eq(directRequests.entertainerProfileId, entertainerProfile.id),
+        ),
+      });
+
+      if (!request) {
+        const startsAt = new Date();
+        startsAt.setDate(startsAt.getDate() + 28);
+        startsAt.setHours(19, 30, 0, 0);
+        const endsAt = new Date(startsAt);
+        endsAt.setHours(21, 0, 0, 0);
+
+        const [createdRequest] = await db
+          .insert(directRequests)
+          .values({
+            venueId: venue.id,
+            entertainerProfileId: entertainerProfile.id,
+            requestedByUserId: venueOperator.id,
+            startsAt,
+            endsAt,
+            proposedFeeCents: 65000,
+            formatCategory: "chamber",
+            notes: "Synthetic accepted direct request for terms testing.",
+            state: "accepted",
+          })
+          .returning();
+        request = createdRequest;
+      } else if (request.state !== "accepted") {
+        const [updated] = await db
+          .update(directRequests)
+          .set({
+            state: "accepted",
+            notes: "Synthetic accepted direct request for terms testing.",
+            updatedAt: new Date(),
+          })
+          .where(eq(directRequests.id, request.id))
+          .returning();
+        if (updated) {
+          request = updated;
+        }
+      }
+
+      if (request) {
+        const existingBooking = await db.query.bookings.findFirst({
+          where: and(
+            eq(bookings.originType, "direct_request"),
+            eq(bookings.originId, request.id),
+          ),
+        });
+        if (!existingBooking) {
+          await db.insert(bookings).values({
+            originType: "direct_request",
+            originId: request.id,
+            venueId: venue.id,
+            entertainerProfileId: entertainerProfile.id,
+            state: "accepted",
+          });
+        } else if (
+          existingBooking.state === "requested" ||
+          existingBooking.state === "applied"
+        ) {
+          await db
+            .update(bookings)
+            .set({ state: "accepted", updatedAt: new Date() })
+            .where(eq(bookings.id, existingBooking.id));
+        }
+      }
     }
   }
 

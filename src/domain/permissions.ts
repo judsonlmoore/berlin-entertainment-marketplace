@@ -29,7 +29,12 @@ export type Permission =
   | "opportunity.apply"
   | "application.review"
   | "direct_request.send"
-  | "direct_request.respond";
+  | "direct_request.respond"
+  | "booking.view"
+  | "booking.propose_terms"
+  | "booking.accept_terms"
+  | "booking.cancel"
+  | "booking.record_deposit";
 
 function isActiveVenueMember(
   actor: ActorContext,
@@ -101,6 +106,25 @@ export function can(
         actor.roles.includes("entertainer") &&
         actor.approvalState !== null &&
         hasMarketplaceAccess(actor.approvalState)
+      );
+
+    case "booking.view":
+    case "booking.propose_terms":
+    case "booking.accept_terms":
+    case "booking.cancel":
+      return (
+        actor.isPlatformStaff ||
+        (actor.approvalState !== null &&
+          hasMarketplaceAccess(actor.approvalState))
+      );
+
+    case "booking.record_deposit":
+      return (
+        actor.isPlatformStaff ||
+        (Boolean(resource?.venueId) &&
+          isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
+          actor.approvalState !== null &&
+          hasMarketplaceAccess(actor.approvalState))
       );
 
     default:

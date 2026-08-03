@@ -8,6 +8,13 @@
       "when": 1785777402139,
       "tag": "0000_broken_colleen_wing",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785781931651,
+      "tag": "0001_booking_terms_propose_accept",
+      "breakpoints": true
     }
   ]
 }

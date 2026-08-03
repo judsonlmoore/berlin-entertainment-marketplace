@@ -27,6 +27,7 @@ export type EntertainerDiscoveryCard = {
 };
 
 export type EntertainerDiscoveryDetail = EntertainerDiscoveryCard & {
+  userId: string;
   technicalRequirements: string;
   contacts: RevealedContact[] | null;
   contactLocked: boolean;
@@ -263,6 +264,7 @@ export async function getDiscoverableEntertainerDetail(input: {
 
   return {
     id: profile.id,
+    userId: profile.userId,
     actName: profile.actName,
     category: profile.category,
     description: profile.description,

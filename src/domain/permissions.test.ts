@@ -105,4 +105,60 @@ describe("permissions", () => {
       ),
     ).toBe(true);
   });
+
+  it("allows approved venue operators to send direct requests", () => {
+    expect(
+      can(
+        actor({
+          roles: ["venue"],
+          venueMemberships: [
+            { venueId: "venue-1", role: "member", status: "active" },
+          ],
+        }),
+        "direct_request.send",
+        { venueId: "venue-1" },
+      ),
+    ).toBe(true);
+    expect(
+      can(
+        actor({
+          approvalState: "applied",
+          roles: ["venue"],
+          venueMemberships: [
+            { venueId: "venue-1", role: "owner", status: "active" },
+          ],
+        }),
+        "direct_request.send",
+        { venueId: "venue-1" },
+      ),
+    ).toBe(false);
+  });
+
+  it("allows approved entertainers to respond to direct requests", () => {
+    expect(
+      can(actor({ roles: ["entertainer"] }), "direct_request.respond"),
+    ).toBe(true);
+    expect(can(actor({ roles: ["venue"] }), "direct_request.respond")).toBe(
+      false,
+    );
+  });
+
+  it("gates booking mutations behind marketplace access", () => {
+    expect(can(actor(), "booking.propose_terms")).toBe(true);
+    expect(
+      can(actor({ approvalState: "applied" }), "booking.accept_terms"),
+    ).toBe(false);
+    expect(
+      can(
+        actor({
+          roles: ["venue"],
+          venueMemberships: [
+            { venueId: "venue-1", role: "owner", status: "active" },
+          ],
+        }),
+        "booking.record_deposit",
+        { venueId: "venue-1" },
+      ),
+    ).toBe(true);
+  });
 });

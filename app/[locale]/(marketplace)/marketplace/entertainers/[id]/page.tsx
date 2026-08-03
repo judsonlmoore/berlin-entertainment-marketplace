@@ -1,7 +1,10 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { DirectRequestForm } from "@/src/components/direct-request-form";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { listVenuesForUser } from "@/src/db/queries/profiles";
+import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = {
@@ -38,6 +41,11 @@ export default async function EntertainerDetailPage({ params }: Props) {
   if (!profile) {
     notFound();
   }
+
+  const operableVenues = (await listVenuesForUser(access.actor.userId)).filter(
+    (venue) => can(access.actor, "direct_request.send", { venueId: venue.id }),
+  );
+  const isOwnProfile = profile.userId === access.actor.userId;
 
   return (
     <section className="mx-auto max-w-2xl">
@@ -86,6 +94,19 @@ export default async function EntertainerDetailPage({ params }: Props) {
           </ul>
         )}
       </div>
+
+      {!isOwnProfile && operableVenues.length > 0 ? (
+        <div className="panel mt-4 p-6">
+          <DirectRequestForm
+            locale={locale as "en" | "de"}
+            entertainerProfileId={profile.id}
+            venues={operableVenues.map((venue) => ({
+              id: venue.id,
+              name: venue.name,
+            }))}
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

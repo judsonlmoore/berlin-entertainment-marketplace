@@ -24,7 +24,7 @@ export default async function MarketplacePage({ params }: Props) {
       <h1 className="display text-4xl">{t("title")}</h1>
       <p className="mt-4 text-[var(--muted)]">{t("body")}</p>
       <p className="mt-3 text-sm text-[var(--muted)]">{t("contactPrivacy")}</p>
-      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+      <div className="mt-8 grid gap-3 sm:grid-cols-2">
         <Link
           href="/marketplace/entertainers"
           className="panel px-5 py-6 no-underline"
@@ -48,6 +48,24 @@ export default async function MarketplacePage({ params }: Props) {
           <h2 className="display text-2xl">{t("opportunitiesTitle")}</h2>
           <p className="mt-2 text-sm text-[var(--muted)]">
             {t("opportunitiesBody")}
+          </p>
+        </Link>
+        <Link
+          href="/marketplace/requests"
+          className="panel px-5 py-6 no-underline"
+        >
+          <h2 className="display text-2xl">{t("requestsTitle")}</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            {t("requestsBody")}
+          </p>
+        </Link>
+        <Link
+          href="/marketplace/bookings"
+          className="panel px-5 py-6 no-underline"
+        >
+          <h2 className="display text-2xl">{t("bookingsTitle")}</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            {t("bookingsBody")}
           </p>
         </Link>
       </div>
