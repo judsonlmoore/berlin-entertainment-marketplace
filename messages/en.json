@@ -54,6 +54,7 @@
     "menu": "Navigation menu",
     "openMenu": "Open navigation menu",
     "closeMenu": "Close navigation menu",
+    "accountMenu": "Account menu",
     "switchLocale": "Switch language to {locale}"
   },
   "ui": {

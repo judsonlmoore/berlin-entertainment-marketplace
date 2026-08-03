@@ -11,9 +11,10 @@ import {
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/src/i18n/navigation";
 import { LocaleSwitcher } from "@/src/components/locale-switcher";
-import { Avatar } from "@/src/components/ui/monogram";
-import { PendingSubmitButton } from "@/src/components/pending-submit-button";
-import { signOutAction } from "@/src/actions/auth";
+import {
+  AccountMenu,
+  type AccountNavItem,
+} from "@/src/components/account-menu";
 
 type NavItem = {
   href: string;
@@ -25,10 +26,7 @@ type NavItem = {
     | "opportunities"
     | "bookings"
     | "calendar"
-    | "requests"
-    | "profile"
-    | "onboarding"
-    | "admin";
+    | "requests";
   match: string;
 };
 
@@ -48,7 +46,7 @@ type Props = {
 
 function breadcrumbKeyFromPath(
   pathname: string,
-): NavItem["labelKey"] | "marketplace" {
+): NavItem["labelKey"] | AccountNavItem["labelKey"] | "marketplace" {
   if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/onboarding")) return "onboarding";
   if (pathname.startsWith("/profile")) return "profile";
@@ -90,6 +88,7 @@ function MenuIcon({ open }: { open: boolean }) {
 
 function RailNav({
   items,
+  accountItems,
   pathname,
   userName,
   approvalLabel,
@@ -97,6 +96,7 @@ function RailNav({
   onNavigate,
 }: {
   items: NavItem[];
+  accountItems: AccountNavItem[];
   pathname: string;
   userName: string;
   approvalLabel: string;
@@ -138,21 +138,12 @@ function RailNav({
         })}
       </nav>
       <div className="mt-auto border-t border-white/10 pt-4">
-        <div className="flex items-center gap-3">
-          <Avatar name={userName} size={40} />
-          <div className="min-w-0">
-            <p className="truncate text-sm text-white">{userName}</p>
-            <p className="text-xs text-[var(--rail-muted)]">{approvalLabel}</p>
-          </div>
-        </div>
-        <form action={signOutAction} className="mt-3">
-          <PendingSubmitButton
-            variant="ghost"
-            className="w-full justify-start text-[var(--rail-muted)]"
-          >
-            {t("signOut")}
-          </PendingSubmitButton>
-        </form>
+        <AccountMenu
+          userName={userName}
+          approvalLabel={approvalLabel}
+          items={accountItems}
+          onNavigate={onNavigate}
+        />
       </div>
     </>
   );
@@ -229,16 +220,13 @@ export function AppShell({
     },
   ];
 
-  const items = [
-    ...mainNav.filter(
-      (item) => isApproved || isStaff || item.labelKey === "overview",
-    ),
-    { href: "/profile", labelKey: "profile" as const, match: "/profile" },
-    {
-      href: "/onboarding",
-      labelKey: "onboarding" as const,
-      match: "/onboarding",
-    },
+  const items = mainNav.filter(
+    (item) => isApproved || isStaff || item.labelKey === "overview",
+  );
+
+  const accountItems: AccountNavItem[] = [
+    { href: "/profile", labelKey: "profile", match: "/profile" },
+    { href: "/onboarding", labelKey: "onboarding", match: "/onboarding" },
     ...(isStaff
       ? [{ href: "/admin", labelKey: "admin" as const, match: "/admin" }]
       : []),
@@ -293,6 +281,7 @@ export function AppShell({
       <aside className="hidden bg-[var(--rail)] text-[var(--primary-foreground)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:px-5 lg:py-6">
         <RailNav
           items={items}
+          accountItems={accountItems}
           pathname={pathname}
           userName={userName}
           approvalLabel={approvalLabel}
@@ -347,6 +336,7 @@ export function AppShell({
           </div>
           <RailNav
             items={items}
+            accountItems={accountItems}
             pathname={pathname}
             userName={userName}
             approvalLabel={approvalLabel}
@@ -376,13 +366,14 @@ export function AppShell({
             </div>
             <div className="flex items-center gap-2">
               <LocaleSwitcher className="border-[var(--rule)]" />
-              <Link
-                href="/profile"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] no-underline lg:hidden"
-                aria-label={t("profile")}
-              >
-                <Avatar name={userName} size={28} />
-              </Link>
+              <div className="lg:hidden">
+                <AccountMenu
+                  userName={userName}
+                  approvalLabel={approvalLabel}
+                  items={accountItems}
+                  variant="header"
+                />
+              </div>
             </div>
           </div>
         </header>
