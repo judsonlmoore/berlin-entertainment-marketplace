@@ -1,0 +1,9 @@
+{
+  "productName": "Salon",
+  "marketplace": "Marketplace",
+  "discover": "Discover",
+  "opportunities": "Opportunities",
+  "bookings": "Bookings",
+  "calendar": "Calendar",
+  "approval": { "applied": "Applied", "invited": "Invited", "approved": "Approved", "suspended": "Suspended" }
+}

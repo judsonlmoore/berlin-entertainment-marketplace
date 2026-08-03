@@ -1,0 +1,9 @@
+{
+  "productName": "Salon",
+  "marketplace": "Marktplatz",
+  "discover": "Entdecken",
+  "opportunities": "Ausschreibungen",
+  "bookings": "Buchungen",
+  "calendar": "Kalender",
+  "approval": { "applied": "Beworben", "invited": "Eingeladen", "approved": "Bestätigt", "suspended": "Gesperrt" }
+}
