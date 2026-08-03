@@ -26,7 +26,10 @@ Required for a working local app:
 - `DATABASE_URL` from Neon via Vercel Marketplace
 - `AUTH_SECRET` (generate with `openssl rand -base64 32`)
 - OAuth credentials (`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` and/or GitHub)
-- Google redirect URI: `http://localhost:3000/api/auth/callback/google`
+- Google redirect URI: `http://localhost:3000/api/session/callback/google`
+  (production: `https://<your-domain>/api/session/callback/google`)
+- Keep `AUTH_URL` set to the public site origin (e.g. `https://entertainment-marketplace.jlm.me`)
+- Do not share or bookmark `/api/auth/signin/google` — use `/sign-in`. Auth routes live under `/api/session` to avoid Google Safe Browsing false positives on the default Auth.js paths.
 
 Platform staff is a database flag (`users.is_platform_staff`), not a login mode. After Google sign-in, set it in Neon for your user when needed.
 

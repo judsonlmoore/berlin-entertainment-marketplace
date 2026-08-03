@@ -90,6 +90,9 @@ function buildProviders() {
 const databaseUrl = process.env.DATABASE_URL;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Avoid the default `/api/auth/*` paths — Google Safe Browsing frequently
+  // false-flags `/api/auth/signin` and `/api/auth/signin/google` as phishing.
+  basePath: "/api/session",
   ...(databaseUrl
     ? {
         adapter: DrizzleAdapter(getDb(), {
@@ -112,6 +115,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/en/sign-in",
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      try {
+        if (new URL(url).origin === baseUrl) {
+          return url;
+        }
+      } catch {
+        // fall through
+      }
+      return baseUrl;
+    },
     async jwt({ token, user }) {
       if (user?.id) {
         token.sub = user.id;

@@ -23,6 +23,7 @@ app/
   [locale]/(auth)/sign-in/
   [locale]/(marketplace)/marketplace/
   [locale]/(admin)/admin/
+  api/session/[...nextauth]/route.ts
   api/auth/[...nextauth]/route.ts
   api/webhooks/esign/route.ts
   api/uploads/rider/route.ts
@@ -105,7 +106,7 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 Representative pages:
 
 - Public: `/[locale]`, `/[locale]/apply`, `/[locale]/privacy`, `/[locale]/terms`
-- Auth: `/[locale]/sign-in`, `/api/auth/[...nextauth]`
+- Auth: `/[locale]/sign-in`, `/api/session/[...nextauth]` (Auth.js `basePath`; legacy `/api/auth/*` redirects to sign-in)
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
 - Marketplace: `/[locale]/marketplace` (role-segregated entertainer vs venue discovery), `/opportunities`, `/opportunities/[id]`, `/bookings/[id]`, `/calendar`, `/profile`
 - Admin: `/[locale]/admin/reviews`, `/accounts/[id]`, `/operations`
