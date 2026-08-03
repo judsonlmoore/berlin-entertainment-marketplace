@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import { isUsableAvatarUrl } from "@/src/lib/avatar";
+
 type Tone = "rose" | "blue" | "ochre" | "forest";
 
 const toneClass: Record<Tone, string> = {
@@ -47,16 +52,43 @@ export function Monogram({
 
 export function Avatar({
   name,
+  src,
   size = 40,
   className = "",
   tone,
 }: {
   name: string;
+  src?: string | null | undefined;
   size?: number;
   className?: string;
   tone?: Tone;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const resolved = tone ?? toneFromName(name);
+  const showImage = !imageFailed && isUsableAvatarUrl(src);
+
+  if (showImage) {
+    return (
+      <span
+        aria-hidden="true"
+        className={`inline-flex shrink-0 overflow-hidden rounded-full ${className}`}
+        style={{ width: size, height: size }}
+      >
+        {/* Provider avatar URLs vary by host; plain img avoids next/image remote allowlists. */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={src}
+          alt=""
+          width={size}
+          height={size}
+          className="size-full object-cover"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+        />
+      </span>
+    );
+  }
+
   return (
     <span
       aria-hidden="true"

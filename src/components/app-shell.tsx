@@ -39,6 +39,7 @@ function isActive(pathname: string, match: string) {
 type Props = {
   children: ReactNode;
   userName: string;
+  userImage?: string | null | undefined;
   approvalLabel: string;
   isStaff: boolean;
   isApproved: boolean;
@@ -92,6 +93,7 @@ function RailNav({
   items,
   pathname,
   userName,
+  userImage,
   approvalLabel,
   navId,
   onNavigate,
@@ -99,6 +101,7 @@ function RailNav({
   items: NavItem[];
   pathname: string;
   userName: string;
+  userImage?: string | null | undefined;
   approvalLabel: string;
   navId?: string;
   onNavigate?: () => void;
@@ -142,7 +145,7 @@ function RailNav({
       </nav>
       <div className="mt-auto border-t border-white/10 pt-4">
         <div className="flex items-center gap-3">
-          <Avatar name={userName} size={40} />
+          <Avatar name={userName} src={userImage} size={40} />
           <div className="min-w-0">
             <p className="truncate text-sm text-white">{userName}</p>
             <p className="text-xs text-[var(--rail-muted)]">{approvalLabel}</p>
@@ -164,6 +167,7 @@ function RailNav({
 export function AppShell({
   children,
   userName,
+  userImage,
   approvalLabel,
   isStaff,
   isApproved,
@@ -298,6 +302,7 @@ export function AppShell({
           items={items}
           pathname={pathname}
           userName={userName}
+          userImage={userImage}
           approvalLabel={approvalLabel}
         />
       </aside>
@@ -352,6 +357,7 @@ export function AppShell({
             items={items}
             pathname={pathname}
             userName={userName}
+            userImage={userImage}
             approvalLabel={approvalLabel}
             onNavigate={closeMenu}
           />
@@ -384,7 +390,7 @@ export function AppShell({
                 className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] no-underline lg:hidden"
                 aria-label={t("profile")}
               >
-                <Avatar name={userName} size={28} />
+                <Avatar name={userName} src={userImage} size={28} />
               </Link>
             </div>
           </div>

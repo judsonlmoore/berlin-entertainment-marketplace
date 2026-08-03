@@ -5,6 +5,7 @@ type Props = {
   children: React.ReactNode;
   locale: string;
   userName: string;
+  userImage?: string | null | undefined;
   approvalState: string | null;
   isStaff: boolean;
   isApproved: boolean;
@@ -15,6 +16,7 @@ type Props = {
 export async function AuthenticatedChrome({
   children,
   userName,
+  userImage,
   approvalState,
   isStaff,
   isApproved,
@@ -34,6 +36,7 @@ export async function AuthenticatedChrome({
   return (
     <AppShell
       userName={userName || "Member"}
+      userImage={userImage}
       approvalLabel={approvalLabel}
       isStaff={isStaff}
       isApproved={isApproved}

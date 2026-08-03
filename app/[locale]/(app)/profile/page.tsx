@@ -218,7 +218,7 @@ export default async function ProfilePage({ params }: Props) {
     <section className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="grid gap-8">
         <div className="flex flex-wrap items-center gap-4">
-          <Avatar name={displayName} size={56} />
+          <Avatar name={displayName} src={session.user.image} size={56} />
           <div>
             <PageHeader
               eyebrow={t("eyebrow")}
