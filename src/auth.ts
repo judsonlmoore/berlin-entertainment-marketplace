@@ -154,6 +154,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           };
 
       session.user.id = userId;
+      session.user.image = user?.image ?? session.user.image ?? null;
       session.user.isPlatformStaff = fields.isPlatformStaff;
       session.user.approvalState = fields.approvalState;
       session.user.roles = fields.roles;

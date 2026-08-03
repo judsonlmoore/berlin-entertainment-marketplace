@@ -56,6 +56,7 @@ export default async function AppLayout({ children, params }: Props) {
     <AuthenticatedChrome
       locale={locale}
       userName={user.name ?? user.email ?? "Member"}
+      userImage={user.image}
       approvalState={user.approvalState}
       isStaff={isStaff}
       isApproved={isApproved}
