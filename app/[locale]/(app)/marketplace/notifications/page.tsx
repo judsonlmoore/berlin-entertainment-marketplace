@@ -4,7 +4,7 @@ import { auth } from "@/src/auth";
 import { redirect } from "@/src/i18n/navigation";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
-import { getUserNotifications } from "@/db/queries/notifications";
+import { getUserNotifications } from "@/src/db/queries/notifications";
 import { NotificationList } from "@/src/components/notification-list";
 import { Link } from "@/src/i18n/navigation";
 
@@ -29,7 +29,7 @@ export default async function NotificationsPage({ params }: Props) {
 
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/sign-in");
+    return redirect("/sign-in");
   }
 
   const notifications = await getUserNotifications({

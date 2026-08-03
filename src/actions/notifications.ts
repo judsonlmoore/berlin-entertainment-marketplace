@@ -12,11 +12,11 @@ import {
   setNotificationPreference,
   setMarketingConsent,
   getMarketingConsent,
-} from "@/db/queries/notifications";
+} from "@/src/db/queries/notifications";
 import type {
   notificationTypeEnum,
   notificationChannelEnum,
-} from "@/db/schema";
+} from "@/src/db/schema";
 
 const setPreferenceSchema = z.object({
   notificationType: z.enum([
@@ -73,7 +73,7 @@ export async function setNotificationPreferenceAction(input: unknown) {
     return {
       ok: false as const,
       error: "Invalid input",
-      details: parsed.error.errors,
+      details: parsed.error.issues,
     };
   }
 
@@ -121,7 +121,7 @@ export async function setMarketingConsentAction(input: unknown) {
     return {
       ok: false as const,
       error: "Invalid input",
-      details: parsed.error.errors,
+      details: parsed.error.issues,
     };
   }
 

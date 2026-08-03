@@ -35,3 +35,8 @@ export function getDb(): Database {
   cached = createDb(databaseUrl);
   return cached;
 }
+
+/**
+ * Convenience export for most queries
+ */
+export const db = getDb();

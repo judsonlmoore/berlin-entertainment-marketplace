@@ -3,7 +3,7 @@
  * These templates provide the structure for notifications in multiple languages
  */
 
-import type { notificationTypeEnum } from "@/db/schema";
+import type { notificationTypeEnum } from "@/src/db/schema";
 
 export interface NotificationTemplate {
   /**

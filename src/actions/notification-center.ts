@@ -11,7 +11,7 @@ import {
   getUnreadNotificationCount,
   markNotificationAsRead,
   markAllNotificationsAsRead,
-} from "@/db/queries/notifications";
+} from "@/src/db/queries/notifications";
 
 export async function getUserNotificationsAction(params?: {
   limit?: number;
@@ -25,9 +25,9 @@ export async function getUserNotificationsAction(params?: {
 
   const notifications = await getUserNotifications({
     userId: session.user.id,
-    limit: params?.limit,
-    offset: params?.offset,
-    unreadOnly: params?.unreadOnly,
+    ...(params?.limit !== undefined && { limit: params.limit }),
+    ...(params?.offset !== undefined && { offset: params.offset }),
+    ...(params?.unreadOnly !== undefined && { unreadOnly: params.unreadOnly }),
   });
 
   return { ok: true as const, data: notifications };

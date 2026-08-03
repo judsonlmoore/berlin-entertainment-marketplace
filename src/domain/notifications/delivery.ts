@@ -3,14 +3,14 @@
  * Handles sending notifications via in-app and email channels
  */
 
-import { getEmailProvider } from "@/integrations/email";
-import type { notificationTypeEnum } from "@/db/schema";
+import { getEmailProvider } from "@/src/integrations/email";
+import type { notificationTypeEnum } from "@/src/db/schema";
 import {
   createNotification,
   isNotificationEnabled,
   logEmail,
   updateEmailLogStatus,
-} from "@/db/queries/notifications";
+} from "@/src/db/queries/notifications";
 
 export interface NotificationPayload {
   recipientUserId: string;
@@ -69,13 +69,15 @@ export async function sendNotification(
         subjectId: payload.subjectId,
         title: payload.title,
         body: payload.body,
-        actionUrl: payload.actionUrl,
-        actionLabel: payload.actionLabel,
-        metadata: payload.metadata,
+        ...(payload.actionUrl && { actionUrl: payload.actionUrl }),
+        ...(payload.actionLabel && { actionLabel: payload.actionLabel }),
+        ...(payload.metadata && { metadata: payload.metadata }),
       });
 
-      result.inApp.success = true;
-      result.inApp.notificationId = notification.id;
+      if (notification) {
+        result.inApp.success = true;
+        result.inApp.notificationId = notification.id;
+      }
     } catch (error) {
       result.inApp.error =
         error instanceof Error ? error.message : "Unknown error";
@@ -101,7 +103,9 @@ export async function sendNotification(
         recipientEmail: payload.recipientEmail,
         subject: payload.emailSubject || payload.title,
         notificationType: payload.type,
-        notificationId: result.inApp.notificationId,
+        ...(result.inApp.notificationId && {
+          notificationId: result.inApp.notificationId,
+        }),
         status: "pending",
       });
 
@@ -110,21 +114,23 @@ export async function sendNotification(
         to: payload.recipientEmail,
         subject: payload.emailSubject || payload.title,
         text: payload.emailText || payload.body,
-        html: payload.emailHtml,
+        ...(payload.emailHtml && { html: payload.emailHtml }),
       });
 
-      // Update email log with result
-      await updateEmailLogStatus({
-        id: emailLog.id,
-        status: emailResult.success ? "sent" : "failed",
-        errorMessage: emailResult.error,
-        sentAt: emailResult.success ? new Date() : undefined,
-      });
+      if (emailLog) {
+        // Update email log with result
+        await updateEmailLogStatus({
+          id: emailLog.id,
+          status: emailResult.success ? "sent" : "failed",
+          ...(emailResult.error && { errorMessage: emailResult.error }),
+          ...(emailResult.success && { sentAt: new Date() }),
+        });
 
-      result.email.success = emailResult.success;
-      result.email.emailLogId = emailLog.id;
-      if (!emailResult.success) {
-        result.email.error = emailResult.error;
+        result.email.success = emailResult.success;
+        result.email.emailLogId = emailLog.id;
+        if (emailResult.error) {
+          result.email.error = emailResult.error;
+        }
       }
     } catch (error) {
       result.email.error =

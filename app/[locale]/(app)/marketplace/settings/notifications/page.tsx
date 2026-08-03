@@ -7,7 +7,7 @@ import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
 import {
   getUserNotificationPreferences,
   getMarketingConsent,
-} from "@/db/queries/notifications";
+} from "@/src/db/queries/notifications";
 import { NotificationPreferencesForm } from "@/src/components/notification-preferences-form";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -31,7 +31,7 @@ export default async function NotificationSettingsPage({ params }: Props) {
 
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/sign-in");
+    return redirect("/sign-in");
   }
 
   const preferences = await getUserNotificationPreferences(session.user.id);
@@ -50,7 +50,7 @@ export default async function NotificationSettingsPage({ params }: Props) {
 
       <NotificationPreferencesForm
         preferences={preferences}
-        marketingConsent={marketingConsent}
+        marketingConsent={marketingConsent ?? null}
       />
     </section>
   );

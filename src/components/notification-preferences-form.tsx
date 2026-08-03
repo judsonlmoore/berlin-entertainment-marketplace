@@ -10,7 +10,7 @@ import {
   setNotificationPreferenceAction,
   setMarketingConsentAction,
 } from "@/src/actions/notifications";
-import type { notificationTypeEnum, notificationChannelEnum } from "@/db/schema";
+import type { notificationTypeEnum, notificationChannelEnum } from "@/src/db/schema";
 
 interface Preference {
   id: string;
