@@ -247,19 +247,6 @@ export function AppShell({
       : []),
   ];
 
-  const bottomKeys = new Set([
-    "overview",
-    "discover",
-    "discoverActs",
-    "discoverVenues",
-    "opportunities",
-    "bookings",
-    "calendar",
-  ]);
-  const bottomItems = items
-    .filter((item) => bottomKeys.has(item.labelKey))
-    .slice(0, 5);
-
   // Close mobile menu when navigating to a new page
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -358,7 +345,7 @@ export function AppShell({
         </div>
       </div>
 
-      <div className="flex min-h-screen flex-col pb-20 lg:pb-0">
+      <div className="flex min-h-screen flex-col">
         <header className="sticky top-0 z-20 border-b border-[var(--rule)] bg-[var(--surface)]">
           <div className="flex min-h-[72px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
             <div className="flex min-w-0 items-center gap-2">
@@ -393,31 +380,6 @@ export function AppShell({
         <main className="mx-auto w-full max-w-[1480px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
           {children}
         </main>
-
-        <nav
-          aria-label={t("mobile")}
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--rule)] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] lg:hidden"
-        >
-          <ul className="grid grid-cols-5">
-            {bottomItems.map((item) => {
-              const active = isActive(pathname, item.match);
-              return (
-                <li key={`${item.labelKey}-${item.href}`}>
-                  <Link
-                    href={item.href}
-                    className={`flex min-h-14 flex-col items-center justify-center px-1 text-center text-[0.65rem] font-medium no-underline ${
-                      active
-                        ? "text-[var(--primary)]"
-                        : "text-[var(--text-muted)]"
-                    }`}
-                  >
-                    {t(item.labelKey)}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
       </div>
     </div>
   );
