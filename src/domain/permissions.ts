@@ -20,9 +20,16 @@ export type Permission =
   | "onboarding.submit"
   | "admin.review_accounts"
   | "admin.change_approval"
+  | "admin.review_profiles"
+  | "venue.create"
   | "venue.manage"
   | "venue.operate"
-  | "entertainer.manage_own_profile";
+  | "entertainer.manage_own_profile"
+  | "opportunity.manage"
+  | "opportunity.apply"
+  | "application.review"
+  | "direct_request.send"
+  | "direct_request.respond";
 
 function isActiveVenueMember(
   actor: ActorContext,
@@ -48,6 +55,7 @@ export function can(
 
     case "admin.review_accounts":
     case "admin.change_approval":
+    case "admin.review_profiles":
       return actor.isPlatformStaff;
 
     case "marketplace.discover":
@@ -64,6 +72,11 @@ export function can(
         actor.approvalState !== "suspended"
       );
 
+    case "venue.create":
+      return (
+        actor.roles.includes("venue") && actor.approvalState !== "suspended"
+      );
+
     case "venue.manage":
       return (
         Boolean(resource?.venueId) &&
@@ -72,10 +85,22 @@ export function can(
       );
 
     case "venue.operate":
+    case "opportunity.manage":
+    case "application.review":
+    case "direct_request.send":
       return (
         Boolean(resource?.venueId) &&
         isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
-        actor.approvalState !== "suspended"
+        actor.approvalState !== null &&
+        hasMarketplaceAccess(actor.approvalState)
+      );
+
+    case "opportunity.apply":
+    case "direct_request.respond":
+      return (
+        actor.roles.includes("entertainer") &&
+        actor.approvalState !== null &&
+        hasMarketplaceAccess(actor.approvalState)
       );
 
     default:

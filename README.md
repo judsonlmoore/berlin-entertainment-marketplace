@@ -25,7 +25,10 @@ Required for a working local app:
 
 - `DATABASE_URL` from Neon via Vercel Marketplace
 - `AUTH_SECRET` (generate with `openssl rand -base64 32`)
-- At least one auth path: OAuth provider credentials **or** `AUTH_DEV_LOGIN=true` for non-production only
+- OAuth credentials (`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` and/or GitHub)
+- Google redirect URI: `http://localhost:3000/api/auth/callback/google`
+
+Platform staff is a database flag (`users.is_platform_staff`), not a login mode. After Google sign-in, set it in Neon for your user when needed.
 
 ```bash
 npm run db:generate   # after schema edits
@@ -45,14 +48,12 @@ npm run build
 npm run check
 ```
 
-## Current foundation slice
+## Implemented so far
 
 - App Router + strict TypeScript + Tailwind foundation
-- Core Drizzle schema and migrations for identity, approval, profiles, booking, calendar, agreements
-- Auth.js adapter with OAuth hooks and explicit non-production development login
-- Central approval + permission domain with tests
+- Core Drizzle schema/migrations, Auth.js OAuth (Google/GitHub), database sessions
+- Account approval, dual-role profiles, venue membership, private discovery projections
 - English/German catalogs and locale-prefixed routes
-- Account application + staff approval admin surface
 - Honest unconfigured file/e-sign integration boundaries
 
 Do not claim Vercel, Neon, Blob, OAuth, or e-sign connectivity until credentials are present and smoke-tested.

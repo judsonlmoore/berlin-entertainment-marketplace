@@ -25,7 +25,6 @@ const serverEnvSchema = z.object({
   AUTH_GITHUB_SECRET: optionalNonEmpty,
   AUTH_GOOGLE_ID: optionalNonEmpty,
   AUTH_GOOGLE_SECRET: optionalNonEmpty,
-  AUTH_DEV_LOGIN: optionalFlag,
   EMAIL_SERVER: optionalNonEmpty,
   EMAIL_FROM: optionalNonEmpty,
   BLOB_READ_WRITE_TOKEN: optionalNonEmpty,
@@ -49,26 +48,18 @@ export function getServerEnv(): ServerEnv {
   return cached;
 }
 
-export function isAuthDevLoginEnabled(): boolean {
-  const env = getServerEnv();
-  return env.NODE_ENV !== "production" && env.AUTH_DEV_LOGIN === "true";
-}
-
 export function hasDatabaseUrl(): boolean {
   return Boolean(getServerEnv().DATABASE_URL);
 }
 
-export function configuredAuthProviders(): Array<"github" | "google" | "dev"> {
+export function configuredAuthProviders(): Array<"github" | "google"> {
   const env = getServerEnv();
-  const providers: Array<"github" | "google" | "dev"> = [];
+  const providers: Array<"github" | "google"> = [];
   if (env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET) {
     providers.push("github");
   }
   if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
     providers.push("google");
-  }
-  if (isAuthDevLoginEnabled()) {
-    providers.push("dev");
   }
   return providers;
 }

@@ -59,6 +59,9 @@ export default async function OnboardingPage({ params }: Props) {
             <p>
               {t("rolesLabel")}: {roles.join(", ") || "—"}
             </p>
+            <p>
+              <Link href="/profile">{t("ctaProfile")}</Link>
+            </p>
           </>
         ) : (
           <>

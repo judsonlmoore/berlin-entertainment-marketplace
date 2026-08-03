@@ -30,6 +30,7 @@ export async function SiteHeader({ signedIn, isStaff, isApproved }: Props) {
         <Link href="/">{t("home")}</Link>
         <Link href="/apply">{t("apply")}</Link>
         {signedIn ? <Link href="/onboarding">{t("onboarding")}</Link> : null}
+        {signedIn ? <Link href="/profile">{t("profile")}</Link> : null}
         {isApproved || isStaff ? (
           <Link href="/marketplace">{t("marketplace")}</Link>
         ) : null}
