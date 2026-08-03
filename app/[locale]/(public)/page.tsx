@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Eyebrow } from "@/src/components/ui/eyebrow";
 import { Link } from "@/src/i18n/navigation";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPublicMetadata } from "@/src/lib/seo-metadata";
 import { auth } from "@/src/auth";
-import { countApprovedMembers } from "@/src/db/queries/overview";
 import { getDb } from "@/src/db/client";
 import { venues } from "@/src/db/schema/marketplace";
 import { eq } from "drizzle-orm";
@@ -34,7 +32,6 @@ export default async function HomePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("home");
-  const brand = await getTranslations("brand");
   const session = await auth();
   const signedIn = Boolean(session?.user);
   const canEnter =
@@ -42,7 +39,6 @@ export default async function HomePage({ params }: Props) {
     Boolean(session?.user?.isPlatformStaff);
 
   let venueNames: string[] = [];
-  let approvedMembers = 0;
   try {
     if (process.env.DATABASE_URL) {
       const db = getDb();
@@ -52,11 +48,9 @@ export default async function HomePage({ params }: Props) {
         .where(eq(venues.publicationState, "approved"))
         .limit(6);
       venueNames = rows.map((row) => row.name);
-      approvedMembers = await countApprovedMembers();
     }
   } catch {
     venueNames = [];
-    approvedMembers = 0;
   }
 
   const primaryHref = canEnter
@@ -84,10 +78,6 @@ export default async function HomePage({ params }: Props) {
 
         <div className="shell relative flex min-h-[min(88vh,44rem)] items-end pt-16 pb-14 sm:items-center sm:pt-20 sm:pb-20">
           <div className="max-w-xl text-white">
-            <p className="display text-[clamp(2.75rem,6vw,4.25rem)] leading-none tracking-tight">
-              {brand("name")}
-            </p>
-            <Eyebrow className="mt-5 !text-[#E8A090]">{t("eyebrow")}</Eyebrow>
             <h1 className="display mt-3 max-w-lg text-[clamp(2.25rem,4.5vw,3.75rem)] leading-[1.02] text-white">
               {t("headline")}
             </h1>
@@ -103,11 +93,6 @@ export default async function HomePage({ params }: Props) {
                 {canEnter ? " →" : ""}
               </Link>
             </div>
-            <p className="mt-8 text-sm font-medium text-white/65">
-              {approvedMembers > 0
-                ? t("memberProof", { count: approvedMembers })
-                : t("proofFallback")}
-            </p>
           </div>
         </div>
       </section>
