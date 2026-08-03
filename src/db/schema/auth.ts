@@ -18,7 +18,10 @@ export const users = pgTable("users", {
   image: text("image"),
   preferredLocale: text("preferred_locale").notNull().default("en"),
   isPlatformStaff: boolean("is_platform_staff").notNull().default(false),
-  anonymizedAt: timestamp("anonymized_at", { withTimezone: true, mode: "date" }),
+  anonymizedAt: timestamp("anonymized_at", {
+    withTimezone: true,
+    mode: "date",
+  }),
   anonymizedReason: text("anonymized_reason"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .notNull()

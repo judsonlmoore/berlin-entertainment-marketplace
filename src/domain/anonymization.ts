@@ -8,9 +8,7 @@
  */
 
 export type AnonymizationReason =
-  | "user_requested"
-  | "gdpr_right_to_erasure"
-  | "staff_action";
+  "user_requested" | "gdpr_right_to_erasure" | "staff_action";
 
 export interface PiiFields {
   name: string | null;

@@ -96,9 +96,7 @@ export function DeleteAccountModal({ userEmail, isOpen, onClose }: Props) {
               {t("challengeInstructions")}
             </p>
             <label className="grid gap-1">
-              <span className="text-sm font-medium">
-                {t("challengeLabel")}
-              </span>
+              <span className="text-sm font-medium">{t("challengeLabel")}</span>
               <input
                 type="text"
                 value={confirmationText}
