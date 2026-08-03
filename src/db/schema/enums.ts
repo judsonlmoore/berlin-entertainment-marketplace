@@ -116,3 +116,39 @@ export const profilePublicationStateEnum = pgEnum("profile_publication_state", [
   "changes_requested",
   "suspended",
 ]);
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "booking_request_received",
+  "booking_accepted",
+  "booking_declined",
+  "booking_confirmed",
+  "booking_cancelled",
+  "application_submitted",
+  "application_shortlisted",
+  "application_rejected",
+  "agreement_ready",
+  "agreement_signed",
+  "approval_approved",
+  "approval_changes_requested",
+  "approval_suspended",
+  "direct_request_received",
+  "direct_request_accepted",
+  "direct_request_declined",
+  "opportunity_published",
+  "calendar_conflict_detected",
+  "hold_expiring_soon",
+  "venue_member_invited",
+  "venue_member_removed",
+]);
+
+export const notificationChannelEnum = pgEnum("notification_channel", [
+  "in_app",
+  "email",
+]);
+
+export const emailStatusEnum = pgEnum("email_status", [
+  "pending",
+  "sent",
+  "failed",
+  "bounced",
+]);
