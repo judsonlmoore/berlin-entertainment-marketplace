@@ -64,7 +64,9 @@ export default async function EntertainerDetailPage({ params }: Props) {
       <p className="text-sm">
         <Link href="/marketplace/entertainers">{t("backToEntertainers")}</Link>
       </p>
-      <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">{profile.actName}</h1>
+      <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">
+        {profile.actName}
+      </h1>
       <p className="mt-2 text-[var(--muted)]">
         {profile.category} · {profile.berlinBase}
       </p>

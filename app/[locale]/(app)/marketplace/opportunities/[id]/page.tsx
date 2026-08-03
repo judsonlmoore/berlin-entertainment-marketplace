@@ -67,11 +67,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
   }
 
   const canBrowseOpenOps = can(access.actor, "discover.venues");
-  if (
-    !access.actor.isPlatformStaff &&
-    !canManage &&
-    !canBrowseOpenOps
-  ) {
+  if (!access.actor.isPlatformStaff && !canManage && !canBrowseOpenOps) {
     return (
       <section className="mx-auto max-w-xl">
         <h1 className="page-title text-3xl">{t("listTitle")}</h1>
@@ -112,7 +108,10 @@ export default async function OpportunityDetailPage({ params }: Props) {
           }),
         ),
       )
-    : new Map<string, Awaited<ReturnType<typeof listClarificationNotesForApplication>>>();
+    : new Map<
+        string,
+        Awaited<ReturnType<typeof listClarificationNotesForApplication>>
+      >();
 
   const ownClarificationNotes =
     ownApplication &&

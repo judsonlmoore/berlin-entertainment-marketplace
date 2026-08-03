@@ -30,7 +30,8 @@ export function ExpireHoldsButton({ locale }: { locale: "en" | "de" }) {
             }
             setMessage(
               t("expireResult", {
-                count: (result.expiredHolds ?? 0) + (result.expiredRequests ?? 0),
+                count:
+                  (result.expiredHolds ?? 0) + (result.expiredRequests ?? 0),
               }),
             );
             router.refresh();

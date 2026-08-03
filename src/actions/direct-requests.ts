@@ -459,7 +459,10 @@ export async function proposeDirectRequestChanges(
       where: eq(entertainerProfiles.id, request.entertainerProfileId),
     });
     if (!profile || profile.userId !== session.user.id) {
-      throw new AppError("forbidden", "Only the requested act can propose changes");
+      throw new AppError(
+        "forbidden",
+        "Only the requested act can propose changes",
+      );
     }
 
     const from = request.state as DirectRequestState;

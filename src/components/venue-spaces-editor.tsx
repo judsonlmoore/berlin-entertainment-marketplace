@@ -66,7 +66,9 @@ export function VenueSpacesEditor({ locale, venueId, spaces }: Props) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-[var(--text-muted)]">{t("venueSpacesEmpty")}</p>
+        <p className="text-sm text-[var(--text-muted)]">
+          {t("venueSpacesEmpty")}
+        </p>
       )}
 
       <form
@@ -83,7 +85,8 @@ export function VenueSpacesEditor({ locale, venueId, spaces }: Props) {
               ...(editingId ? { spaceId: editingId } : {}),
               name: String(form.get("name") ?? ""),
               capacity: Number(form.get("capacity") ?? 1),
-              stageDimensions: String(form.get("stageDimensions") ?? "") || undefined,
+              stageDimensions:
+                String(form.get("stageDimensions") ?? "") || undefined,
               accessibilityNotes:
                 String(form.get("accessibilityNotes") ?? "") || undefined,
               locale,

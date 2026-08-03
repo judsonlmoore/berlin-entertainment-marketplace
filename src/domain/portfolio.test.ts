@@ -27,9 +27,9 @@ describe("portfolio domain", () => {
   });
 
   it("validates external links", () => {
-    expect(validatePortfolioLinkInput({ url: "https://example.com/gig" }).ok).toBe(
-      true,
-    );
+    expect(
+      validatePortfolioLinkInput({ url: "https://example.com/gig" }).ok,
+    ).toBe(true);
     expect(validatePortfolioLinkInput({ url: "not-a-url" }).ok).toBe(false);
   });
 

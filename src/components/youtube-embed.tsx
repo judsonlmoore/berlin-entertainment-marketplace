@@ -15,7 +15,12 @@ export function YouTubeEmbed({ url, title, className }: Props) {
   }
 
   return (
-    <div className={className ?? "aspect-video w-full overflow-hidden border border-[var(--line)]"}>
+    <div
+      className={
+        className ??
+        "aspect-video w-full overflow-hidden border border-[var(--line)]"
+      }
+    >
       <iframe
         src={toPrivacyEmbedUrl(parsed.videoId)}
         title={title ?? "YouTube video"}

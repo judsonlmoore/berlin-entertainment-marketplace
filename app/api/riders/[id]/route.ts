@@ -14,7 +14,10 @@ export async function GET(_request: Request, { params }: Props) {
   const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401 },
+    );
   }
   if (!isFileStoreConfigured()) {
     return NextResponse.json(
@@ -25,17 +28,26 @@ export async function GET(_request: Request, { params }: Props) {
 
   const actor = await getActorContext(session.user.id);
   if (!actor) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401 },
+    );
   }
 
   const rider = await getRiderFileForDownload(id);
   if (!rider) {
-    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      { status: 404 },
+    );
   }
 
   const allowed = await canAccessRiderFile({ actor, rider });
   if (!allowed) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
   }
 
   const store = getFileStore();

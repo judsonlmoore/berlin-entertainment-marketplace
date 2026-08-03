@@ -150,20 +150,11 @@ export function VenueMembersPanel({
           <h3 className="font-medium">{t("inviteTitle")}</h3>
           <label className="grid gap-1 text-sm">
             <span>{t("email")}</span>
-            <input
-              name="email"
-              type="email"
-              required
-              className="field"
-            />
+            <input name="email" type="email" required className="field" />
           </label>
           <label className="grid gap-1 text-sm">
             <span>{t("role")}</span>
-            <select
-              name="role"
-              defaultValue="member"
-              className="field"
-            >
+            <select name="role" defaultValue="member" className="field">
               <option value="member">{t("roleMember")}</option>
               <option value="owner">{t("roleOwner")}</option>
             </select>

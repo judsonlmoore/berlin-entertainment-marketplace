@@ -9,7 +9,10 @@ import {
   riderFiles,
 } from "@/src/db/schema/marketplace";
 import { can } from "@/src/domain/permissions";
-import { sanitizeRiderFilename, validateRiderUploadInput } from "@/src/domain/rider";
+import {
+  sanitizeRiderFilename,
+  validateRiderUploadInput,
+} from "@/src/domain/rider";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
 
 /**

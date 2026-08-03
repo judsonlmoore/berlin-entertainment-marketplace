@@ -177,4 +177,3 @@ export async function listClarificationNotesForApplication(
     .where(eq(applicationClarificationNotes.applicationId, applicationId))
     .orderBy(applicationClarificationNotes.createdAt);
 }
-

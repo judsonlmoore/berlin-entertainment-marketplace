@@ -21,8 +21,7 @@ import {
 import { can } from "@/src/domain/permissions";
 
 export type ActionResult =
-  | { ok: true; id?: string }
-  | { ok: false; code: string; message: string };
+  { ok: true; id?: string } | { ok: false; code: string; message: string };
 
 const localeSchema = z.enum(["en", "de"]).default("en");
 
@@ -325,7 +324,10 @@ export async function reorderPortfolioItems(
       parsed.data.orderedIds.length !== existingIds.size ||
       parsed.data.orderedIds.some((id) => !existingIds.has(id))
     ) {
-      throw new AppError("validation", "Reorder must include all portfolio items");
+      throw new AppError(
+        "validation",
+        "Reorder must include all portfolio items",
+      );
     }
 
     await db.transaction(async (tx) => {

@@ -46,7 +46,9 @@ export default async function MarketplacePage({ params }: Props) {
     return (
       <section className="mx-auto max-w-xl">
         <h1 className="page-title text-3xl">{t("title")}</h1>
-        <p className="mt-4 font-medium text-[var(--text-muted)]">{t("denied")}</p>
+        <p className="mt-4 font-medium text-[var(--text-muted)]">
+          {t("denied")}
+        </p>
       </section>
     );
   }
@@ -232,7 +234,9 @@ export default async function MarketplacePage({ params }: Props) {
             </Link>
           </div>
           {recommendedActs.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">{t("empty")}</p>
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {t("empty")}
+            </p>
           ) : (
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {recommendedActs.map((act) => (
@@ -270,7 +274,9 @@ export default async function MarketplacePage({ params }: Props) {
             </Link>
           </div>
           {recommendedVenues.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">{t("empty")}</p>
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {t("empty")}
+            </p>
           ) : (
             <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {recommendedVenues.map((venue) => (

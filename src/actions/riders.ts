@@ -14,7 +14,10 @@ import {
 } from "@/src/db/schema/marketplace";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
-import { sanitizeRiderFilename, validateRiderUploadInput } from "@/src/domain/rider";
+import {
+  sanitizeRiderFilename,
+  validateRiderUploadInput,
+} from "@/src/domain/rider";
 import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
 

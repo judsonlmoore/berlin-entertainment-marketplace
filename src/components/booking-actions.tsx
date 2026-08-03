@@ -106,12 +106,7 @@ export function CancelBookingForm({
       <h3 className="text-lg font-medium">{t("cancelTitle")}</h3>
       <label className="grid gap-1 text-sm">
         <span>{t("cancelReason")}</span>
-        <textarea
-          name="reason"
-          required
-          rows={2}
-          className="field"
-        />
+        <textarea name="reason" required rows={2} className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">
@@ -277,11 +272,7 @@ export function DepositStatusForm({
       </p>
       <label className="grid gap-1 text-sm">
         <span>{t("depositStatus")}</span>
-        <select
-          name="status"
-          defaultValue={currentStatus}
-          className="field"
-        >
+        <select name="status" defaultValue={currentStatus} className="field">
           <option value="not_required">{t("depositNotRequired")}</option>
           <option value="pending">{t("depositPending")}</option>
           <option value="received">{t("depositReceived")}</option>
@@ -291,10 +282,7 @@ export function DepositStatusForm({
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("depositNote")}</span>
-        <input
-          name="note"
-          className="field"
-        />
+        <input name="note" className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">

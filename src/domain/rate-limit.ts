@@ -12,7 +12,10 @@ export type RateLimitConfig = {
   windowMs: number;
 };
 
-export function checkRateLimit(config: RateLimitConfig, now = Date.now()): void {
+export function checkRateLimit(
+  config: RateLimitConfig,
+  now = Date.now(),
+): void {
   const bucket = buckets.get(config.key) ?? { timestamps: [] };
   const windowStart = now - config.windowMs;
   bucket.timestamps = bucket.timestamps.filter((ts) => ts > windowStart);

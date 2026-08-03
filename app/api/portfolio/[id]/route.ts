@@ -16,12 +16,18 @@ export async function GET(_request: Request, { params }: Props) {
   const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401 },
+    );
   }
 
   const actor = await getActorContext(session.user.id);
   if (!actor) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401 },
+    );
   }
 
   const db = getDb();
@@ -29,19 +35,28 @@ export async function GET(_request: Request, { params }: Props) {
     where: eq(portfolioItems.id, id),
   });
   if (!item || item.kind !== "image" || !item.blobKey) {
-    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      { status: 404 },
+    );
   }
 
   const profile = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.id, item.entertainerProfileId),
   });
   if (!profile) {
-    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      { status: 404 },
+    );
   }
 
   const isOwner = profile.userId === session.user.id;
   if (!isOwner && !can(actor, "discover.entertainers")) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
   }
 
   if (!isFileStoreConfigured()) {

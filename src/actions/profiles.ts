@@ -346,7 +346,9 @@ export async function createVenue(
           productionResources: buildVenueProductionResources(parsed.data),
           houseRules: optionalNullableText(parsed.data.houseRules),
           loadInNotes: optionalNullableText(parsed.data.loadInNotes),
-          accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
+          accessibilityNotes: optionalNullableText(
+            parsed.data.accessibilityNotes,
+          ),
           socialLinks: compactSocialLinks(parsed.data.socialLinks),
           ...(parsed.data.websiteUrl
             ? { websiteUrl: parsed.data.websiteUrl }
@@ -441,7 +443,9 @@ export async function updateVenue(
           productionResources: buildVenueProductionResources(parsed.data),
           houseRules: optionalNullableText(parsed.data.houseRules),
           loadInNotes: optionalNullableText(parsed.data.loadInNotes),
-          accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
+          accessibilityNotes: optionalNullableText(
+            parsed.data.accessibilityNotes,
+          ),
           socialLinks: compactSocialLinks(parsed.data.socialLinks),
           websiteUrl: parsed.data.websiteUrl || null,
           publicationState: nextState,
@@ -695,13 +699,17 @@ export async function upsertVenueSpace(
 
     await db.insert(auditEvents).values({
       actorUserId: session.user.id,
-      action: parsed.data.spaceId ? "venue_space.updated" : "venue_space.created",
+      action: parsed.data.spaceId
+        ? "venue_space.updated"
+        : "venue_space.created",
       subjectType: "venue_space",
       subjectId: spaceId ?? parsed.data.venueId,
       metadata: { venueId: parsed.data.venueId },
     });
 
-    revalidatePath(`/${parsed.data.locale}/profile/venues/${parsed.data.venueId}`);
+    revalidatePath(
+      `/${parsed.data.locale}/profile/venues/${parsed.data.venueId}`,
+    );
     return { ok: true, ...(spaceId ? { id: spaceId } : {}) };
   } catch (error) {
     return toActionError(error);

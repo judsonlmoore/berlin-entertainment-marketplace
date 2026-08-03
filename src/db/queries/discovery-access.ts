@@ -2,11 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
 import { getActorContext } from "@/src/db/queries/actor";
+import { bookings, entertainerProfiles } from "@/src/db/schema/marketplace";
 import {
-  bookings,
-  entertainerProfiles,
-} from "@/src/db/schema/marketplace";
-import { can, type ActorContext, type Permission } from "@/src/domain/permissions";
+  can,
+  type ActorContext,
+  type Permission,
+} from "@/src/domain/permissions";
 
 export type DiscoveryAccess =
   | { ok: true; actor: ActorContext }

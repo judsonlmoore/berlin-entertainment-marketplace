@@ -142,10 +142,7 @@ export async function expireOverdueDirectRequests(input?: {
   let expired = 0;
   for (const row of overdue) {
     if (
-      !canSystemTransitionDirectRequest(
-        row.state as "requested",
-        "expired",
-      )
+      !canSystemTransitionDirectRequest(row.state as "requested", "expired")
     ) {
       continue;
     }
@@ -169,7 +166,11 @@ export async function expireOverdueDirectRequests(input?: {
         action: "direct_request.expired",
         subjectType: "direct_request",
         subjectId: row.id,
-        metadata: { from: row.state, to: "expired", reason: "response_deadline" },
+        metadata: {
+          from: row.state,
+          to: "expired",
+          reason: "response_deadline",
+        },
       });
     });
     expired += 1;
@@ -177,4 +178,3 @@ export async function expireOverdueDirectRequests(input?: {
 
   return { expired, checkedAt: now };
 }
-

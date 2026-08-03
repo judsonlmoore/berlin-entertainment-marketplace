@@ -22,10 +22,7 @@ describe("application transitions", () => {
 
   it("lets applicants reply to clarification by resubmitting", () => {
     expect(
-      canApplicantTransitionApplication(
-        "clarification_requested",
-        "submitted",
-      ),
+      canApplicantTransitionApplication("clarification_requested", "submitted"),
     ).toBe(true);
   });
 
@@ -41,10 +38,7 @@ describe("application transitions", () => {
 
   it("lets venues act on clarification_requested applications", () => {
     expect(
-      canVenueTransitionApplication(
-        "clarification_requested",
-        "shortlisted",
-      ),
+      canVenueTransitionApplication("clarification_requested", "shortlisted"),
     ).toBe(true);
     expect(
       canVenueTransitionApplication(
@@ -61,9 +55,9 @@ describe("application transitions", () => {
   });
 
   it("does not unlock contact on clarification", () => {
-    expect(unlocksContactOnApplicationTransition("clarification_requested")).toBe(
-      false,
-    );
+    expect(
+      unlocksContactOnApplicationTransition("clarification_requested"),
+    ).toBe(false);
     expect(unlocksContactOnApplicationTransition("shortlisted")).toBe(true);
   });
 });

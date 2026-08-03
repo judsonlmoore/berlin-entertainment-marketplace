@@ -83,7 +83,7 @@ export function PortfolioEditor({
               className="grid gap-2 border border-[var(--rule)] p-3 text-sm"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium uppercase tracking-wide">
+                <span className="font-medium tracking-wide uppercase">
                   {item.kind}
                 </span>
                 <div className="flex flex-wrap gap-2">
@@ -158,7 +158,9 @@ export function PortfolioEditor({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-[var(--text-muted)]">{t("portfolioEmpty")}</p>
+        <p className="text-sm text-[var(--text-muted)]">
+          {t("portfolioEmpty")}
+        </p>
       )}
 
       <form

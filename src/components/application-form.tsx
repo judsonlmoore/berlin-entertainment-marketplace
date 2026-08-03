@@ -95,21 +95,12 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
 
       <label className="grid gap-1">
         <span>{t("berlinLabel")}</span>
-        <textarea
-          name="berlinConnection"
-          required
-          rows={3}
-          className="field"
-        />
+        <textarea name="berlinConnection" required rows={3} className="field" />
       </label>
 
       <label className="grid gap-1">
         <span>{t("noteLabel")}</span>
-        <textarea
-          name="applicationNote"
-          rows={3}
-          className="field"
-        />
+        <textarea name="applicationNote" rows={3} className="field" />
       </label>
 
       <label className="grid gap-1">

@@ -53,7 +53,9 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
       <p className="text-sm">
         <Link href="/marketplace/venues">{t("backToVenues")}</Link>
       </p>
-      <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">{venue.name}</h1>
+      <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">
+        {venue.name}
+      </h1>
       <p className="mt-2 text-[var(--muted)]">
         {venue.district} · {venue.venueType}
       </p>
