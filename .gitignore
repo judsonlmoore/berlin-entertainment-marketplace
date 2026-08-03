@@ -22,3 +22,4 @@ coverage/
 # Local scratch/deliverable directories.
 outputs/
 work/
+.vercel

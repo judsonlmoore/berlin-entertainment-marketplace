@@ -107,9 +107,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: databaseUrl ? ("database" as const) : ("jwt" as const),
   },
-  trustHost:
-    getServerEnv().AUTH_TRUST_HOST === "true" ||
-    process.env.NODE_ENV !== "production",
+  trustHost: true,
   providers: buildProviders(),
   pages: {
     signIn: "/en/sign-in",
