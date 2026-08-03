@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/src/auth";
@@ -8,8 +8,10 @@ import { getDb } from "@/src/db/client";
 import { getActorContext } from "@/src/db/queries/actor";
 import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
 import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
+import { expireOverdueDirectRequests } from "@/src/db/queries/direct-requests";
 import {
   auditEvents,
+  bookingTerms,
   bookings,
   contactMethods,
   contactUnlocks,
@@ -22,10 +24,13 @@ import { selectPreferredContact } from "@/src/domain/contact-projection";
 import {
   canEntertainerTransitionDirectRequest,
   canVenueTransitionDirectRequest,
+  defaultResponseDeadlineAt,
   type DirectRequestState,
 } from "@/src/domain/direct-request";
+import { nextTermsVersion } from "@/src/domain/booking";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
+import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 
 export type ActionResult =
   { ok: true; id?: string } | { ok: false; code: string; message: string };
@@ -65,6 +70,12 @@ export async function sendDirectRequest(
 ): Promise<ActionResult> {
   try {
     const { session, actor } = await requireActor();
+    checkRateLimit({
+      key: rateLimitKey("direct_request.send", session.user.id),
+      limit: 10,
+      windowMs: 60_000,
+    });
+
     const parsed = sendSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid direct request");
@@ -118,6 +129,7 @@ export async function sendDirectRequest(
     }
 
     let requestId: string | undefined;
+    const responseDeadlineAt = defaultResponseDeadlineAt();
     await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(directRequests)
@@ -130,6 +142,7 @@ export async function sendDirectRequest(
           proposedFeeCents: Math.round(parsed.data.proposedFeeEur * 100),
           formatCategory: parsed.data.formatCategory,
           notes: parsed.data.notes ?? null,
+          responseDeadlineAt,
           state: "requested",
         })
         .returning();
@@ -154,6 +167,7 @@ export async function sendDirectRequest(
         metadata: {
           venueId: parsed.data.venueId,
           entertainerProfileId: profile.id,
+          responseDeadlineAt: responseDeadlineAt.toISOString(),
         },
       });
     });
@@ -403,4 +417,333 @@ export async function withdrawDirectRequest(
   } catch (error) {
     return toActionError(error);
   }
+}
+
+const proposeChangesSchema = z.object({
+  requestId: z.string().uuid(),
+  startsAt: z.string().datetime({ offset: true }).optional(),
+  endsAt: z.string().datetime({ offset: true }).optional(),
+  proposedFeeEur: z.coerce.number().min(0).optional(),
+  notes: z.string().trim().max(4000).optional(),
+  locale: z.enum(["en", "de"]).default("en"),
+});
+
+export async function proposeDirectRequestChanges(
+  input: z.infer<typeof proposeChangesSchema>,
+): Promise<ActionResult> {
+  try {
+    const { session, actor } = await requireActor();
+    checkRateLimit({
+      key: rateLimitKey("direct_request.respond", session.user.id),
+      limit: 15,
+      windowMs: 60_000,
+    });
+
+    const parsed = proposeChangesSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid change proposal");
+    }
+    if (!can(actor, "direct_request.respond")) {
+      throw new AppError("forbidden", "Approved entertainer required");
+    }
+
+    const db = getDb();
+    const request = await db.query.directRequests.findFirst({
+      where: eq(directRequests.id, parsed.data.requestId),
+    });
+    if (!request) {
+      throw new AppError("not_found", "Request not found");
+    }
+
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, request.entertainerProfileId),
+    });
+    if (!profile || profile.userId !== session.user.id) {
+      throw new AppError("forbidden", "Only the requested act can propose changes");
+    }
+
+    const from = request.state as DirectRequestState;
+    if (!canEntertainerTransitionDirectRequest(from, "changes_proposed")) {
+      throw new AppError(
+        "invalid_transition",
+        `Cannot propose changes from ${from}`,
+      );
+    }
+
+    const startsAt = parsed.data.startsAt
+      ? new Date(parsed.data.startsAt)
+      : request.startsAt;
+    const endsAt = parsed.data.endsAt
+      ? new Date(parsed.data.endsAt)
+      : request.endsAt;
+    if (endsAt <= startsAt) {
+      throw new AppError("validation", "End must be after start");
+    }
+    const proposedFeeCents =
+      parsed.data.proposedFeeEur !== undefined
+        ? Math.round(parsed.data.proposedFeeEur * 100)
+        : request.proposedFeeCents;
+    const notes =
+      parsed.data.notes !== undefined ? parsed.data.notes : request.notes;
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(directRequests)
+        .set({
+          startsAt,
+          endsAt,
+          proposedFeeCents,
+          notes,
+          state: "changes_proposed",
+          updatedAt: new Date(),
+        })
+        .where(eq(directRequests.id, request.id));
+
+      const booking = await tx.query.bookings.findFirst({
+        where: and(
+          eq(bookings.originType, "direct_request"),
+          eq(bookings.originId, request.id),
+        ),
+      });
+
+      if (booking) {
+        const [latest] = await tx
+          .select({ version: bookingTerms.version })
+          .from(bookingTerms)
+          .where(eq(bookingTerms.bookingId, booking.id))
+          .orderBy(desc(bookingTerms.version))
+          .limit(1);
+
+        const version = nextTermsVersion(latest?.version ?? null);
+        await tx.insert(bookingTerms).values({
+          bookingId: booking.id,
+          version,
+          proposedByUserId: session.user.id,
+          startsAt,
+          endsAt,
+          feeCents: proposedFeeCents,
+          performanceFormat: request.formatCategory,
+          cancellationTerms:
+            "Standard cancellation per direct-request counter-proposal.",
+          productionObligations:
+            "Parties to confirm production obligations after accepting proposed changes.",
+          depositTerms: null,
+          snapshot: {
+            directRequestId: request.id,
+            proposedFeeCents,
+            notes,
+            proposedAt: new Date().toISOString(),
+          },
+        });
+      }
+
+      await tx.insert(auditEvents).values({
+        actorUserId: session.user.id,
+        action: "direct_request.changes_proposed",
+        subjectType: "direct_request",
+        subjectId: request.id,
+        metadata: { from, to: "changes_proposed" },
+      });
+    });
+
+    revalidatePath(`/${parsed.data.locale}/marketplace/requests`);
+    revalidatePath(
+      `/${parsed.data.locale}/marketplace/entertainers/${request.entertainerProfileId}`,
+    );
+    return { ok: true, id: request.id };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function venueRespondToDirectRequestChanges(input: {
+  requestId: string;
+  nextState: "accepted" | "declined";
+  locale?: "en" | "de";
+}): Promise<ActionResult> {
+  try {
+    const { session, actor } = await requireActor();
+    const locale = input.locale ?? "en";
+
+    const db = getDb();
+    const request = await db.query.directRequests.findFirst({
+      where: eq(directRequests.id, input.requestId),
+    });
+    if (!request) {
+      throw new AppError("not_found", "Request not found");
+    }
+    if (!can(actor, "direct_request.send", { venueId: request.venueId })) {
+      throw new AppError("forbidden", "Venue operator required");
+    }
+
+    const from = request.state as DirectRequestState;
+    if (!canVenueTransitionDirectRequest(from, input.nextState)) {
+      throw new AppError(
+        "invalid_transition",
+        `Cannot move request from ${from} to ${input.nextState}`,
+      );
+    }
+
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, request.entertainerProfileId),
+    });
+    if (!profile) {
+      throw new AppError("not_found", "Entertainer profile missing");
+    }
+
+    if (input.nextState === "accepted") {
+      await assertNoHardCalendarConflict({
+        entertainerProfileId: request.entertainerProfileId,
+        venueId: request.venueId,
+        startsAt: request.startsAt,
+        endsAt: request.endsAt,
+      });
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(directRequests)
+        .set({ state: input.nextState, updatedAt: new Date() })
+        .where(eq(directRequests.id, request.id));
+
+      await tx
+        .update(bookings)
+        .set({
+          state: input.nextState === "accepted" ? "accepted" : "declined",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(bookings.originType, "direct_request"),
+            eq(bookings.originId, request.id),
+          ),
+        );
+
+      if (input.nextState === "accepted") {
+        const booking = await tx.query.bookings.findFirst({
+          where: and(
+            eq(bookings.originType, "direct_request"),
+            eq(bookings.originId, request.id),
+          ),
+        });
+
+        const entertainerContacts = await tx
+          .select()
+          .from(contactMethods)
+          .where(
+            and(
+              eq(contactMethods.ownerType, "entertainer"),
+              eq(contactMethods.ownerId, request.entertainerProfileId),
+            ),
+          );
+        const preferredEntertainer = selectPreferredContact(
+          entertainerContacts.map((c) => ({
+            id: c.id,
+            kind: c.kind,
+            valueEncrypted: c.valueEncrypted,
+            isPreferred: c.isPreferred,
+          })),
+        );
+
+        const venueOperators = await tx
+          .select({ userId: venueMemberships.userId })
+          .from(venueMemberships)
+          .where(
+            and(
+              eq(venueMemberships.venueId, request.venueId),
+              eq(venueMemberships.status, "active"),
+            ),
+          );
+
+        if (preferredEntertainer) {
+          for (const operator of venueOperators) {
+            await tx.insert(contactUnlocks).values({
+              ...(booking?.id ? { bookingId: booking.id } : {}),
+              directRequestId: request.id,
+              unlockedForUserId: operator.userId,
+              contactMethodId: preferredEntertainer.id,
+              reason: "direct_request_accepted",
+            });
+          }
+        }
+
+        const venueContacts = await tx
+          .select()
+          .from(contactMethods)
+          .where(
+            and(
+              eq(contactMethods.ownerType, "venue"),
+              eq(contactMethods.ownerId, request.venueId),
+            ),
+          );
+        const preferredVenue = selectPreferredContact(
+          venueContacts.map((c) => ({
+            id: c.id,
+            kind: c.kind,
+            valueEncrypted: c.valueEncrypted,
+            isPreferred: c.isPreferred,
+          })),
+        );
+        if (preferredVenue) {
+          await tx.insert(contactUnlocks).values({
+            ...(booking?.id ? { bookingId: booking.id } : {}),
+            directRequestId: request.id,
+            unlockedForUserId: profile.userId,
+            contactMethodId: preferredVenue.id,
+            reason: "direct_request_accepted",
+          });
+        }
+
+        if (booking) {
+          const { spaceId } = await assertNoHardCalendarConflict({
+            entertainerProfileId: request.entertainerProfileId,
+            venueId: request.venueId,
+            startsAt: request.startsAt,
+            endsAt: request.endsAt,
+            excludeBookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "entertainer",
+            ownerId: request.entertainerProfileId,
+            startsAt: request.startsAt,
+            endsAt: request.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "venue_space",
+            ownerId: spaceId,
+            startsAt: request.startsAt,
+            endsAt: request.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+        }
+      }
+
+      await tx.insert(auditEvents).values({
+        actorUserId: session.user.id,
+        action: `direct_request.${input.nextState}`,
+        subjectType: "direct_request",
+        subjectId: request.id,
+        metadata: { from, to: input.nextState, via: "changes_proposed" },
+      });
+    });
+
+    revalidatePath(`/${locale}/marketplace/requests`);
+    revalidatePath(
+      `/${locale}/marketplace/entertainers/${request.entertainerProfileId}`,
+    );
+    revalidatePath(`/${locale}/marketplace/calendar`);
+    return { ok: true, id: request.id };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function runExpireOverdueDirectRequests(): Promise<{
+  expired: number;
+  checkedAt: Date;
+}> {
+  return expireOverdueDirectRequests();
 }

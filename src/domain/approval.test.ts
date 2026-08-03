@@ -25,5 +25,11 @@ describe("marketplace access", () => {
     expect(hasMarketplaceAccess("applied")).toBe(false);
     expect(hasMarketplaceAccess("invited")).toBe(false);
     expect(hasMarketplaceAccess("suspended")).toBe(false);
+    expect(hasMarketplaceAccess("rejected")).toBe(false);
+  });
+
+  it("allows staff to reject or reconsider rejected accounts", () => {
+    expect(canTransitionApproval("applied", "rejected")).toBe(true);
+    expect(canTransitionApproval("rejected", "applied")).toBe(true);
   });
 });

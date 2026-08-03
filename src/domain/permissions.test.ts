@@ -106,6 +106,52 @@ describe("permissions", () => {
     ).toBe(true);
   });
 
+  it("role-segregates entertainer vs venue discovery", () => {
+    expect(can(actor({ roles: ["entertainer"] }), "discover.venues")).toBe(
+      true,
+    );
+    expect(
+      can(actor({ roles: ["entertainer"] }), "discover.entertainers"),
+    ).toBe(false);
+
+    expect(
+      can(
+        actor({
+          roles: ["venue"],
+          venueMemberships: [
+            { venueId: "venue-1", role: "owner", status: "active" },
+          ],
+        }),
+        "discover.entertainers",
+      ),
+    ).toBe(true);
+    expect(
+      can(
+        actor({
+          roles: ["venue"],
+          venueMemberships: [
+            { venueId: "venue-1", role: "owner", status: "active" },
+          ],
+        }),
+        "discover.venues",
+      ),
+    ).toBe(false);
+
+    expect(
+      can(actor({ roles: ["entertainer", "venue"] }), "discover.entertainers"),
+    ).toBe(true);
+    expect(
+      can(actor({ roles: ["entertainer", "venue"] }), "discover.venues"),
+    ).toBe(true);
+
+    expect(
+      can(
+        actor({ isPlatformStaff: true, approvalState: null, roles: [] }),
+        "discover.entertainers",
+      ),
+    ).toBe(true);
+  });
+
   it("allows approved venue operators to send direct requests", () => {
     expect(
       can(

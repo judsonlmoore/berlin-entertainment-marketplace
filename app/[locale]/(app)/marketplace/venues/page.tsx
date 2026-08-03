@@ -7,7 +7,7 @@ import { Monogram } from "@/src/components/ui/monogram";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { listDiscoverableVenues } from "@/src/db/queries/discovery";
-import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { requireVenueDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = {
@@ -26,12 +26,17 @@ export default async function VenuesDiscoveryPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
-  const access = await requireDiscoveryAccess();
+  const access = await requireVenueDiscoveryAccess();
 
   if (!access.ok) {
     return (
       <section className="mx-auto max-w-xl">
         <PageHeader title={t("venuesTitle")} body={t("denied")} />
+        {access.reason === "forbidden" ? (
+          <p className="mt-4 text-sm text-[var(--text-muted)]">
+            {t("roleDeniedVenues")}
+          </p>
+        ) : null}
       </section>
     );
   }

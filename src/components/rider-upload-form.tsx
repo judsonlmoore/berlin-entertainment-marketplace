@@ -58,6 +58,7 @@ export function RiderUploadForm({
             mimeType: file.type || "application/pdf",
             sizeBytes: file.size,
             checksum,
+            originalFilename: file.name,
             locale,
           });
           if (!result.ok) {

@@ -12,6 +12,8 @@ type NavItem = {
   labelKey:
     | "overview"
     | "discover"
+    | "discoverActs"
+    | "discoverVenues"
     | "opportunities"
     | "bookings"
     | "calendar"
@@ -21,35 +23,6 @@ type NavItem = {
     | "admin";
   match: string;
 };
-
-const mainNav: NavItem[] = [
-  { href: "/marketplace", labelKey: "overview", match: "/marketplace$" },
-  {
-    href: "/marketplace/entertainers",
-    labelKey: "discover",
-    match: "/marketplace/(entertainers|venues)",
-  },
-  {
-    href: "/marketplace/opportunities",
-    labelKey: "opportunities",
-    match: "/marketplace/opportunities",
-  },
-  {
-    href: "/marketplace/bookings",
-    labelKey: "bookings",
-    match: "/marketplace/bookings",
-  },
-  {
-    href: "/marketplace/calendar",
-    labelKey: "calendar",
-    match: "/marketplace/calendar",
-  },
-  {
-    href: "/marketplace/requests",
-    labelKey: "requests",
-    match: "/marketplace/requests",
-  },
-];
 
 function isActive(pathname: string, match: string) {
   return new RegExp(match).test(pathname);
@@ -61,9 +34,13 @@ type Props = {
   approvalLabel: string;
   isStaff: boolean;
   isApproved: boolean;
+  canDiscoverEntertainers: boolean;
+  canDiscoverVenues: boolean;
 };
 
-function breadcrumbKeyFromPath(pathname: string): NavItem["labelKey"] | "marketplace" {
+function breadcrumbKeyFromPath(
+  pathname: string,
+): NavItem["labelKey"] | "marketplace" {
   if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/onboarding")) return "onboarding";
   if (pathname.startsWith("/profile")) return "profile";
@@ -71,9 +48,8 @@ function breadcrumbKeyFromPath(pathname: string): NavItem["labelKey"] | "marketp
   if (pathname.includes("/bookings")) return "bookings";
   if (pathname.includes("/calendar")) return "calendar";
   if (pathname.includes("/requests")) return "requests";
-  if (pathname.includes("/entertainers") || pathname.includes("/venues")) {
-    return "discover";
-  }
+  if (pathname.includes("/entertainers")) return "discoverActs";
+  if (pathname.includes("/venues")) return "discoverVenues";
   return "marketplace";
 }
 
@@ -83,10 +59,63 @@ export function AppShell({
   approvalLabel,
   isStaff,
   isApproved,
+  canDiscoverEntertainers,
+  canDiscoverVenues,
 }: Props) {
   const t = useTranslations("nav");
   const pathname = usePathname();
   const breadcrumbKey = breadcrumbKeyFromPath(pathname);
+
+  const discoverItems: NavItem[] = [];
+  if (canDiscoverEntertainers && canDiscoverVenues) {
+    discoverItems.push({
+      href: "/marketplace/entertainers",
+      labelKey: "discoverActs",
+      match: "/marketplace/entertainers",
+    });
+    discoverItems.push({
+      href: "/marketplace/venues",
+      labelKey: "discoverVenues",
+      match: "/marketplace/venues",
+    });
+  } else if (canDiscoverEntertainers) {
+    discoverItems.push({
+      href: "/marketplace/entertainers",
+      labelKey: "discover",
+      match: "/marketplace/entertainers",
+    });
+  } else if (canDiscoverVenues) {
+    discoverItems.push({
+      href: "/marketplace/venues",
+      labelKey: "discover",
+      match: "/marketplace/venues",
+    });
+  }
+
+  const mainNav: NavItem[] = [
+    { href: "/marketplace", labelKey: "overview", match: "/marketplace$" },
+    ...discoverItems,
+    {
+      href: "/marketplace/opportunities",
+      labelKey: "opportunities",
+      match: "/marketplace/opportunities",
+    },
+    {
+      href: "/marketplace/bookings",
+      labelKey: "bookings",
+      match: "/marketplace/bookings",
+    },
+    {
+      href: "/marketplace/calendar",
+      labelKey: "calendar",
+      match: "/marketplace/calendar",
+    },
+    {
+      href: "/marketplace/requests",
+      labelKey: "requests",
+      match: "/marketplace/requests",
+    },
+  ];
 
   const items = [
     ...mainNav.filter(
@@ -103,11 +132,18 @@ export function AppShell({
       : []),
   ];
 
-  const bottomItems = items.filter((item) =>
-    ["overview", "discover", "opportunities", "bookings", "calendar"].includes(
-      item.labelKey,
-    ),
-  );
+  const bottomKeys = new Set([
+    "overview",
+    "discover",
+    "discoverActs",
+    "discoverVenues",
+    "opportunities",
+    "bookings",
+    "calendar",
+  ]);
+  const bottomItems = items
+    .filter((item) => bottomKeys.has(item.labelKey))
+    .slice(0, 5);
 
   return (
     <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[280px_1fr]">
@@ -123,7 +159,7 @@ export function AppShell({
             const active = isActive(pathname, item.match);
             return (
               <Link
-                key={item.href}
+                key={`${item.labelKey}-${item.href}`}
                 href={item.href}
                 className={`min-h-11 px-3 py-2.5 text-sm no-underline ${
                   active
@@ -188,7 +224,7 @@ export function AppShell({
             {bottomItems.map((item) => {
               const active = isActive(pathname, item.match);
               return (
-                <li key={item.href}>
+                <li key={`${item.labelKey}-${item.href}`}>
                   <Link
                     href={item.href}
                     className={`flex min-h-14 flex-col items-center justify-center px-1 text-center text-[0.65rem] no-underline ${

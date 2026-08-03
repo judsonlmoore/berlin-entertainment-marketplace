@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
 import { EntertainerProfileForm } from "@/src/components/entertainer-profile-form";
+import { PortfolioEditor } from "@/src/components/portfolio-editor";
 import { ProfileRoleTabs } from "@/src/components/profile-role-tabs";
 import { RiderUploadForm } from "@/src/components/rider-upload-form";
 import { VenueProfileForm } from "@/src/components/venue-profile-form";
@@ -11,6 +12,7 @@ import { getActorContext } from "@/src/db/queries/actor";
 import { listRiderFilesForProfile } from "@/src/db/queries/admin-ops";
 import {
   getEntertainerProfileForUser,
+  listPortfolioItemsForProfile,
   listVenuesForUser,
 } from "@/src/db/queries/profiles";
 import { can } from "@/src/domain/permissions";
@@ -52,6 +54,10 @@ export default async function ProfilePage({ params }: Props) {
   const riderFiles =
     entertainerProfile && process.env.DATABASE_URL
       ? await listRiderFilesForProfile(entertainerProfile.id)
+      : [];
+  const portfolioItems =
+    entertainerProfile && process.env.DATABASE_URL
+      ? await listPortfolioItemsForProfile(entertainerProfile.id)
       : [];
   const storeConfigured = isFileStoreConfigured();
   const displayName = session.user.name ?? session.user.email ?? "Member";
@@ -105,10 +111,26 @@ export default async function ProfilePage({ params }: Props) {
                 priceMaxCents: entertainerProfile.priceMaxCents,
                 durationMinutes: entertainerProfile.durationMinutes,
                 technicalRequirements: entertainerProfile.technicalRequirements,
+                genres: entertainerProfile.genres,
+                performanceFormats: entertainerProfile.performanceFormats,
+                languages: entertainerProfile.languages,
+                accessibilityNotes: entertainerProfile.accessibilityNotes,
+                equipmentSupplied: entertainerProfile.equipmentSupplied,
+                websiteUrl: entertainerProfile.websiteUrl,
+                socialLinks: entertainerProfile.socialLinks,
               },
             }
           : {})}
       />
+      {entertainerProfile ? (
+        <div className="mt-6 border-t border-[var(--rule)] pt-4">
+          <PortfolioEditor
+            locale={locale as "en" | "de"}
+            entertainerProfileId={entertainerProfile.id}
+            items={portfolioItems}
+          />
+        </div>
+      ) : null}
       <div className="mt-6 border-t border-[var(--rule)] pt-4">
         <h3 className="text-sm font-semibold tracking-[0.12em] uppercase">
           {t("riderPlaceholderTitle")}
@@ -120,7 +142,11 @@ export default async function ProfilePage({ params }: Props) {
           <ul className="mt-3 grid gap-1 text-sm">
             {riderFiles.map((file) => (
               <li key={file.id}>
-                PDF · {file.scanStatus} · {file.sizeBytes} B ·{" "}
+                <a href={`/api/riders/${file.id}`} className="text-[var(--primary)]">
+                  {file.originalFilename ?? t("riderDownload")}
+                </a>
+                {" · "}
+                {file.scanStatus} · {file.sizeBytes} B ·{" "}
                 {file.createdAt.toISOString().slice(0, 10)}
               </li>
             ))}

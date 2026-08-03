@@ -10,7 +10,7 @@ import {
   listDiscoverableEntertainers,
   listEntertainerCategoryFacets,
 } from "@/src/db/queries/discovery";
-import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { requireEntertainerDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
@@ -38,12 +38,17 @@ export default async function EntertainersDiscoveryPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
-  const access = await requireDiscoveryAccess();
+  const access = await requireEntertainerDiscoveryAccess();
 
   if (!access.ok) {
     return (
       <section className="mx-auto max-w-xl">
         <PageHeader title={t("entertainersTitle")} body={t("denied")} />
+        {access.reason === "forbidden" ? (
+          <p className="mt-4 text-sm text-[var(--text-muted)]">
+            {t("roleDeniedEntertainers")}
+          </p>
+        ) : null}
       </section>
     );
   }

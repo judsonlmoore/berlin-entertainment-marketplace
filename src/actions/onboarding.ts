@@ -14,6 +14,7 @@ import {
 import { users } from "@/src/db/schema";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
+import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 import { getActorContext } from "@/src/db/queries/actor";
 
 const applicationSchema = z.object({
@@ -37,6 +38,11 @@ export async function submitMarketplaceApplication(
     if (!session?.user?.id) {
       throw new AppError("unauthorized", "Sign in required");
     }
+    checkRateLimit({
+      key: rateLimitKey("onboarding.submit", session.user.id),
+      limit: 5,
+      windowMs: 60_000,
+    });
 
     const parsed = applicationSchema.safeParse(input);
     if (!parsed.success) {

@@ -139,7 +139,11 @@ export function DirectRequestForm({
           {error}
         </p>
       ) : null}
-      {message ? <p className="text-sm">{message}</p> : null}
+      {message ? (
+        <p aria-live="polite" className="text-sm text-[var(--muted)]">
+          {message}
+        </p>
+      ) : null}
       <Button
         type="submit"
         pending={pending}

@@ -1,10 +1,13 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, lte } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
+  auditEvents,
+  bookings,
   directRequests,
   entertainerProfiles,
   venues,
 } from "@/src/db/schema/marketplace";
+import { canSystemTransitionDirectRequest } from "@/src/domain/direct-request";
 
 export async function listDirectRequestsForEntertainer(userId: string) {
   const db = getDb();
@@ -23,6 +26,7 @@ export async function listDirectRequestsForEntertainer(userId: string) {
       currency: directRequests.currency,
       formatCategory: directRequests.formatCategory,
       notes: directRequests.notes,
+      responseDeadlineAt: directRequests.responseDeadlineAt,
       createdAt: directRequests.createdAt,
       venueId: venues.id,
       venueName: venues.name,
@@ -53,6 +57,7 @@ export async function listDirectRequestsForVenues(venueIds: string[]) {
       currency: directRequests.currency,
       formatCategory: directRequests.formatCategory,
       notes: directRequests.notes,
+      responseDeadlineAt: directRequests.responseDeadlineAt,
       createdAt: directRequests.createdAt,
       venueId: venues.id,
       venueName: venues.name,
@@ -83,6 +88,7 @@ export async function getDirectRequestById(id: string) {
       currency: directRequests.currency,
       formatCategory: directRequests.formatCategory,
       notes: directRequests.notes,
+      responseDeadlineAt: directRequests.responseDeadlineAt,
       requestedByUserId: directRequests.requestedByUserId,
       venueId: venues.id,
       venueName: venues.name,
@@ -115,3 +121,60 @@ export async function findPendingRequest(input: {
     ),
   });
 }
+
+export async function expireOverdueDirectRequests(input?: {
+  actorUserId?: string | null;
+  now?: Date;
+}) {
+  const db = getDb();
+  const now = input?.now ?? new Date();
+
+  const overdue = await db
+    .select({ id: directRequests.id, state: directRequests.state })
+    .from(directRequests)
+    .where(
+      and(
+        eq(directRequests.state, "requested"),
+        lte(directRequests.responseDeadlineAt, now),
+      ),
+    );
+
+  let expired = 0;
+  for (const row of overdue) {
+    if (
+      !canSystemTransitionDirectRequest(
+        row.state as "requested",
+        "expired",
+      )
+    ) {
+      continue;
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(directRequests)
+        .set({ state: "expired", updatedAt: now })
+        .where(eq(directRequests.id, row.id));
+      await tx
+        .update(bookings)
+        .set({ state: "expired", updatedAt: now })
+        .where(
+          and(
+            eq(bookings.originType, "direct_request"),
+            eq(bookings.originId, row.id),
+          ),
+        );
+      await tx.insert(auditEvents).values({
+        actorUserId: input?.actorUserId ?? null,
+        action: "direct_request.expired",
+        subjectType: "direct_request",
+        subjectId: row.id,
+        metadata: { from: row.state, to: "expired", reason: "response_deadline" },
+      });
+    });
+    expired += 1;
+  }
+
+  return { expired, checkedAt: now };
+}
+

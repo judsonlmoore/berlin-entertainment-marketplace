@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
 import { ExpireHoldsButton } from "@/src/components/admin-expire-holds";
+import { QuarantineRiderButton } from "@/src/components/admin-rider-quarantine";
 import { ApprovalForm } from "@/src/components/approval-form";
 import { StaffProfileReviewForm } from "@/src/components/staff-profile-review-form";
 import { PageHeader } from "@/src/components/ui/page-header";
@@ -193,6 +194,11 @@ export default async function AdminPage({ params }: Props) {
                   {ops.riders.map((row) => (
                     <li key={row.id}>
                       {row.mimeType} · {row.scanStatus} · {row.sizeBytes} B
+                      <QuarantineRiderButton
+                        locale={locale as "en" | "de"}
+                        riderFileId={row.id}
+                        scanStatus={row.scanStatus}
+                      />
                     </li>
                   ))}
                 </ul>

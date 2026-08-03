@@ -5,6 +5,7 @@ export const approvalStateEnum = pgEnum("approval_state", [
   "invited",
   "approved",
   "suspended",
+  "rejected",
 ]);
 
 export const marketplaceRoleEnum = pgEnum("marketplace_role", [
@@ -43,7 +44,9 @@ export const opportunityStateEnum = pgEnum("opportunity_state", [
 ]);
 
 export const applicationStateEnum = pgEnum("application_state", [
+  "draft",
   "submitted",
+  "clarification_requested",
   "withdrawn",
   "rejected",
   "shortlisted",
@@ -51,10 +54,29 @@ export const applicationStateEnum = pgEnum("application_state", [
 
 export const directRequestStateEnum = pgEnum("direct_request_state", [
   "requested",
+  "changes_proposed",
   "accepted",
   "declined",
   "withdrawn",
   "expired",
+]);
+
+export const portfolioItemKindEnum = pgEnum("portfolio_item_kind", [
+  "image",
+  "link",
+  "youtube",
+]);
+
+export const calendarSyncProviderEnum = pgEnum("calendar_sync_provider", [
+  "google",
+  "microsoft",
+  "ical",
+]);
+
+export const calendarSyncStatusEnum = pgEnum("calendar_sync_status", [
+  "disconnected",
+  "connected",
+  "error",
 ]);
 
 export const bookingStateEnum = pgEnum("booking_state", [

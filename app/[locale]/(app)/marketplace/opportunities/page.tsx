@@ -4,6 +4,7 @@ import { StatusLabel } from "@/src/components/ui/status-label";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { getOverviewMetrics } from "@/src/db/queries/overview";
 import { listOpenOpportunities } from "@/src/db/queries/opportunities";
+import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -41,9 +42,15 @@ export default async function OpportunitiesPage({ params }: Props) {
   const venueIds = access.actor.venueMemberships
     .filter((m) => m.status === "active")
     .map((m) => m.venueId);
-  const rows = await listOpenOpportunities({
-    viewerVenueIds: venueIds,
-    entertainerProfileId: metrics.entertainerProfileId,
+  const canBrowseOpenOps = can(access.actor, "discover.venues");
+  const rows = (
+    await listOpenOpportunities({
+      viewerVenueIds: venueIds,
+      entertainerProfileId: metrics.entertainerProfileId,
+    })
+  ).filter((row) => {
+    if (access.actor.isPlatformStaff || canBrowseOpenOps) return true;
+    return venueIds.includes(row.venueId);
   });
 
   const dateFmt = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {

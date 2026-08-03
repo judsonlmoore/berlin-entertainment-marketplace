@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { expireStaleHolds } from "@/src/db/queries/calendar-ops";
+import { expireOverdueDirectRequests } from "@/src/db/queries/direct-requests";
 import { getDb } from "@/src/db/client";
 import { auditEvents } from "@/src/db/schema/marketplace";
 
 /**
- * Idempotent hold-expiry reconciliation for Vercel Cron.
+ * Idempotent hold-expiry and direct-request expiry reconciliation for Vercel Cron.
  * Authorize with Authorization: Bearer $CRON_SECRET.
  */
 export async function GET(request: Request) {
@@ -30,18 +31,25 @@ export async function GET(request: Request) {
     );
   }
 
-  const result = await expireStaleHolds();
+  const holdResult = await expireStaleHolds();
+  const requestResult = await expireOverdueDirectRequests();
   const db = getDb();
   await db.insert(auditEvents).values({
     actorUserId: null,
-    action: "calendar.holds_expired",
+    action: "system.reconciliation_run",
     subjectType: "system",
     subjectId: "hold-expiry-cron",
     metadata: {
-      expired: result.expired,
-      checkedAt: result.checkedAt.toISOString(),
+      expiredHolds: holdResult.expired,
+      expiredRequests: requestResult.expired,
+      checkedAt: holdResult.checkedAt.toISOString(),
     },
   });
 
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({
+    ok: true,
+    expiredHolds: holdResult.expired,
+    expiredRequests: requestResult.expired,
+    checkedAt: holdResult.checkedAt,
+  });
 }

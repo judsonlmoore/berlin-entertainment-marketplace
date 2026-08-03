@@ -1,7 +1,8 @@
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   applications,
+  applicationClarificationNotes,
   entertainerProfiles,
   opportunities,
   venues,
@@ -139,7 +140,12 @@ export async function listApplicationsForOpportunity(opportunityId: string) {
       entertainerProfiles,
       eq(entertainerProfiles.id, applications.entertainerProfileId),
     )
-    .where(eq(applications.opportunityId, opportunityId))
+    .where(
+      and(
+        eq(applications.opportunityId, opportunityId),
+        ne(applications.state, "draft"),
+      ),
+    )
     .orderBy(desc(applications.createdAt));
 }
 
@@ -155,3 +161,20 @@ export async function getApplicationForEntertainer(input: {
     ),
   });
 }
+
+export async function listClarificationNotesForApplication(
+  applicationId: string,
+) {
+  const db = getDb();
+  return db
+    .select({
+      id: applicationClarificationNotes.id,
+      body: applicationClarificationNotes.body,
+      createdAt: applicationClarificationNotes.createdAt,
+      authorUserId: applicationClarificationNotes.authorUserId,
+    })
+    .from(applicationClarificationNotes)
+    .where(eq(applicationClarificationNotes.applicationId, applicationId))
+    .orderBy(applicationClarificationNotes.createdAt);
+}
+

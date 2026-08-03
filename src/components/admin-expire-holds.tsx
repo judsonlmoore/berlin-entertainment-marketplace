@@ -28,7 +28,11 @@ export function ExpireHoldsButton({ locale }: { locale: "en" | "de" }) {
               setMessage(result.message);
               return;
             }
-            setMessage(t("expireResult", { count: result.expired ?? 0 }));
+            setMessage(
+              t("expireResult", {
+                count: (result.expiredHolds ?? 0) + (result.expiredRequests ?? 0),
+              }),
+            );
             router.refresh();
           });
         }}

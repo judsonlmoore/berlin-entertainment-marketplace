@@ -8,6 +8,8 @@ type Props = {
   approvalState: string | null;
   isStaff: boolean;
   isApproved: boolean;
+  canDiscoverEntertainers: boolean;
+  canDiscoverVenues: boolean;
 };
 
 export async function AuthenticatedChrome({
@@ -16,6 +18,8 @@ export async function AuthenticatedChrome({
   approvalState,
   isStaff,
   isApproved,
+  canDiscoverEntertainers,
+  canDiscoverVenues,
 }: Props) {
   const approval = await getTranslations("approval");
 
@@ -33,6 +37,8 @@ export async function AuthenticatedChrome({
       approvalLabel={approvalLabel}
       isStaff={isStaff}
       isApproved={isApproved}
+      canDiscoverEntertainers={canDiscoverEntertainers}
+      canDiscoverVenues={canDiscoverVenues}
     >
       {children}
     </AppShell>

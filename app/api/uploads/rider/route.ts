@@ -9,7 +9,7 @@ import {
   riderFiles,
 } from "@/src/db/schema/marketplace";
 import { can } from "@/src/domain/permissions";
-import { validateRiderUploadInput } from "@/src/domain/rider";
+import { sanitizeRiderFilename, validateRiderUploadInput } from "@/src/domain/rider";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
 
 /**
@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     mimeType?: string;
     sizeBytes?: number;
     checksum?: string;
+    originalFilename?: string;
   };
   try {
     body = (await request.json()) as typeof body;
@@ -100,6 +101,9 @@ export async function POST(request: Request) {
       ownerUserId: session.user.id,
       entertainerProfileId: profile.id,
       blobKey: intent.key,
+      originalFilename: body.originalFilename
+        ? sanitizeRiderFilename(body.originalFilename)
+        : null,
       mimeType: body.mimeType!,
       sizeBytes: Number(body.sizeBytes),
       checksum: body.checksum!.toLowerCase(),

@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import { auth } from "@/src/auth";
 import { VenueMembersPanel } from "@/src/components/venue-members-panel";
 import { VenueProfileForm } from "@/src/components/venue-profile-form";
+import { VenueSpacesEditor } from "@/src/components/venue-spaces-editor";
 import { getActorContext } from "@/src/db/queries/actor";
 import { OpportunityForm } from "@/src/components/opportunity-form";
 import {
   getVenueForOwnerView,
   listVenueMembers,
+  listVenueSpaces,
 } from "@/src/db/queries/profiles";
 import { listVenueOpportunities } from "@/src/db/queries/opportunities";
 import { can } from "@/src/domain/permissions";
@@ -38,10 +40,11 @@ export default async function VenueDetailPage({ params }: Props) {
     notFound();
   }
 
-  const [venue, members, venueOpportunities] = await Promise.all([
+  const [venue, members, venueOpportunities, venueSpaces] = await Promise.all([
     getVenueForOwnerView(venueId),
     listVenueMembers(venueId),
     listVenueOpportunities(venueId),
+    listVenueSpaces(venueId),
   ]);
   if (!venue) {
     notFound();
@@ -49,12 +52,17 @@ export default async function VenueDetailPage({ params }: Props) {
 
   const canManage = can(actor, "venue.manage", { venueId });
   const canManageOpportunities = can(actor, "opportunity.manage", { venueId });
-  const productionNotes =
-    typeof venue.productionResources === "object" &&
-    venue.productionResources &&
-    "notes" in venue.productionResources
-      ? String((venue.productionResources as { notes?: unknown }).notes ?? "")
-      : "";
+  const productionResources =
+    typeof venue.productionResources === "object" && venue.productionResources
+      ? (venue.productionResources as Record<string, unknown>)
+      : {};
+  const productionNotes = String(productionResources.notes ?? "");
+  const productionField = (key: string) =>
+    String(productionResources[key] ?? "");
+  const socialLinks =
+    typeof venue.socialLinks === "object" && venue.socialLinks
+      ? (venue.socialLinks as Record<string, string>)
+      : {};
 
   return (
     <section className="mx-auto grid max-w-3xl gap-8">
@@ -87,9 +95,27 @@ export default async function VenueDetailPage({ params }: Props) {
               capacity: venue.capacity,
               capacityContext: venue.capacityContext,
               productionNotes,
+              productionPa: productionField("pa"),
+              productionMixer: productionField("mixer"),
+              productionMics: productionField("mics"),
+              productionLighting: productionField("lighting"),
+              productionBackline: productionField("backline"),
+              productionPower: productionField("power"),
+              productionStage: productionField("stage"),
+              houseRules: venue.houseRules,
+              loadInNotes: venue.loadInNotes,
+              accessibilityNotes: venue.accessibilityNotes,
+              socialLinks,
               websiteUrl: venue.websiteUrl,
             }}
           />
+          <div className="mt-6 border-t border-[var(--rule)] pt-4">
+            <VenueSpacesEditor
+              locale={locale as "en" | "de"}
+              venueId={venue.id}
+              spaces={venueSpaces}
+            />
+          </div>
         </div>
       ) : null}
 

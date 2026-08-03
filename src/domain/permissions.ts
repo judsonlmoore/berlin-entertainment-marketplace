@@ -17,6 +17,8 @@ export type ActorContext = {
 
 export type Permission =
   | "marketplace.discover"
+  | "discover.entertainers"
+  | "discover.venues"
   | "onboarding.submit"
   | "admin.review_accounts"
   | "admin.change_approval"
@@ -39,6 +41,20 @@ export type Permission =
   | "booking.generate_agreement"
   | "booking.sign_agreement"
   | "calendar.manage";
+
+function hasPrivateAccess(actor: ActorContext): boolean {
+  return (
+    actor.isPlatformStaff ||
+    (actor.approvalState !== null && hasMarketplaceAccess(actor.approvalState))
+  );
+}
+
+function isActiveVenueOperator(actor: ActorContext): boolean {
+  return (
+    actor.roles.includes("venue") ||
+    actor.venueMemberships.some((m) => m.status === "active")
+  );
+}
 
 function isActiveVenueMember(
   actor: ActorContext,
@@ -69,11 +85,20 @@ export function can(
       return actor.isPlatformStaff;
 
     case "marketplace.discover":
+      return hasPrivateAccess(actor);
+
+    case "discover.entertainers":
+      // Venues (and staff) browse acts — never peer entertainers as the primary mode.
       return (
-        (!actor.isPlatformStaff &&
-          actor.approvalState !== null &&
-          hasMarketplaceAccess(actor.approvalState)) ||
-        actor.isPlatformStaff
+        actor.isPlatformStaff ||
+        (hasPrivateAccess(actor) && isActiveVenueOperator(actor))
+      );
+
+    case "discover.venues":
+      // Entertainers (and staff) browse venues/opportunities.
+      return (
+        actor.isPlatformStaff ||
+        (hasPrivateAccess(actor) && actor.roles.includes("entertainer"))
       );
 
     case "entertainer.manage_own_profile":

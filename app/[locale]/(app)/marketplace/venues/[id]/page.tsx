@@ -1,7 +1,10 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { getDiscoverableVenueDetail } from "@/src/db/queries/discovery";
-import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import {
+  canViewVenueDiscoveryDetail,
+  requireDiscoveryAccess,
+} from "@/src/db/queries/discovery-access";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = {
@@ -19,6 +22,15 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
       <section className="mx-auto max-w-xl">
         <h1 className="display text-4xl">{t("venuesTitle")}</h1>
         <p className="mt-4">{t("denied")}</p>
+      </section>
+    );
+  }
+
+  if (!(await canViewVenueDiscoveryDetail(access.actor, id))) {
+    return (
+      <section className="mx-auto max-w-xl">
+        <h1 className="display text-4xl">{t("venuesTitle")}</h1>
+        <p className="mt-4">{t("roleDeniedVenues")}</p>
       </section>
     );
   }

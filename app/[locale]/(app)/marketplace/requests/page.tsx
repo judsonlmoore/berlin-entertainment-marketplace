@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import {
   RespondDirectRequestButtons,
+  VenueRespondToChangesButtons,
   WithdrawDirectRequestButton,
 } from "@/src/components/direct-request-actions";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
@@ -139,6 +140,11 @@ export default async function DirectRequestsPage({ params }: Props) {
                 </p>
                 <div className="mt-3">
                   <WithdrawDirectRequestButton
+                    locale={locale as "en" | "de"}
+                    requestId={request.id}
+                    state={request.state}
+                  />
+                  <VenueRespondToChangesButtons
                     locale={locale as "en" | "de"}
                     requestId={request.id}
                     state={request.state}

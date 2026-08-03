@@ -39,3 +39,10 @@ export function isPrivateRiderKey(blobKey: string): boolean {
     blobKey.startsWith("blob:")
   );
 }
+
+/** Keep a human-readable basename without path or unsafe characters. */
+export function sanitizeRiderFilename(name: string): string {
+  const base = name.split(/[/\\]/).pop()?.trim() ?? "rider.pdf";
+  const cleaned = base.replace(/[^\w.\- ()]/g, "_").slice(0, 200);
+  return cleaned || "rider.pdf";
+}

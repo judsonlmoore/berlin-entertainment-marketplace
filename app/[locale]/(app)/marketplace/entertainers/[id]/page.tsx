@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { DirectRequestForm } from "@/src/components/direct-request-form";
+import { YouTubeEmbed } from "@/src/components/youtube-embed";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
@@ -37,15 +38,26 @@ export default async function EntertainerDetailPage({ params }: Props) {
   const profile = await getDiscoverableEntertainerDetail({
     entertainerProfileId: id,
     viewerUserId: access.actor.userId,
+    includePortfolio: true,
   });
   if (!profile) {
     notFound();
   }
 
+  const isOwnProfile = profile.userId === access.actor.userId;
+  const canBrowseActs = can(access.actor, "discover.entertainers");
+  if (!isOwnProfile && !canBrowseActs) {
+    return (
+      <section className="mx-auto max-w-xl">
+        <h1 className="display text-4xl">{t("entertainersTitle")}</h1>
+        <p className="mt-4">{t("roleDeniedEntertainers")}</p>
+      </section>
+    );
+  }
+
   const operableVenues = (await listVenuesForUser(access.actor.userId)).filter(
     (venue) => can(access.actor, "direct_request.send", { venueId: venue.id }),
   );
-  const isOwnProfile = profile.userId === access.actor.userId;
 
   return (
     <section className="mx-auto max-w-2xl">
@@ -76,6 +88,38 @@ export default async function EntertainerDetailPage({ params }: Props) {
           {t("technicalRequirements")}: {profile.technicalRequirements}
         </p>
       </div>
+
+      {profile.portfolio && profile.portfolio.length > 0 ? (
+        <div className="panel mt-4 p-6">
+          <h2 className="text-lg font-semibold">{t("portfolioTitle")}</h2>
+          <ul className="mt-4 grid gap-4">
+            {profile.portfolio.map((item) => (
+              <li key={item.id} className="grid gap-2 text-sm">
+                {item.caption ? <p>{item.caption}</p> : null}
+                {item.kind === "link" && item.url ? (
+                  <a href={item.url} className="text-[var(--primary)]">
+                    {item.url}
+                  </a>
+                ) : null}
+                {item.kind === "youtube" && item.url ? (
+                  <YouTubeEmbed
+                    url={item.url}
+                    {...(item.caption ? { title: item.caption } : {})}
+                  />
+                ) : null}
+                {item.kind === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={`/api/portfolio/${item.id}`}
+                    alt={item.altText ?? item.caption ?? profile.actName}
+                    className="max-h-80 w-full object-cover"
+                  />
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="panel mt-4 p-6">
         <h2 className="text-lg font-semibold">{t("contactTitle")}</h2>

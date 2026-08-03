@@ -3,15 +3,17 @@ export const APPROVAL_STATES = [
   "invited",
   "approved",
   "suspended",
+  "rejected",
 ] as const;
 
 export type ApprovalState = (typeof APPROVAL_STATES)[number];
 
 const STAFF_TRANSITIONS: Record<ApprovalState, readonly ApprovalState[]> = {
-  applied: ["invited", "approved", "suspended"],
-  invited: ["applied", "approved", "suspended"],
-  approved: ["suspended", "applied"],
-  suspended: ["approved", "applied"],
+  applied: ["invited", "approved", "suspended", "rejected"],
+  invited: ["applied", "approved", "suspended", "rejected"],
+  approved: ["suspended", "applied", "rejected"],
+  suspended: ["approved", "applied", "rejected"],
+  rejected: ["applied", "invited"],
 };
 
 export function canTransitionApproval(

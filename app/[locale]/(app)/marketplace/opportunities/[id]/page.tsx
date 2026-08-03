@@ -3,7 +3,9 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
   ApplyForm,
+  ClarificationNotesList,
   OpportunityStateButtons,
+  ReplyClarificationForm,
   ReviewApplicationButtons,
   WithdrawButton,
 } from "@/src/components/application-actions";
@@ -12,6 +14,7 @@ import {
   getApplicationForEntertainer,
   getOpportunityDetail,
   listApplicationsForOpportunity,
+  listClarificationNotesForApplication,
 } from "@/src/db/queries/opportunities";
 import { getDb } from "@/src/db/client";
 import { entertainerProfiles } from "@/src/db/schema/marketplace";
@@ -63,6 +66,20 @@ export default async function OpportunityDetailPage({ params }: Props) {
     notFound();
   }
 
+  const canBrowseOpenOps = can(access.actor, "discover.venues");
+  if (
+    !access.actor.isPlatformStaff &&
+    !canManage &&
+    !canBrowseOpenOps
+  ) {
+    return (
+      <section className="mx-auto max-w-xl">
+        <h1 className="display text-4xl">{t("listTitle")}</h1>
+        <p className="mt-4">{market("roleDeniedVenues")}</p>
+      </section>
+    );
+  }
+
   const dateFmt = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {
     dateStyle: "full",
     timeStyle: "short",
@@ -84,6 +101,23 @@ export default async function OpportunityDetailPage({ params }: Props) {
     ? await listApplicationsForOpportunity(opportunity.id)
     : [];
 
+  const clarificationByApplication = canManage
+    ? new Map(
+        await Promise.all(
+          applications.map(async (application) => {
+            const notes = await listClarificationNotesForApplication(
+              application.id,
+            );
+            return [application.id, notes] as const;
+          }),
+        ),
+      )
+    : new Map<string, Awaited<ReturnType<typeof listClarificationNotesForApplication>>>();
+
+  const ownClarificationNotes =
+    ownApplication &&
+    (await listClarificationNotesForApplication(ownApplication.id));
+
   const accepting = isOpportunityAcceptingApplications(
     opportunity.state,
     opportunity.applicationDeadline,
@@ -91,7 +125,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
   const canApply =
     can(access.actor, "opportunity.apply") &&
     accepting &&
-    !ownApplication &&
+    (!ownApplication || ownApplication.state === "draft") &&
     ownProfile?.publicationState === "approved";
 
   return (
@@ -179,6 +213,9 @@ export default async function OpportunityDetailPage({ params }: Props) {
                       locale={locale as "en" | "de"}
                       applicationId={application.id}
                       state={application.state}
+                      clarificationNotes={
+                        clarificationByApplication.get(application.id) ?? []
+                      }
                     />
                   </div>
                 </li>
@@ -193,13 +230,27 @@ export default async function OpportunityDetailPage({ params }: Props) {
           <p className="text-sm">
             {t("yourApplication")}: {ownApplication.state}
           </p>
-          {(ownApplication.state === "submitted" ||
+          {(ownApplication.state === "draft" ||
+            ownApplication.state === "submitted" ||
+            ownApplication.state === "clarification_requested" ||
             ownApplication.state === "shortlisted") && (
             <WithdrawButton
               locale={locale as "en" | "de"}
               applicationId={ownApplication.id}
             />
           )}
+          {ownClarificationNotes && ownClarificationNotes.length > 0 ? (
+            <ClarificationNotesList
+              notes={ownClarificationNotes}
+              locale={locale as "en" | "de"}
+            />
+          ) : null}
+          {ownApplication.state === "clarification_requested" ? (
+            <ReplyClarificationForm
+              locale={locale as "en" | "de"}
+              applicationId={ownApplication.id}
+            />
+          ) : null}
           {ownApplication.state === "shortlisted" ? (
             <p className="text-sm text-[var(--muted)]">
               {t("shortlistedHint")}
@@ -213,6 +264,16 @@ export default async function OpportunityDetailPage({ params }: Props) {
           <ApplyForm
             locale={locale as "en" | "de"}
             opportunityId={opportunity.id}
+            {...(ownApplication?.state === "draft"
+              ? {
+                  initial: {
+                    message: ownApplication.message,
+                    quoteMinEur: ownApplication.quoteMinCents / 100,
+                    quoteMaxEur: ownApplication.quoteMaxCents / 100,
+                    isDraft: true,
+                  },
+                }
+              : {})}
           />
         </div>
       ) : null}

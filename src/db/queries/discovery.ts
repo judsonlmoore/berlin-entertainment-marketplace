@@ -4,6 +4,7 @@ import {
   contactMethods,
   contactUnlocks,
   entertainerProfiles,
+  portfolioItems,
   venues,
 } from "@/src/db/schema/marketplace";
 import {
@@ -26,11 +27,21 @@ export type EntertainerDiscoveryCard = {
   durationMinutes: number;
 };
 
+export type PortfolioDiscoveryItem = {
+  id: string;
+  kind: "image" | "link" | "youtube";
+  caption: string | null;
+  altText: string | null;
+  url: string | null;
+  sortOrder: number;
+};
+
 export type EntertainerDiscoveryDetail = EntertainerDiscoveryCard & {
   userId: string;
   technicalRequirements: string;
   contacts: RevealedContact[] | null;
   contactLocked: boolean;
+  portfolio: PortfolioDiscoveryItem[] | null;
 };
 
 export type VenueDiscoveryCard = {
@@ -338,6 +349,7 @@ async function hasContactUnlockForViewer(input: {
 export async function getDiscoverableEntertainerDetail(input: {
   entertainerProfileId: string;
   viewerUserId: string;
+  includePortfolio?: boolean;
 }): Promise<EntertainerDiscoveryDetail | null> {
   const db = getDb();
   const profile = await db.query.entertainerProfiles.findFirst({
@@ -371,6 +383,22 @@ export async function getDiscoverableEntertainerDetail(input: {
   });
   const contacts = projectContactMethods(asStoredContacts(methods), unlocked);
 
+  let portfolio: PortfolioDiscoveryItem[] | null = null;
+  if (input.includePortfolio) {
+    portfolio = await db
+      .select({
+        id: portfolioItems.id,
+        kind: portfolioItems.kind,
+        caption: portfolioItems.caption,
+        altText: portfolioItems.altText,
+        url: portfolioItems.url,
+        sortOrder: portfolioItems.sortOrder,
+      })
+      .from(portfolioItems)
+      .where(eq(portfolioItems.entertainerProfileId, profile.id))
+      .orderBy(portfolioItems.sortOrder, portfolioItems.createdAt);
+  }
+
   return {
     id: profile.id,
     userId: profile.userId,
@@ -387,6 +415,7 @@ export async function getDiscoverableEntertainerDetail(input: {
     technicalRequirements: profile.technicalRequirements,
     contacts,
     contactLocked: !unlocked,
+    portfolio,
   };
 }
 

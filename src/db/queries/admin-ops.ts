@@ -164,6 +164,7 @@ export async function listRiderFilesForProfile(entertainerProfileId: string) {
       scanStatus: riderFiles.scanStatus,
       createdAt: riderFiles.createdAt,
       blobKey: riderFiles.blobKey,
+      originalFilename: riderFiles.originalFilename,
     })
     .from(riderFiles)
     .where(eq(riderFiles.entertainerProfileId, entertainerProfileId))

@@ -14,7 +14,8 @@ import {
 } from "@/src/db/schema/marketplace";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
-import { validateRiderUploadInput } from "@/src/domain/rider";
+import { sanitizeRiderFilename, validateRiderUploadInput } from "@/src/domain/rider";
+import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
 
 export type ActionResult =
@@ -33,6 +34,7 @@ const registerSchema = z.object({
   mimeType: z.string().trim().min(1),
   sizeBytes: z.coerce.number().int().positive(),
   checksum: z.string().trim().min(64).max(64),
+  originalFilename: z.string().trim().max(255).optional(),
   locale: z.enum(["en", "de"]).default("en"),
 });
 
@@ -44,6 +46,12 @@ export async function registerRiderUpload(
     if (!session?.user?.id) {
       throw new AppError("unauthorized", "Sign in required");
     }
+    checkRateLimit({
+      key: rateLimitKey("rider.upload", session.user.id),
+      limit: 10,
+      windowMs: 60_000,
+    });
+
     const actor = await getActorContext(session.user.id);
     if (!actor || !can(actor, "entertainer.manage_own_profile")) {
       throw new AppError("forbidden", "Entertainer profile required");
@@ -86,6 +94,9 @@ export async function registerRiderUpload(
         ownerUserId: session.user.id,
         entertainerProfileId: profile.id,
         blobKey: intent.key,
+        originalFilename: parsed.data.originalFilename
+          ? sanitizeRiderFilename(parsed.data.originalFilename)
+          : null,
         mimeType: parsed.data.mimeType,
         sizeBytes: parsed.data.sizeBytes,
         checksum: parsed.data.checksum.toLowerCase(),

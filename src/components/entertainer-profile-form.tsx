@@ -9,6 +9,14 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
+type SocialLinks = {
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  spotify?: string;
+  soundcloud?: string;
+};
+
 type Props = {
   locale: "en" | "de";
   defaultValues?: {
@@ -22,10 +30,27 @@ type Props = {
     priceMaxCents: number;
     durationMinutes: number;
     technicalRequirements: string;
+    genres?: string | null;
+    performanceFormats?: string | null;
+    languages?: string | null;
+    accessibilityNotes?: string | null;
+    equipmentSupplied?: string | null;
+    websiteUrl?: string | null;
+    socialLinks?: SocialLinks;
   };
   publicationState?: string;
   defaultContactEmail: string;
 };
+
+function readSocialLinks(form: FormData): SocialLinks {
+  return {
+    instagram: String(form.get("socialInstagram") ?? ""),
+    facebook: String(form.get("socialFacebook") ?? ""),
+    tiktok: String(form.get("socialTiktok") ?? ""),
+    spotify: String(form.get("socialSpotify") ?? ""),
+    soundcloud: String(form.get("socialSoundcloud") ?? ""),
+  };
+}
 
 export function EntertainerProfileForm({
   locale,
@@ -41,6 +66,7 @@ export function EntertainerProfileForm({
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const social = defaultValues?.socialLinks ?? {};
 
   function readForm(form: FormData) {
     return {
@@ -54,6 +80,13 @@ export function EntertainerProfileForm({
       priceMaxCents: Math.round(Number(form.get("priceMaxEur") ?? 0) * 100),
       durationMinutes: Number(form.get("durationMinutes") ?? 60),
       technicalRequirements: String(form.get("technicalRequirements") ?? ""),
+      genres: String(form.get("genres") ?? ""),
+      performanceFormats: String(form.get("performanceFormats") ?? ""),
+      languages: String(form.get("languages") ?? ""),
+      accessibilityNotes: String(form.get("accessibilityNotes") ?? ""),
+      equipmentSupplied: String(form.get("equipmentSupplied") ?? ""),
+      websiteUrl: String(form.get("websiteUrl") ?? ""),
+      socialLinks: readSocialLinks(form),
       contactEmail: String(form.get("contactEmail") ?? ""),
       locale,
     };
@@ -109,6 +142,14 @@ export function EntertainerProfileForm({
           />
         </label>
         <label className="grid gap-1 text-sm">
+          <span>{t("genres")}</span>
+          <input
+            name="genres"
+            defaultValue={defaultValues?.genres ?? ""}
+            className="border border-[var(--line)] bg-transparent px-3 py-2"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
           <span>{t("description")}</span>
           <textarea
             name="description"
@@ -142,6 +183,14 @@ export function EntertainerProfileForm({
             />
           </label>
         </div>
+        <label className="grid gap-1 text-sm">
+          <span>{t("performanceFormats")}</span>
+          <input
+            name="performanceFormats"
+            defaultValue={defaultValues?.performanceFormats ?? ""}
+            className="border border-[var(--line)] bg-transparent px-3 py-2"
+          />
+        </label>
         <label className="grid gap-1 text-sm">
           <span>{t("berlinBase")}</span>
           <input
@@ -206,6 +255,89 @@ export function EntertainerProfileForm({
             className="border border-[var(--line)] bg-transparent px-3 py-2"
           />
         </label>
+        <label className="grid gap-1 text-sm">
+          <span>{t("languages")}</span>
+          <input
+            name="languages"
+            defaultValue={defaultValues?.languages ?? ""}
+            className="border border-[var(--line)] bg-transparent px-3 py-2"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span>{t("accessibilityNotes")}</span>
+          <textarea
+            name="accessibilityNotes"
+            rows={2}
+            defaultValue={defaultValues?.accessibilityNotes ?? ""}
+            className="border border-[var(--line)] bg-transparent px-3 py-2"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span>{t("equipmentSupplied")}</span>
+          <textarea
+            name="equipmentSupplied"
+            rows={2}
+            defaultValue={defaultValues?.equipmentSupplied ?? ""}
+            className="border border-[var(--line)] bg-transparent px-3 py-2"
+          />
+        </label>
+        <label className="grid gap-1 text-sm">
+          <span>{t("websiteUrl")}</span>
+          <input
+            name="websiteUrl"
+            type="url"
+            defaultValue={defaultValues?.websiteUrl ?? ""}
+            className="border border-[var(--line)] bg-transparent px-3 py-2"
+          />
+        </label>
+        <fieldset className="grid gap-2 border border-[var(--rule)] p-3">
+          <legend className="px-1 text-sm">{t("socialLinks")}</legend>
+          <label className="grid gap-1 text-sm">
+            <span>{t("socialInstagram")}</span>
+            <input
+              name="socialInstagram"
+              type="url"
+              defaultValue={social.instagram ?? ""}
+              className="border border-[var(--line)] bg-transparent px-3 py-2"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>{t("socialFacebook")}</span>
+            <input
+              name="socialFacebook"
+              type="url"
+              defaultValue={social.facebook ?? ""}
+              className="border border-[var(--line)] bg-transparent px-3 py-2"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>{t("socialTiktok")}</span>
+            <input
+              name="socialTiktok"
+              type="url"
+              defaultValue={social.tiktok ?? ""}
+              className="border border-[var(--line)] bg-transparent px-3 py-2"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>{t("socialSpotify")}</span>
+            <input
+              name="socialSpotify"
+              type="url"
+              defaultValue={social.spotify ?? ""}
+              className="border border-[var(--line)] bg-transparent px-3 py-2"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>{t("socialSoundcloud")}</span>
+            <input
+              name="socialSoundcloud"
+              type="url"
+              defaultValue={social.soundcloud ?? ""}
+              className="border border-[var(--line)] bg-transparent px-3 py-2"
+            />
+          </label>
+        </fieldset>
         <label className="grid gap-1 text-sm">
           <span>{t("contactEmail")}</span>
           <input
