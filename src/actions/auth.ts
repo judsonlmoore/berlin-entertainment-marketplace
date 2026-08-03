@@ -1,9 +1,13 @@
 "use server";
 
 import { signIn, signOut } from "@/src/auth";
+import type { AppLocale } from "@/src/i18n/routing";
 
-export async function signInWithProvider(provider: "github" | "google") {
-  await signIn(provider, { redirectTo: "/en/onboarding" });
+export async function signInWithProvider(
+  provider: "github" | "google",
+  locale: AppLocale = "en",
+) {
+  await signIn(provider, { redirectTo: `/${locale}/marketplace` });
 }
 
 export async function signOutAction() {

@@ -2,12 +2,14 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { listConfiguredProviders } from "@/src/auth";
 import { signInWithProvider } from "@/src/actions/auth";
 import { PendingSubmitButton } from "@/src/components/pending-submit-button";
+import type { AppLocale } from "@/src/i18n/routing";
 
 type Props = { params: Promise<{ locale: string }> };
 
 export default async function SignInPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const appLocale = locale as AppLocale;
   const t = await getTranslations("signIn");
   const providers = listConfiguredProviders();
 
@@ -23,7 +25,7 @@ export default async function SignInPage({ params }: Props) {
           <form
             action={async () => {
               "use server";
-              await signInWithProvider("github");
+              await signInWithProvider("github", appLocale);
             }}
           >
             <PendingSubmitButton className="w-full">
@@ -36,7 +38,7 @@ export default async function SignInPage({ params }: Props) {
           <form
             action={async () => {
               "use server";
-              await signInWithProvider("google");
+              await signInWithProvider("google", appLocale);
             }}
           >
             <PendingSubmitButton className="w-full">

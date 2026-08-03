@@ -17,19 +17,8 @@ export async function PublicHeader({ signedIn, showApplyCta = true }: Props) {
   return (
     <header className="border-b border-[var(--rule)] bg-[var(--surface)]">
       <div className="shell flex min-h-[72px] items-center justify-between gap-4 py-4">
-        <Link href="/" className="flex items-center gap-2 no-underline">
-          <span
-            aria-hidden="true"
-            className="inline-flex size-8 items-center justify-center rounded-full bg-[var(--rail)] text-sm font-semibold text-[var(--primary-foreground)]"
-          >
-            S
-          </span>
-          <span className="display text-2xl leading-none">
-            {brand("name")}
-            <span className="ml-1 font-sans text-xs font-semibold tracking-[0.14em] text-[var(--text-muted)] uppercase">
-              {brand("city")}
-            </span>
-          </span>
+        <Link href="/" className="display text-2xl leading-none no-underline">
+          {brand("name")}
         </Link>
         <nav
           aria-label={t("primary")}
