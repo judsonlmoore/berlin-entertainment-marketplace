@@ -1,5 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
+import { AccountDeletionSection } from "@/src/components/account-deletion-section";
 import { EntertainerProfileForm } from "@/src/components/entertainer-profile-form";
 import { PortfolioEditor } from "@/src/components/portfolio-editor";
 import { ProfileRoleTabs } from "@/src/components/profile-role-tabs";
@@ -241,6 +242,8 @@ export default async function ProfilePage({ params }: Props) {
         ) : (
           <p className="panel p-6">{t("noRoles")}</p>
         )}
+
+        <AccountDeletionSection userEmail={session.user.email ?? ""} />
       </div>
 
       <aside className="panel h-fit space-y-4 p-5">
