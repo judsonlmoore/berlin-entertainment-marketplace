@@ -157,26 +157,6 @@ export default async function HomePage({ params }: Props) {
             </article>
           ))}
         </section>
-
-        <footer className="border-t border-[var(--rule)] pt-8 pb-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="display text-2xl">Salon</p>
-              <p className="mt-2 max-w-md text-sm font-medium text-[var(--text-muted)]">
-                {t("footerNote")}
-              </p>
-            </div>
-            <p className="text-sm font-medium">
-              <Link href="/privacy">{t("footerLegal")}</Link>
-              {" · "}
-              <Link href="/terms">{t("footerTerms")}</Link>
-              {" · "}
-              <Link href="/cookies">Cookie Policy</Link>
-              {" · "}
-              <Link href="/sign-in">{t("ctaSignIn")}</Link>
-            </p>
-          </div>
-        </footer>
       </div>
     </div>
   );

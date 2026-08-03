@@ -80,7 +80,8 @@
 
 ## Shell
 - Desktop ≥1024px: sticky ~280px rail, slim surface top bar (~64–72px), breadcrumb + locale
-- Mobile &lt;768px: compact header + 5-item bottom nav; safe-area insets
+- Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav
+- Logged-out surfaces share one public footer (privacy, terms, cookies, sign-in)
 
 ## Explicitly prohibited
 No gradients, glassmorphism, neon, purple-first templates, oversized rounded cards, pill-everything, generic stock photography, decorative blobs, drop-shadow-heavy cards, warm-cream + terracotta + giant serif everywhere as the default authenticated look.
@@ -92,3 +93,5 @@ No gradients, glassmorphism, neon, purple-first templates, oversized rounded car
 | 2026-08-03 | Cool stone canvas + true white surfaces | Improves contrast and modern marketplace feel while keeping cultural restraint |
 | 2026-08-03 | Fraunces for brand/hero; Outfit for UI | Serif demoted so ops screens stay scannable |
 | 2026-08-03 | Form system with 8px radius and section groups | Profile/booking trust surfaces need first-class field UI |
+| 2026-08-03 | Remove authenticated sticky bottom nav | Mobile drawer + desktop rail already cover navigation; bottom bar was redundant |
+| 2026-08-03 | Legal pages from markdown under `content/legal` | Easier bilingual updates; shared prose template + public footer |

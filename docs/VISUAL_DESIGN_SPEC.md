@@ -104,7 +104,7 @@ At desktop widths (`>= 1024px`), use a fixed or sticky `280px` near-black green 
 
 Content area: slim white top bar (~64–72px), breadcrumb left, locale/account utilities right. Thin bottom rule. Do not densify into a second global nav.
 
-Tablet: collapse rail to icon rail or drawer with labels on demand. Below `768px`: compact top header + five-item bottom nav; safe-area insets. Never squeeze the desktop rail beside a narrow column.
+Tablet: collapse rail to icon rail or drawer with labels on demand. Below `768px`: compact top header + drawer navigation (same items as the rail); safe-area insets. Never squeeze the desktop rail beside a narrow column. Do not add a sticky bottom nav when the drawer/rail menu already covers navigation.
 
 ## 5. Core component contracts
 
@@ -216,7 +216,7 @@ Reference: [dual-role-profile.png](./design-reference/dual-role-profile.png)
 
 - Desktop: `280px` rail + consistent max-width canvas
 - Tablet: two-column collections; collapsed nav
-- Mobile: single column; bottom nav; drawer filters; agenda calendar
+- Mobile: single column; drawer nav; drawer filters; agenda calendar
 - Recompose modules; never scale desktop mockups wholesale
 - Skeleton/empty/error/forbidden/suspended states are intentional
 - Visible focus; ≥44×44px targets; 200% zoom without clipping
