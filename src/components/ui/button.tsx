@@ -14,7 +14,8 @@ const variantClass: Record<Variant, string> = {
     "rounded-[var(--radius-md)] bg-[var(--primary)] text-[var(--primary-foreground)] border border-[var(--primary)] font-semibold",
   secondary:
     "rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--ink)] border border-[var(--rule)] font-semibold",
-  ghost: "rounded-[var(--radius-md)] bg-transparent text-[var(--ink)] border border-transparent underline font-medium",
+  ghost:
+    "rounded-[var(--radius-md)] bg-transparent text-[var(--ink)] border border-transparent underline font-medium",
 };
 
 export function Button({

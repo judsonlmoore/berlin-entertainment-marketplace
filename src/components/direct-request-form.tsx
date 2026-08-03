@@ -110,11 +110,7 @@ export function DirectRequestForm({
       </div>
       <label className="grid gap-1 text-sm">
         <span>{t("formatCategory")}</span>
-        <input
-          name="formatCategory"
-          required
-          className="field"
-        />
+        <input name="formatCategory" required className="field" />
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("proposedFee")}</span>
@@ -128,11 +124,7 @@ export function DirectRequestForm({
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("notes")}</span>
-        <textarea
-          name="notes"
-          rows={3}
-          className="field"
-        />
+        <textarea name="notes" rows={3} className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">

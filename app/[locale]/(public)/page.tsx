@@ -64,9 +64,7 @@ export default async function HomePage({ params }: Props) {
     : signedIn
       ? "/apply"
       : "/sign-in";
-  const primaryLabel = canEnter
-    ? t("ctaEnter")
-    : t("ctaApply");
+  const primaryLabel = canEnter ? t("ctaEnter") : t("ctaApply");
 
   return (
     <div>
@@ -77,7 +75,7 @@ export default async function HomePage({ params }: Props) {
           fill
           priority
           sizes="100vw"
-          className="object-cover object-[55%_40%] scale-105 blur-[2.5px] saturate-[0.78] brightness-[0.72]"
+          className="scale-105 object-cover object-[55%_40%] blur-[2.5px] brightness-[0.72] saturate-[0.78]"
         />
         <div
           aria-hidden="true"
@@ -92,7 +90,7 @@ export default async function HomePage({ params }: Props) {
           className="absolute inset-0 bg-gradient-to-t from-[var(--rail)]/70 via-transparent to-[var(--rail)]/25"
         />
 
-        <div className="shell relative flex min-h-[min(88vh,44rem)] items-end pb-14 pt-16 sm:items-center sm:pb-20 sm:pt-20">
+        <div className="shell relative flex min-h-[min(88vh,44rem)] items-end pt-16 pb-14 sm:items-center sm:pt-20 sm:pb-20">
           <div className="max-w-xl text-white">
             <p className="display text-[clamp(2.75rem,6vw,4.25rem)] leading-none tracking-tight">
               {brand("name")}

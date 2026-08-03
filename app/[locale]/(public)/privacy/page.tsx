@@ -55,7 +55,8 @@ export default async function PrivacyPage({ params }: Props) {
             <br />
             {t("representedBy")}: Judson Moore (President & CEO)
             <br />
-            {t("contactEmail")}: <a href="mailto:hello@moorewwe.com">hello@moorewwe.com</a>
+            {t("contactEmail")}:{" "}
+            <a href="mailto:hello@moorewwe.com">hello@moorewwe.com</a>
           </p>
         </section>
 
@@ -78,16 +79,20 @@ export default async function PrivacyPage({ params }: Props) {
           <h2>{t("legalBasisTitle")}</h2>
           <ul>
             <li>
-              <strong>{t("contractBasisLabel")}</strong> — {t("contractBasisBody")}
+              <strong>{t("contractBasisLabel")}</strong> —{" "}
+              {t("contractBasisBody")}
             </li>
             <li>
-              <strong>{t("legitimateInterestLabel")}</strong> — {t("legitimateInterestBody")}
+              <strong>{t("legitimateInterestLabel")}</strong> —{" "}
+              {t("legitimateInterestBody")}
             </li>
             <li>
-              <strong>{t("consentBasisLabel")}</strong> — {t("consentBasisBody")}
+              <strong>{t("consentBasisLabel")}</strong> —{" "}
+              {t("consentBasisBody")}
             </li>
             <li>
-              <strong>{t("legalObligationLabel")}</strong> — {t("legalObligationBody")}
+              <strong>{t("legalObligationLabel")}</strong> —{" "}
+              {t("legalObligationBody")}
             </li>
           </ul>
         </section>
@@ -110,10 +115,12 @@ export default async function PrivacyPage({ params }: Props) {
           <p>{t("sharingBody")}</p>
           <ul>
             <li>
-              <strong>{t("sharingApprovedMembers")}</strong> — {t("sharingApprovedMembersBody")}
+              <strong>{t("sharingApprovedMembers")}</strong> —{" "}
+              {t("sharingApprovedMembersBody")}
             </li>
             <li>
-              <strong>{t("sharingServiceProviders")}</strong> — {t("sharingServiceProvidersBody")}
+              <strong>{t("sharingServiceProviders")}</strong> —{" "}
+              {t("sharingServiceProvidersBody")}
             </li>
             <li>
               <strong>{t("sharingLegal")}</strong> — {t("sharingLegalBody")}
@@ -121,7 +128,9 @@ export default async function PrivacyPage({ params }: Props) {
           </ul>
           <p>
             {t("subProcessorsLink")}{" "}
-            <a href={`/${locale}/sub-processors`}>{t("subProcessorsLinkText")}</a>
+            <a href={`/${locale}/sub-processors`}>
+              {t("subProcessorsLinkText")}
+            </a>
           </p>
         </section>
 
@@ -142,25 +151,31 @@ export default async function PrivacyPage({ params }: Props) {
               <strong>{t("rightAccessLabel")}</strong> — {t("rightAccessBody")}
             </li>
             <li>
-              <strong>{t("rightRectificationLabel")}</strong> — {t("rightRectificationBody")}
+              <strong>{t("rightRectificationLabel")}</strong> —{" "}
+              {t("rightRectificationBody")}
             </li>
             <li>
-              <strong>{t("rightErasureLabel")}</strong> — {t("rightErasureBody")}
+              <strong>{t("rightErasureLabel")}</strong> —{" "}
+              {t("rightErasureBody")}
             </li>
             <li>
-              <strong>{t("rightRestrictionLabel")}</strong> — {t("rightRestrictionBody")}
+              <strong>{t("rightRestrictionLabel")}</strong> —{" "}
+              {t("rightRestrictionBody")}
             </li>
             <li>
-              <strong>{t("rightPortabilityLabel")}</strong> — {t("rightPortabilityBody")}
+              <strong>{t("rightPortabilityLabel")}</strong> —{" "}
+              {t("rightPortabilityBody")}
             </li>
             <li>
               <strong>{t("rightObjectLabel")}</strong> — {t("rightObjectBody")}
             </li>
             <li>
-              <strong>{t("rightWithdrawLabel")}</strong> — {t("rightWithdrawBody")}
+              <strong>{t("rightWithdrawLabel")}</strong> —{" "}
+              {t("rightWithdrawBody")}
             </li>
             <li>
-              <strong>{t("rightComplainLabel")}</strong> — {t("rightComplainBody")}
+              <strong>{t("rightComplainLabel")}</strong> —{" "}
+              {t("rightComplainBody")}
             </li>
           </ul>
           <p>{t("exerciseRights")}</p>

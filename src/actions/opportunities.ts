@@ -227,10 +227,7 @@ export async function applyToOpportunity(
     if (isSubmit && !parsed.data.message.trim()) {
       throw new AppError("validation", "Message is required to submit");
     }
-    if (
-      isSubmit &&
-      parsed.data.quoteMaxEur < parsed.data.quoteMinEur
-    ) {
+    if (isSubmit && parsed.data.quoteMaxEur < parsed.data.quoteMinEur) {
       throw new AppError("validation", "Quote max must be >= min");
     }
 
@@ -282,12 +279,18 @@ export async function applyToOpportunity(
       const from = existing.state as ApplicationState;
       if (from === "draft" && isSubmit) {
         if (!canApplicantTransitionApplication(from, "submitted")) {
-          throw new AppError("invalid_transition", `Cannot submit from ${from}`);
+          throw new AppError(
+            "invalid_transition",
+            `Cannot submit from ${from}`,
+          );
         }
       } else if (from === "draft" && !isSubmit) {
         // update draft in place
       } else {
-        throw new AppError("conflict", "You already applied to this opportunity");
+        throw new AppError(
+          "conflict",
+          "You already applied to this opportunity",
+        );
       }
     }
 
@@ -326,7 +329,9 @@ export async function applyToOpportunity(
 
         await tx.insert(auditEvents).values({
           actorUserId: session.user.id,
-          action: isSubmit ? "application.submitted" : "application.draft_saved",
+          action: isSubmit
+            ? "application.submitted"
+            : "application.draft_saved",
           subjectType: "application",
           subjectId: existing.id,
           metadata: {

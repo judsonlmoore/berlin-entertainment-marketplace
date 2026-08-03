@@ -217,12 +217,7 @@ export function RequestClarificationForm({
     >
       <label className="grid gap-1 text-sm">
         <span>{t("requestClarification")}</span>
-        <textarea
-          name="body"
-          required
-          rows={3}
-          className="field"
-        />
+        <textarea name="body" required rows={3} className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">
@@ -285,12 +280,7 @@ export function ReplyClarificationForm({
     >
       <label className="grid gap-1 text-sm">
         <span>{t("replyClarification")}</span>
-        <textarea
-          name="body"
-          required
-          rows={3}
-          className="field"
-        />
+        <textarea name="body" required rows={3} className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">
@@ -475,7 +465,10 @@ export function ReviewApplicationButtons({
         </Button>
       </div>
       {state === "submitted" || state === "clarification_requested" ? (
-        <RequestClarificationForm locale={locale} applicationId={applicationId} />
+        <RequestClarificationForm
+          locale={locale}
+          applicationId={applicationId}
+        />
       ) : null}
     </div>
   );

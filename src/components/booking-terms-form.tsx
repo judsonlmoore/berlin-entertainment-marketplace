@@ -137,11 +137,7 @@ export function BookingTermsForm({
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("depositTerms")}</span>
-        <textarea
-          name="depositTerms"
-          rows={2}
-          className="field"
-        />
+        <textarea name="depositTerms" rows={2} className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">

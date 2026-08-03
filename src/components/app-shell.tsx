@@ -260,7 +260,9 @@ export function AppShell({
     .filter((item) => bottomKeys.has(item.labelKey))
     .slice(0, 5);
 
+  // Close mobile menu when navigating to a new page
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     closeMenu();
   }, [pathname, closeMenu]);
 
@@ -279,9 +281,8 @@ export function AppShell({
     };
 
     document.addEventListener("keydown", onKeyDown);
-    const firstLink = drawerRef.current?.querySelector<HTMLElement>(
-      "a, button",
-    );
+    const firstLink =
+      drawerRef.current?.querySelector<HTMLElement>("a, button");
     firstLink?.focus();
 
     return () => {

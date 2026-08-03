@@ -3,7 +3,8 @@ import type {
   calendarSyncProviderEnum,
 } from "@/src/db/schema/enums";
 
-export type CalendarOwnerType = (typeof calendarOwnerTypeEnum.enumValues)[number];
+export type CalendarOwnerType =
+  (typeof calendarOwnerTypeEnum.enumValues)[number];
 export type CalendarSyncProviderName =
   (typeof calendarSyncProviderEnum.enumValues)[number];
 

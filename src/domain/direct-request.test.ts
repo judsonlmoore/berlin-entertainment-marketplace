@@ -46,9 +46,9 @@ describe("direct request transitions", () => {
 
   it("lets the system expire overdue requested items", () => {
     expect(canSystemTransitionDirectRequest("requested", "expired")).toBe(true);
-    expect(canSystemTransitionDirectRequest("changes_proposed", "expired")).toBe(
-      false,
-    );
+    expect(
+      canSystemTransitionDirectRequest("changes_proposed", "expired"),
+    ).toBe(false);
   });
 
   it("defaults response deadline to seven days", () => {

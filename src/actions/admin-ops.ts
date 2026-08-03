@@ -21,7 +21,12 @@ import {
 } from "@/src/db/schema/marketplace";
 
 export type ActionResult =
-  | { ok: true; expired?: number; expiredHolds?: number; expiredRequests?: number }
+  | {
+      ok: true;
+      expired?: number;
+      expiredHolds?: number;
+      expiredRequests?: number;
+    }
   | { ok: false; code: string; message: string };
 
 const expireSchema = z.object({

@@ -23,9 +23,7 @@ describe("role-segregated discovery surfaces", () => {
   it("blocks venue-only users from venue list permission", () => {
     const a = actor({
       roles: ["venue"],
-      venueMemberships: [
-        { venueId: "v1", role: "owner", status: "active" },
-      ],
+      venueMemberships: [{ venueId: "v1", role: "owner", status: "active" }],
     });
     expect(can(a, "marketplace.discover")).toBe(true);
     expect(can(a, "discover.entertainers")).toBe(true);
@@ -35,9 +33,7 @@ describe("role-segregated discovery surfaces", () => {
   it("allows dual-role users both discovery modes", () => {
     const a = actor({
       roles: ["entertainer", "venue"],
-      venueMemberships: [
-        { venueId: "v1", role: "member", status: "active" },
-      ],
+      venueMemberships: [{ venueId: "v1", role: "member", status: "active" }],
     });
     expect(can(a, "discover.entertainers")).toBe(true);
     expect(can(a, "discover.venues")).toBe(true);
@@ -46,9 +42,7 @@ describe("role-segregated discovery surfaces", () => {
   it("treats active venue membership as venue operator for act discovery", () => {
     const a = actor({
       roles: [],
-      venueMemberships: [
-        { venueId: "v1", role: "member", status: "active" },
-      ],
+      venueMemberships: [{ venueId: "v1", role: "member", status: "active" }],
     });
     expect(can(a, "discover.entertainers")).toBe(true);
     expect(can(a, "discover.venues")).toBe(false);

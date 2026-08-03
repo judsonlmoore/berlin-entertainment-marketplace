@@ -113,9 +113,7 @@ export function ProposeChangesForm({
         startTransition(async () => {
           const result = await proposeDirectRequestChanges({
             requestId,
-            ...(startsAt
-              ? { startsAt: new Date(startsAt).toISOString() }
-              : {}),
+            ...(startsAt ? { startsAt: new Date(startsAt).toISOString() } : {}),
             ...(endsAt ? { endsAt: new Date(endsAt).toISOString() } : {}),
             ...(feeRaw ? { proposedFeeEur: Number(feeRaw) } : {}),
             ...(notes ? { notes } : {}),

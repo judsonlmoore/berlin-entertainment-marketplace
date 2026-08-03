@@ -18,9 +18,9 @@ describe("youtube domain", () => {
   });
 
   it("rejects non-YouTube hosts", () => {
-    expect(validateYouTubeUrl("https://example.com/watch?v=dQw4w9WgXcQ").ok).toBe(
-      false,
-    );
+    expect(
+      validateYouTubeUrl("https://example.com/watch?v=dQw4w9WgXcQ").ok,
+    ).toBe(false);
   });
 
   it("builds nocookie embed URLs", () => {

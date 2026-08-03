@@ -142,7 +142,10 @@ export default async function ProfilePage({ params }: Props) {
           <ul className="mt-3 grid gap-1 text-sm">
             {riderFiles.map((file) => (
               <li key={file.id}>
-                <a href={`/api/riders/${file.id}`} className="text-[var(--primary)]">
+                <a
+                  href={`/api/riders/${file.id}`}
+                  className="text-[var(--primary)]"
+                >
                   {file.originalFilename ?? t("riderDownload")}
                 </a>
                 {" · "}

@@ -10,10 +10,7 @@ type Props = {
   showApplyCta?: boolean;
 };
 
-export async function PublicHeader({
-  signedIn,
-  showApplyCta = true,
-}: Props) {
+export async function PublicHeader({ signedIn, showApplyCta = true }: Props) {
   const t = await getTranslations("nav");
   const brand = await getTranslations("brand");
 

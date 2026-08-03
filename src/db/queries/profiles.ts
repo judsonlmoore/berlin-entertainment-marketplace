@@ -16,7 +16,9 @@ export async function getEntertainerProfileForUser(userId: string) {
   });
 }
 
-export async function listPortfolioItemsForProfile(entertainerProfileId: string) {
+export async function listPortfolioItemsForProfile(
+  entertainerProfileId: string,
+) {
   const db = getDb();
   return db
     .select({

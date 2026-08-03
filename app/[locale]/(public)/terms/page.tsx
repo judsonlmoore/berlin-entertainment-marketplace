@@ -55,7 +55,8 @@ export default async function TermsPage({ params }: Props) {
             <br />
             {t("representedBy")}: Judson Moore (President & CEO)
             <br />
-            {t("contactEmail")}: <a href="mailto:hello@moorewwe.com">hello@moorewwe.com</a>
+            {t("contactEmail")}:{" "}
+            <a href="mailto:hello@moorewwe.com">hello@moorewwe.com</a>
           </p>
         </section>
 
@@ -144,9 +145,8 @@ export default async function TermsPage({ params }: Props) {
           <h2>{t("dataProtectionTitle")}</h2>
           <p>
             {t("dataProtectionBody")}{" "}
-            <a href={`/${locale}/privacy`}>{t("privacyPolicyLink")}</a>
-            {" "}{t("and")}{" "}
-            <a href={`/${locale}/dpa`}>{t("dpaLink")}</a>
+            <a href={`/${locale}/privacy`}>{t("privacyPolicyLink")}</a>{" "}
+            {t("and")} <a href={`/${locale}/dpa`}>{t("dpaLink")}</a>
           </p>
         </section>
 

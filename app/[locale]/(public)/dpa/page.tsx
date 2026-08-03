@@ -91,7 +91,9 @@ export default async function DpaPage({ params }: Props) {
           <p>{t("subProcessorsBody")}</p>
           <p>
             {t("subProcessorsLink")}{" "}
-            <a href={`/${locale}/sub-processors`}>{t("subProcessorsLinkText")}</a>
+            <a href={`/${locale}/sub-processors`}>
+              {t("subProcessorsLinkText")}
+            </a>
           </p>
         </section>
 

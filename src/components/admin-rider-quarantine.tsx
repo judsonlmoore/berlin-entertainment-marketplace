@@ -23,7 +23,9 @@ export function QuarantineRiderButton({
 
   if (scanStatus === "quarantined") {
     return (
-      <span className="text-xs text-[var(--text-muted)]">{t("quarantined")}</span>
+      <span className="text-xs text-[var(--text-muted)]">
+        {t("quarantined")}
+      </span>
     );
   }
 

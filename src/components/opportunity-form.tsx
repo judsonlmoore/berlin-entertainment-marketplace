@@ -78,11 +78,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
       <h3 className="text-lg font-medium">{t("createTitle")}</h3>
       <label className="grid gap-1 text-sm">
         <span>{t("titleLabel")}</span>
-        <input
-          name="title"
-          required
-          className="field"
-        />
+        <input name="title" required className="field" />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
@@ -106,57 +102,30 @@ export function OpportunityForm({ locale, venueId }: Props) {
       </div>
       <label className="grid gap-1 text-sm">
         <span>{t("formatCategory")}</span>
-        <input
-          name="formatCategory"
-          required
-          className="field"
-        />
+        <input name="formatCategory" required className="field" />
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("expectedAudience")}</span>
-        <input
-          name="expectedAudience"
-          className="field"
-        />
+        <input name="expectedAudience" className="field" />
       </label>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           <span>{t("budgetMin")}</span>
-          <input
-            name="budgetMinEur"
-            type="number"
-            min={0}
-            className="field"
-          />
+          <input name="budgetMinEur" type="number" min={0} className="field" />
         </label>
         <label className="grid gap-1 text-sm">
           <span>{t("budgetMax")}</span>
-          <input
-            name="budgetMaxEur"
-            type="number"
-            min={0}
-            className="field"
-          />
+          <input name="budgetMaxEur" type="number" min={0} className="field" />
         </label>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">
           <span>{t("actSizeMin")}</span>
-          <input
-            name="actSizeMin"
-            type="number"
-            min={1}
-            className="field"
-          />
+          <input name="actSizeMin" type="number" min={1} className="field" />
         </label>
         <label className="grid gap-1 text-sm">
           <span>{t("actSizeMax")}</span>
-          <input
-            name="actSizeMax"
-            type="number"
-            min={1}
-            className="field"
-          />
+          <input name="actSizeMax" type="number" min={1} className="field" />
         </label>
       </div>
       <label className="grid gap-1 text-sm">
@@ -169,19 +138,11 @@ export function OpportunityForm({ locale, venueId }: Props) {
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("productionContext")}</span>
-        <textarea
-          name="productionContext"
-          rows={3}
-          className="field"
-        />
+        <textarea name="productionContext" rows={3} className="field" />
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("notes")}</span>
-        <textarea
-          name="notes"
-          rows={3}
-          className="field"
-        />
+        <textarea name="notes" rows={3} className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">

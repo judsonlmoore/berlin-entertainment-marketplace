@@ -81,9 +81,10 @@ export default async function CookiesPage({ params }: Props) {
           <button
             type="button"
             onClick={() => {
-              if (typeof window !== "undefined") {
-                // @ts-expect-error - CookieConsent global
-                window.CookieConsent?.showPreferences();
+              if (typeof window !== "undefined" && "CookieConsent" in window) {
+                (
+                  window as { CookieConsent?: { showPreferences: () => void } }
+                ).CookieConsent?.showPreferences();
               }
             }}
             className="btn-primary mt-4"

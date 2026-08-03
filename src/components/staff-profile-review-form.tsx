@@ -83,11 +83,7 @@ export function StaffProfileReviewForm({
       </label>
       <label className="grid gap-1 text-sm">
         <span>{t("reasonLabel")}</span>
-        <input
-          name="reason"
-          required
-          className="field"
-        />
+        <input name="reason" required className="field" />
       </label>
       {error ? (
         <p role="alert" className="text-sm text-red-800">
