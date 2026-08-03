@@ -139,9 +139,7 @@ function updateConsentMode(categories: string[]) {
   const consentState = {
     ad_storage: categories.includes("marketing") ? "granted" : "denied",
     ad_user_data: categories.includes("marketing") ? "granted" : "denied",
-    ad_personalization: categories.includes("marketing")
-      ? "granted"
-      : "denied",
+    ad_personalization: categories.includes("marketing") ? "granted" : "denied",
     analytics_storage: categories.includes("analytics") ? "granted" : "denied",
     functionality_storage: categories.includes("functionality")
       ? "granted"

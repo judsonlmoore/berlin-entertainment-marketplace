@@ -27,9 +27,7 @@ describe("legal content", () => {
   it("includes the cookie preference action marker in cookie policies", () => {
     for (const locale of routing.locales) {
       const document = getLegalDocument("cookies", locale);
-      expect(document.body).toMatch(
-        /\{\{manage-cookie-preferences:[^}]+\}\}/,
-      );
+      expect(document.body).toMatch(/\{\{manage-cookie-preferences:[^}]+\}\}/);
     }
   });
 });

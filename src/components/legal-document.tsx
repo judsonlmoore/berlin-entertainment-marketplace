@@ -1,8 +1,5 @@
 import { MarkdownDocument } from "@/src/components/markdown-document";
-import {
-  getLegalDocument,
-  type LegalSlug,
-} from "@/src/lib/legal-content";
+import { getLegalDocument, type LegalSlug } from "@/src/lib/legal-content";
 import { type AppLocale } from "@/src/i18n/routing";
 
 type Props = {

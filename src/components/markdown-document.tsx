@@ -9,11 +9,7 @@ const MANAGE_COOKIE_RE = /\{\{manage-cookie-preferences:([^}]+)\}\}/;
 const markdownComponents: Components = {
   a({ href, children }) {
     const hrefValue = typeof href === "string" ? href : undefined;
-    if (
-      hrefValue &&
-      hrefValue.startsWith("/") &&
-      !hrefValue.startsWith("//")
-    ) {
+    if (hrefValue && hrefValue.startsWith("/") && !hrefValue.startsWith("//")) {
       return <Link href={hrefValue}>{children}</Link>;
     }
 
@@ -21,9 +17,7 @@ const markdownComponents: Components = {
     return (
       <a
         href={hrefValue}
-        {...(external
-          ? { target: "_blank", rel: "noopener noreferrer" }
-          : {})}
+        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
         {children}
       </a>
