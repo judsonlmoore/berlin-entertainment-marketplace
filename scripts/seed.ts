@@ -1,10 +1,17 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../src/db/client";
 import { users } from "../src/db/schema";
 import {
   auditEvents,
+  bookings,
+  contactMethods,
+  directRequests,
+  entertainerProfiles,
   marketplaceAccounts,
+  opportunities,
   userRoles,
+  venueMemberships,
+  venues,
 } from "../src/db/schema/marketplace";
 
 async function main() {
@@ -93,6 +100,207 @@ async function main() {
   await ensureAccount(entertainer.id, "approved", ["entertainer"]);
   await ensureAccount(venueOperator.id, "approved", ["venue"]);
 
+  let entertainerProfile = await db.query.entertainerProfiles.findFirst({
+    where: eq(entertainerProfiles.userId, entertainer.id),
+  });
+  if (!entertainerProfile) {
+    const [created] = await db
+      .insert(entertainerProfiles)
+      .values({
+        userId: entertainer.id,
+        actName: "Kiez Quartet",
+        category: "chamber",
+        description: "Synthetic four-piece acoustic act for Berlin salons.",
+        groupSize: 4,
+        berlinBase: "Neukölln",
+        travelRadiusKm: 20,
+        priceMinCents: 40000,
+        priceMaxCents: 90000,
+        durationMinutes: 75,
+        technicalRequirements: "Two DI boxes, four chairs, soft lighting.",
+        publicationState: "approved",
+      })
+      .returning();
+    entertainerProfile = created;
+  }
+
+  if (entertainerProfile) {
+    const existingContact = await db.query.contactMethods.findFirst({
+      where: and(
+        eq(contactMethods.ownerType, "entertainer"),
+        eq(contactMethods.ownerId, entertainerProfile.id),
+      ),
+    });
+    if (!existingContact) {
+      await db.insert(contactMethods).values({
+        ownerType: "entertainer",
+        ownerId: entertainerProfile.id,
+        kind: "email",
+        valueEncrypted: entertainerEmail,
+        isPreferred: true,
+      });
+    }
+  }
+
+  let venue = await db.query.venues.findFirst({
+    where: eq(venues.name, "Salon am Kanal"),
+  });
+  if (!venue) {
+    const [created] = await db
+      .insert(venues)
+      .values({
+        name: "Salon am Kanal",
+        shortDescription: "Synthetic canal-side room for small formats.",
+        addressLine1: "Maybachufer 12",
+        district: "Neukölln",
+        postalCode: "12047",
+        latitude: "52.4912",
+        longitude: "13.4395",
+        venueType: "salon",
+        audienceDescription: "Seated listening, 40–60 guests.",
+        capacity: 55,
+        capacityContext: "mostly seated",
+        productionResources: {
+          notes: "Small PA, two mics, warm house lights.",
+        },
+        publicationState: "approved",
+      })
+      .returning();
+    venue = created;
+
+    if (venue) {
+      await db.insert(venueMemberships).values({
+        venueId: venue.id,
+        userId: venueOperator.id,
+        role: "owner",
+        status: "active",
+      });
+    }
+  }
+
+  if (venue) {
+    const existingVenueContact = await db.query.contactMethods.findFirst({
+      where: and(
+        eq(contactMethods.ownerType, "venue"),
+        eq(contactMethods.ownerId, venue.id),
+      ),
+    });
+    if (!existingVenueContact) {
+      await db.insert(contactMethods).values({
+        ownerType: "venue",
+        ownerId: venue.id,
+        kind: "email",
+        valueEncrypted: venueEmail,
+        isPreferred: true,
+      });
+    }
+
+    const existingOpportunity = await db.query.opportunities.findFirst({
+      where: eq(opportunities.title, "Late salon set — Neukölln"),
+    });
+    if (!existingOpportunity) {
+      const startsAt = new Date();
+      startsAt.setDate(startsAt.getDate() + 21);
+      startsAt.setHours(20, 0, 0, 0);
+      const endsAt = new Date(startsAt);
+      endsAt.setHours(22, 0, 0, 0);
+      const deadline = new Date();
+      deadline.setDate(deadline.getDate() + 14);
+
+      await db.insert(opportunities).values({
+        venueId: venue.id,
+        createdByUserId: venueOperator.id,
+        title: "Late salon set — Neukölln",
+        startsAt,
+        endsAt,
+        formatCategory: "chamber",
+        expectedAudience: "40 seated listeners",
+        budgetMinCents: 50000,
+        budgetMaxCents: 90000,
+        actSizeMin: 1,
+        actSizeMax: 5,
+        productionContext: "House PA available; soft lighting preferred.",
+        applicationDeadline: deadline,
+        notes: "Synthetic open opportunity for local testing.",
+        state: "open",
+      });
+    }
+
+    if (entertainerProfile) {
+      let request:
+        | Awaited<ReturnType<typeof db.query.directRequests.findFirst>>
+        | undefined = await db.query.directRequests.findFirst({
+        where: and(
+          eq(directRequests.venueId, venue.id),
+          eq(directRequests.entertainerProfileId, entertainerProfile.id),
+        ),
+      });
+
+      if (!request) {
+        const startsAt = new Date();
+        startsAt.setDate(startsAt.getDate() + 28);
+        startsAt.setHours(19, 30, 0, 0);
+        const endsAt = new Date(startsAt);
+        endsAt.setHours(21, 0, 0, 0);
+
+        const [createdRequest] = await db
+          .insert(directRequests)
+          .values({
+            venueId: venue.id,
+            entertainerProfileId: entertainerProfile.id,
+            requestedByUserId: venueOperator.id,
+            startsAt,
+            endsAt,
+            proposedFeeCents: 65000,
+            formatCategory: "chamber",
+            notes: "Synthetic accepted direct request for terms testing.",
+            state: "accepted",
+          })
+          .returning();
+        request = createdRequest;
+      } else if (request.state !== "accepted") {
+        const [updated] = await db
+          .update(directRequests)
+          .set({
+            state: "accepted",
+            notes: "Synthetic accepted direct request for terms testing.",
+            updatedAt: new Date(),
+          })
+          .where(eq(directRequests.id, request.id))
+          .returning();
+        if (updated) {
+          request = updated;
+        }
+      }
+
+      if (request) {
+        const existingBooking = await db.query.bookings.findFirst({
+          where: and(
+            eq(bookings.originType, "direct_request"),
+            eq(bookings.originId, request.id),
+          ),
+        });
+        if (!existingBooking) {
+          await db.insert(bookings).values({
+            originType: "direct_request",
+            originId: request.id,
+            venueId: venue.id,
+            entertainerProfileId: entertainerProfile.id,
+            state: "accepted",
+          });
+        } else if (
+          existingBooking.state === "requested" ||
+          existingBooking.state === "applied"
+        ) {
+          await db
+            .update(bookings)
+            .set({ state: "accepted", updatedAt: new Date() })
+            .where(eq(bookings.id, existingBooking.id));
+        }
+      }
+    }
+  }
+
   await db.insert(auditEvents).values({
     actorUserId: staff.id,
     action: "seed.completed",
@@ -103,7 +311,9 @@ async function main() {
     },
   });
 
-  console.log("Seeded synthetic Salon fixtures (idempotent users/roles).");
+  console.log(
+    "Seeded synthetic Salon fixtures (idempotent users/roles/profiles).",
+  );
 }
 
 main().catch((error) => {

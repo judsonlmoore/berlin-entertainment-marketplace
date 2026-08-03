@@ -406,6 +406,14 @@ export const bookingTerms = pgTable(
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
     version: integer("version").notNull(),
+    proposedByUserId: text("proposed_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    acceptedByUserId: text("accepted_by_user_id").references(() => users.id),
+    acceptedAt: timestamp("accepted_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     startsAt: timestamp("starts_at", {
       withTimezone: true,
       mode: "date",

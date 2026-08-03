@@ -1,6 +1,5 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { eq } from "drizzle-orm";
@@ -13,11 +12,7 @@ import {
   verificationTokens,
 } from "@/src/db/schema";
 import { marketplaceAccounts, userRoles } from "@/src/db/schema/marketplace";
-import {
-  configuredAuthProviders,
-  getServerEnv,
-  isAuthDevLoginEnabled,
-} from "@/src/validation/env";
+import { configuredAuthProviders, getServerEnv } from "@/src/validation/env";
 import type { ApprovalState } from "@/src/domain/approval";
 import type { MarketplaceRole } from "@/src/domain/permissions";
 
@@ -89,94 +84,11 @@ function buildProviders() {
     );
   }
 
-  if (isAuthDevLoginEnabled()) {
-    providers.push(
-      Credentials({
-        id: "dev-login",
-        name: "Development login",
-        credentials: {
-          email: { label: "Email", type: "email" },
-          name: { label: "Name", type: "text" },
-          staff: { label: "Staff", type: "text" },
-        },
-        async authorize(credentials) {
-          if (!isAuthDevLoginEnabled() || !process.env.DATABASE_URL) {
-            return null;
-          }
-
-          const email =
-            typeof credentials?.email === "string" &&
-            credentials.email.includes("@")
-              ? credentials.email.toLowerCase().trim()
-              : "dev@salon.local";
-          const name =
-            typeof credentials?.name === "string" && credentials.name.trim()
-              ? credentials.name.trim()
-              : "Salon Dev User";
-          const isStaff = credentials?.staff === "true";
-
-          const db = getDb();
-          const existing = await db.query.users.findFirst({
-            where: eq(users.email, email),
-          });
-
-          if (existing) {
-            if (
-              existing.isPlatformStaff !== isStaff ||
-              existing.name !== name
-            ) {
-              await db
-                .update(users)
-                .set({
-                  isPlatformStaff: isStaff,
-                  name,
-                  updatedAt: new Date(),
-                })
-                .where(eq(users.id, existing.id));
-            }
-            return {
-              id: existing.id,
-              email: existing.email,
-              name,
-              isPlatformStaff: isStaff,
-            };
-          }
-
-          const [created] = await db
-            .insert(users)
-            .values({
-              email,
-              name,
-              emailVerified: new Date(),
-              isPlatformStaff: isStaff,
-            })
-            .returning();
-
-          if (!created) {
-            return null;
-          }
-
-          return {
-            id: created.id,
-            email: created.email,
-            name: created.name,
-            isPlatformStaff: created.isPlatformStaff,
-          };
-        },
-      }),
-    );
-  }
-
   return providers;
 }
 
 const databaseUrl = process.env.DATABASE_URL;
-const useDevLogin = isAuthDevLoginEnabled();
 
-/**
- * Database sessions are the default when Neon is configured and the credentials
- * development login is off. Auth.js requires JWT for the credentials provider.
- */
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...(databaseUrl
     ? {
@@ -190,8 +102,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
     : {}),
   session: {
-    strategy:
-      databaseUrl && !useDevLogin ? ("database" as const) : ("jwt" as const),
+    strategy: databaseUrl ? ("database" as const) : ("jwt" as const),
   },
   trustHost:
     getServerEnv().AUTH_TRUST_HOST === "true" ||

@@ -1,7 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { listConfiguredProviders } from "@/src/auth";
-import { signInWithDevLogin, signInWithProvider } from "@/src/actions/auth";
-import { isAuthDevLoginEnabled } from "@/src/validation/env";
+import { signInWithProvider } from "@/src/actions/auth";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -10,7 +9,6 @@ export default async function SignInPage({ params }: Props) {
   setRequestLocale(locale);
   const t = await getTranslations("signIn");
   const providers = listConfiguredProviders();
-  const devEnabled = isAuthDevLoginEnabled();
 
   return (
     <section className="mx-auto max-w-lg">
@@ -48,41 +46,6 @@ export default async function SignInPage({ params }: Props) {
               {t("google")}
             </button>
           </form>
-        ) : null}
-
-        {devEnabled ? (
-          <>
-            <p className="text-sm text-[var(--muted)]">{t("devNotice")}</p>
-            <form action={signInWithDevLogin} className="grid gap-3">
-              <label className="grid gap-1 text-sm">
-                <span>Email</span>
-                <input
-                  name="email"
-                  type="email"
-                  defaultValue="dev@salon.local"
-                  className="border border-[var(--line)] bg-transparent px-3 py-2"
-                />
-              </label>
-              <label className="grid gap-1 text-sm">
-                <span>Name</span>
-                <input
-                  name="name"
-                  defaultValue="Salon Dev User"
-                  className="border border-[var(--line)] bg-transparent px-3 py-2"
-                />
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="staff" />
-                <span>Platform staff</span>
-              </label>
-              <button
-                type="submit"
-                className="bg-[var(--ink)] px-4 py-3 text-[var(--background)]"
-              >
-                {t("dev")}
-              </button>
-            </form>
-          </>
         ) : null}
 
         {providers.length === 0 ? <p>{t("unconfigured")}</p> : null}
