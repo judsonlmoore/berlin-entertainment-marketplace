@@ -15,6 +15,13 @@
       "when": 1785781931651,
       "tag": "0001_booking_terms_propose_accept",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785820000000,
+      "tag": "0002_marketplace_requirements_enrichment",
+      "breakpoints": true
     }
   ]
 }

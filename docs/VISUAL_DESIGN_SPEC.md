@@ -1,11 +1,13 @@
 # Salon Visual Design Specification
 
-Status: approved visual-direction source of truth
-Companions: [Product specification](./PRODUCT_SPEC.md), [Technical specification](./TECHNICAL_SPEC.md), [Cursor handoff](./CURSOR_HANDOFF.md)
+Status: approved visual-direction source of truth (evolved 2026-08-03)
+Companions: [DESIGN.md](../DESIGN.md), [Product specification](./PRODUCT_SPEC.md), [Technical specification](./TECHNICAL_SPEC.md), [Cursor handoff](./CURSOR_HANDOFF.md)
+
+Token, type, form, and aesthetic authority for new work: **[DESIGN.md](../DESIGN.md)**. This document keeps route contracts, shell behavior, responsive rules, and implementation order. When this file and `DESIGN.md` disagree on tokens or typography, **prefer `DESIGN.md`**.
 
 ## 1. Reference set and authority
 
-These seven screenshots are the approved aesthetic and interaction references:
+Historical screenshots remain useful for **layout composition and information hierarchy**, not for literal cream/ivory color matching or Instrument Serif on every ops heading:
 
 | Screen | Reference |
 |---|---|
@@ -17,245 +19,237 @@ These seven screenshots are the approved aesthetic and interaction references:
 | Native calendar | [calendar.png](./design-reference/calendar.png) |
 | Dual-role profile | [dual-role-profile.png](./design-reference/dual-role-profile.png) |
 
-Use the images to match tone, hierarchy, density, proportions, and interaction patterns. Do not copy their demo names, dates, counts, or text into production code. Real routes render authorized server data and localized copy.
+Approved evolved preview (contrast, forms, tokens):  
+`~/.gstack/projects/berlin-entertainment-marketplace/designs/design-system-20260803/salon-evolved-preview.html`
 
-When a screenshot conflicts with accessibility, responsive behavior, security, the product specification, or real data constraints, preserve the visual intent while following the higher-order requirement. Document any material visual departure.
+Use references to match module order, density, and interaction patterns. Do not copy demo names, dates, counts, or text. Real routes render authorized server data and localized copy.
+
+When a screenshot conflicts with accessibility, `DESIGN.md`, product/security rules, or real data constraints, follow the higher-order requirement. Document material visual departures.
 
 ## 2. Design intent
 
-Salon should feel like a small Berlin cultural institution with excellent editorial taste, not a generic booking SaaS product. Refined, calm, private, credible. The interface creates confidence through typography, spacing, thin structure, and restrained color rather than effects.
+**Memorable thing:** the private, protected way Berlin venues and acts book each other.
 
-The public surface is editorial and expressive. Authenticated surfaces become more functional but retain the same cultural voice. Users should understand within three seconds that the marketplace is curated, human, and serious about the details of live performance.
+Salon should feel like a crisp Berlin cultural-ops product — calm, trustworthy, current — not a dated warm-ivory editorial brochure and not generic booking SaaS. Confidence comes from readable type, AA contrast, disciplined structure, and first-class forms.
+
+Public surfaces may stay more expressive (Fraunces hero). Authenticated surfaces are operational: Outfit titles, clear metrics, scannable lists, sectioned profile forms.
 
 ### Required character
 
-- Editorial, refined Berlin cultural-marketplace tone
-- Warm ivory page ground, never cold white as the dominant canvas
-- Near-black forest-green navigation and primary ink
-- Muted terracotta as the rare accent
-- Soft blue and ochre as controlled identity/card fields
-- High-contrast serif display headings paired with restrained sans-serif UI type
-- Generous whitespace and clear rhythm, even in operational screens
+- Crisp cultural-ops tone (Airbnb-shaped trust clarity, Berlin taste)
+- Cool stone canvas `#F7F6F3` with true white `#FFFFFF` surfaces
+- Near-black green rail `#121A17` and deeper primary `#1F5A45`
+- Muted terracotta `#B84A32` as a rare accent only
+- Soft blue / ochre / rose as flat monogram identity fields
+- Fraunces for brand/hero; Outfit for all app UI (labels ≥ weight 500)
+- Comfortable whitespace and clear rhythm on operational screens
 - Monograms and avatar initials instead of generic stock imagery
-- Crisp rectangular geometry with small radii only where function calls for it
+- Rectangular geometry with functional radii (`6–8px` on controls/cards)
 
 ### Explicitly prohibited
 
-No gradients, glassmorphism, neon colors, oversized rounded cards, pill-everything styling, generic SaaS dashboard chrome, generic stock photography, decorative blobs, arbitrary icon packs, mismatched icon styles, gradient buttons, drop-shadow-heavy cards, or purple-first AI-template aesthetics.
-
-The screenshot image fields may look softly tonal because of their source rendering. Reimplement them as flat or subtly textured color fields, not CSS gradients.
+No gradients, glassmorphism, neon colors, oversized rounded cards, pill-everything styling, generic SaaS dashboard chrome, generic stock photography, decorative blobs, arbitrary icon packs, mismatched icon styles, gradient buttons, drop-shadow-heavy cards, purple-first AI-template aesthetics, or warm-cream + giant serif everywhere as the authenticated default.
 
 ## 3. Foundational tokens
 
-Treat these as starting tokens. Tune only after side-by-side screenshot comparison and accessibility measurement.
+Authoritative values live in [DESIGN.md](../DESIGN.md). Summary:
 
 ### Color
 
-| Token | Starting value | Use |
+| Token | Value | Use |
 |---|---:|---|
-| `canvas` | `#F4F1E9` | Warm ivory page ground |
-| `surface` | `#FCFBF8` | Cards, forms, top bar |
-| `ink` | `#1C2823` | Near-black forest text and dark rail |
-| `primary` | `#2F664F` | Primary buttons, active progress, approved/confirmed |
-| `terracotta` | `#C86549` | Eyebrows, selected tab rule, notification count, restrained emphasis |
-| `blue-soft` | `#8EA9B7` | Performer identity field and requested state family |
-| `ochre-soft` | `#B99A59` | Performer identity field and tentative/warning family |
-| `rose-soft` | `#B9786C` | Performer identity field and avatar family |
-| `text-muted` | `#7B817D` | Secondary copy; verify contrast at rendered size |
-| `rule` | `#D9D5CB` | Thin warm-gray borders and separators |
+| `canvas` | `#F7F6F3` | Cool stone page ground |
+| `surface` | `#FFFFFF` | Cards, forms, top bar |
+| `ink` | `#141816` | Body text |
+| `primary` | `#1F5A45` | Primary buttons, focus, confirmed/approved |
+| `primary-foreground` | `#FFFFFF` | On primary |
+| `terracotta` / accent | `#B84A32` | Eyebrows, rare emphasis |
+| `blue-soft` | `#8EA9B7` | Identity / requested family |
+| `ochre-soft` | `#B99A59` | Identity / warning family |
+| `rose-soft` | `#B9786C` | Identity / avatar family |
+| `text-muted` | `#5C635F` | Secondary copy (AA at UI sizes) |
+| `rule` | `#E4E1DA` | Hairlines |
+| `rail` | `#121A17` | Left navigation |
 | `success-soft` | `#E3EEE5` | Approved/confirmed background |
-| `warning-soft` | `#F3E8CF` | Signature/hold background |
+| `warning-soft` | `#F3E8CF` | Hold/signature background |
 | `info-soft` | `#DEE7ED` | Requested background |
+| `danger` | `#A11F2C` | Errors |
 
-Use color semantically and sparingly. Never rely on color alone: every state also needs a text label, shape, icon, or pattern. Text/background pairs must meet WCAG 2.2 AA contrast.
+Never rely on color alone. Text on soft semantic surfaces uses `ink`. Meet WCAG 2.2 AA.
 
 ### Typography
 
-- **Display and editorial headings:** a high-contrast serif with an assured cultural/editorial voice. Preferred implementation candidates: Instrument Serif or a properly licensed comparable serif. Do not use a default system serif without visual comparison.
-- **Body and UI:** a restrained sans-serif such as Instrument Sans or Geist. Use one family consistently for navigation, labels, inputs, tables, buttons, metadata, and helper text.
-- **Numbers:** use tabular numerals for metrics, fees, dates, counts, and calendar cells.
-- **Scale:** public hero `clamp(3.5rem, 6vw, 6rem)` with tight line-height; authenticated H1 `clamp(2.5rem, 4vw, 4.5rem)`; section H2 `1.75–2.25rem`; card title `1.25–1.75rem`; body `1rem`; UI/meta `0.75–0.875rem`; eyebrow `0.6875–0.75rem`.
-- **Eyebrows:** compact coral uppercase, semibold/bold, `0.12–0.18em` tracking. Never use them as long sentences.
+- **Display:** Fraunces — Salon wordmark and public hero only
+- **UI/Body:** Outfit 400/500/600 — nav, labels, inputs, tables, buttons, authenticated headings
+- **Numbers:** tabular numerals for metrics, fees, dates, counts, calendar cells
+- **Scale:** see `DESIGN.md` (authenticated H1 is Outfit, not oversized serif)
+- **Eyebrows:** accent uppercase, weight 600, `0.12–0.16em` tracking; never long sentences
 
-Headings are not decorative labels. Preserve semantic order and avoid shrinking them until the editorial character disappears.
+### Forms
+
+Forms are a first-class system (see `DESIGN.md`): label above, 44px min height, 8px radius, visible focus ring, section titles, error/`aria-live` patterns.
 
 ### Spacing, edges, and elevation
 
-- Base spacing unit: `4px`; common steps: `8, 12, 16, 24, 32, 48, 64, 96`.
-- Authenticated page padding: approximately `48–64px` desktop, `24–32px` tablet, `16–20px` mobile.
-- Content width: one consistent authenticated max width, approximately `1480px`, centered in the area beside the rail.
-- Desktop collection grids: three equal columns with `20–28px` gutters.
-- Rules: `1px` warm gray. Use borders to group and separate; avoid shadows by default.
-- Cards: off-white surface, thin border, square or `2–4px` corner radius. Never use oversized floating rounded containers.
-- Primary action: solid dark green, white label, compact rectangular shape, minimum `44px` touch height.
-- Secondary action: off-white/transparent surface, thin warm-gray border, dark label.
-- Links: dark green or ink with underline/arrow where action clarity benefits.
-- Motion: minimal and functional, `120–220ms`; respect reduced-motion. No decorative page choreography.
+- Base unit `4px`; steps `8, 12, 16, 24, 32, 48, 64, 96`
+- Authenticated max content width ~`1480px`
+- Desktop collections: three columns, `20–28px` gutters
+- Cards: white surface, thin rule, `6–8px` radius; borders over shadows
+- Primary action: solid primary, white label, min `44px` height
+- Motion: `150–220ms` functional only; respect reduced-motion
 
 ## 4. Authenticated application shell
 
-At desktop widths (`>= 1024px`), use a fixed or sticky `280px` near-black forest-green left rail. It contains the Salon mark, primary navigation, optional numeric badge, approval/access state, and current-person summary. The active item uses a slightly lighter dark field and high-contrast text. Icons are a tiny coherent set chosen for meaning, not decoration.
+At desktop widths (`>= 1024px`), use a fixed or sticky `280px` near-black green left rail. It contains the Salon mark (Fraunces), primary navigation, optional badge, approval state, and person summary. Active item: lighter dark field + high-contrast text.
 
-The content area begins with a slim white top bar, roughly `72–80px`, containing breadcrumb on the left and locale/search/notifications or account utilities on the right. Use thin bottom rules. Do not turn this bar into a dense global navigation system.
+Content area: slim white top bar (~64–72px), breadcrumb left, locale/account utilities right. Thin bottom rule. Do not densify into a second global nav.
 
-At tablet widths, the rail may collapse to a narrow icon rail or drawer, provided labels remain available on demand. Below `768px`, replace it with a compact top header and five-item bottom navigation for the highest-frequency destinations; lower-frequency and account actions move into a menu. Respect safe-area insets. Never squeeze the desktop rail beside a narrow content column.
+Tablet: collapse rail to icon rail or drawer with labels on demand. Below `768px`: compact top header + five-item bottom nav; safe-area insets. Never squeeze the desktop rail beside a narrow column.
 
 ## 5. Core component contracts
 
-- **Monogram identity panel:** large serif initials centered in a flat rose, soft-blue, ochre, or forest field. Provide accessible act/venue name text nearby; initials are not the accessible name.
-- **Avatar:** circular initials, 32–64px depending on hierarchy, with deterministic identity color and sufficient contrast.
-- **Status label:** short uppercase or compact title-case text on a quiet semantic background. No oversized pills.
-- **Date tile:** bordered square/near-square with large serif day and coral uppercase month.
-- **Filter/control:** rectangular white field, thin border, 44px minimum height, clear label and native/form affordance.
-- **Progress track:** text-labeled steps with completed, current, and future states. Do not hide meaning in checkmarks alone.
-- **Data card/list row:** one clear primary object, secondary metadata, and one dominant row action. Use dividers instead of nested card shadows.
-- **Notices:** full-width quiet semantic surface with icon, concise message, and optional end action.
+- **Monogram identity panel:** large initials (display font OK here) on flat rose/blue/ochre/forest; accessible name text nearby
+- **Avatar:** circular initials, 32–64px, deterministic color, sufficient contrast
+- **Status label:** compact text on quiet semantic background; ink text; no oversized pills
+- **Date tile:** bordered near-square; strong day numeral; accent uppercase month
+- **Filter/control:** white field, thin border, 44px min, clear label
+- **Progress track:** text-labeled steps; never color/checkmarks alone
+- **Data card/list row:** one primary object, secondary meta, one dominant action; dividers over nested shadows
+- **Notices:** full-width quiet semantic surface + concise message + optional action
+- **Form section:** titled group with rule separator and consistent field grid
 
 ## 6. Page contracts
+
+Layout hierarchy and modules below still apply. Visual treatment follows `DESIGN.md` (stone/white, Outfit titles, form system). Screenshots guide composition only.
 
 ### 6.1 Public landing
 
 Reference: [landing.png](./design-reference/landing.png)
 
-**Purpose:** explain the private marketplace, establish trust, and route visitors to apply or sign in.
+**Purpose:** explain the private marketplace, establish trust, route to apply or sign in.
 
-**Hierarchy:** slim public header → two-column hero → credibility/member proof → dark venue strip → three editorial value propositions → restrained footer.
+**Hierarchy:** slim public header → hero (Fraunces proposition) → credibility/member proof → venue strip → value propositions → footer.
 
-**Required modules:** Salon wordmark; locale toggle; sign-in and apply CTA; coral eyebrow; large multi-line serif proposition; supporting copy; primary entry/apply actions; approved-member count only when backed by real data; abstract arched stage/performer monogram composition; two small status callouts; approved venue proof strip; three numbered principles; footer legal/navigation.
+**Required modules:** Salon wordmark; locale; sign-in/apply; accent eyebrow; large proposition; supporting copy; primary CTAs; approved-member count only from real data; monogram/stage composition; status callouts; venue proof; principles; footer legal/nav.
 
-**Data/actions:** locale switch, sign in, apply for access, privacy/terms. Counts and venue names must come from approved publishable data or be omitted.
+**Data/actions:** locale, sign in, apply, privacy/terms. Omit unverifiable counts.
 
-**Responsive transformation:** stack copy above visual; retain headline impact without clipping; collapse proof strip to a horizontally scrollable or shortened verified set; stack principle columns; keep CTAs at least 44px and full-width where helpful. Decorative callouts must not obscure the visual or core copy.
+**Responsive:** stack copy above visual; keep CTA ≥44px; don’t obscure core copy with decoration.
 
 ### 6.2 Dashboard / overview
 
 Reference: [dashboard.png](./design-reference/dashboard.png)
 
-**Purpose:** answer “what needs my attention?” and surface the next useful actions for a dual-role member.
+**Purpose:** “what needs my attention?” plus next useful actions for role-aware members.
 
-**Hierarchy:** date eyebrow and greeting + primary action → four compact metrics → recent applications and next confirmed booking → recommended acts in a three-column row.
+**Hierarchy:** date eyebrow + Outfit greeting + primary action → metrics → recent applications + next booking → role-aware explore (acts for venues, venues for entertainers).
 
-**Required modules:** role-aware greeting; post-opportunity action when permitted; metric strip; recent application rows with initials, relative time, and shortlist/review action; next-booking date tile and progress; recommendation cards with monograms, match explanation, metadata, fee range, save, and request action.
+**Required modules:** greeting; post-opportunity when permitted; metric strip; application rows; next-booking + lifecycle; explore cards with monograms (no fake match % unless real).
 
-**Data/actions:** server-authorized metrics and records; shortlist/review; open booking; explore discovery; save act; start direct request. Do not show venue controls to entertainer-only accounts.
+**Data/actions:** authorized metrics only; review/open booking; explore discovery; start direct request when permitted. Role-segregated discovery rules apply.
 
-**Responsive transformation:** metrics become two columns then a horizontal/stacked set; application and next-booking panels stack; recommendations become one column or a snap-scrolling row; primary action moves below heading or becomes a compact sticky action. Maintain reading order: attention items before recommendations.
+**Responsive:** metrics 4 → 2 → 1; stack panels; keep attention items before recommendations.
 
 ### 6.3 Private discovery
 
 Reference: [discovery.png](./design-reference/discovery.png)
 
-**Purpose:** help approved members find acts that fit venue, audience, budget, size, and date.
+**Purpose:** help the **authorized role** find fitting counterparts (venues discover acts; entertainers discover venues/opportunities).
 
-**Hierarchy:** privacy eyebrow → serif page title/supporting line → filter/search bar → three-column results grid.
+**Hierarchy:** privacy eyebrow → page title → filters → results grid.
 
-**Required modules:** category/date/act-size/budget filters; search; result count/active-filter summary; monogram cards; save control; match indicator with explanation; category, name, size, district, price range, and request action; pagination or load-more behavior; loading skeletons; no-results and permission-denied states.
+**Required modules:** filters/search; result count; monogram cards; metadata; request/open actions; pagination; loading/empty/denied states.
 
-**Data/actions:** URL-backed filters; authorized private profile projections; save/unsave; open profile; start direct request. Never include locked contact fields in page data or HTML.
+**Data/actions:** URL filters; authorized projections only; never locked contacts in HTML.
 
-**Responsive transformation:** filters become a “Filters” sheet/drawer with active chips/summary; search remains visible; grid moves 3 → 2 → 1 columns; sorting and result count stay near the grid; card actions remain thumb reachable.
+**Responsive:** filter sheet; grid 3 → 2 → 1.
 
 ### 6.4 Opportunities
 
 Reference: [opportunities.png](./design-reference/opportunities.png)
 
-**Purpose:** let approved entertainers assess open venue needs quickly and let authorized venue operators create opportunities.
+**Purpose:** entertainers assess open needs; venue operators manage their own opportunities.
 
-**Hierarchy:** access eyebrow → title/supporting line + role-aware post action → vertically spaced opportunity rows.
+**Hierarchy:** eyebrow → title + role-aware post → opportunity rows.
 
-**Required modules:** date tile; application status label; opportunity title; venue/district; category, group-size, and budget tags; application count where authorized/appropriate; deadline; view/apply action; filters and empty/closed states in production.
+**Required modules:** date tile; status; title; venue/district; tags; deadline; view/apply; empty/closed states.
 
-**Data/actions:** open detail; apply or manage applications based on role; create/edit/close opportunity for permitted venue members. Application counts must follow privacy rules.
-
-**Responsive transformation:** each wide row becomes a compact stacked card: date/status first, title/meta second, tags wrap, action becomes full width. Keep date and action visible without horizontal scrolling.
+**Responsive:** stacked cards; full-width actions on small screens.
 
 ### 6.5 Bookings
 
 Reference: [bookings.png](./design-reference/bookings.png)
 
-**Purpose:** show applications and direct requests in one dependable booking pipeline and make the next required action obvious.
+**Purpose:** one booking pipeline; next required action obvious.
 
-**Hierarchy:** booking eyebrow/title → Active/Confirmed/Past tabs with counts → expanded current booking → compact additional booking rows → deposit-semantics notice.
+**Hierarchy:** title → Active/Confirmed/Past tabs → rows → deposit notice.
 
-**Required modules:** origin and booking ID; party monogram/name pairing; event date/time/location; status label; fully labeled lifecycle track; German-controlling agreement notice with English convenience translation label; relevant agreement/terms/signature action; separate deposit notice/action; loading, empty, stale-version, cancelled, and conflict states.
+**Required modules:** origin/ID; parties; datetime/location; status; labeled lifecycle; German-controlling agreement notice + English convenience label; deposit separate from confirmation.
 
-**Data/actions:** switch tabs; open booking; accept/propose terms; review generated agreement; initiate/inspect sandbox signature flow; record deposit status when authorized. Never imply deposit confirms a booking or that Salon holds funds.
-
-**Responsive transformation:** tabs remain horizontally scrollable; party/title information stacks; lifecycle becomes a vertical timeline with labels; agreement and action stack; notice becomes a compact block with action below. Preserve the current step and next action above the fold.
+**Responsive:** vertical lifecycle; sticky clarity of current step.
 
 ### 6.6 Calendar
 
 Reference: [calendar.png](./design-reference/calendar.png)
 
-**Purpose:** let a member understand and manage native availability while seeing holds, requests, and booking blocks.
+**Purpose:** native availability, holds, requests, confirmed blocks.
 
-**Hierarchy:** calendar eyebrow → month and owner context + add action → five-state legend → month grid.
+**Hierarchy:** eyebrow → month/owner + add → legend → grid/agenda.
 
-**Required modules:** month navigation and today control; resource selector for dual-role users; state legend with text; weekday header; date cells; compact entries for available, unavailable, tentative hold with expiry, requested, confirmed; detail/editor interaction; conflict and loading states.
+**Required modules:** navigation; resource selector; five-state legend with text; entries; conflict/loading states.
 
-**Data/actions:** navigate period; select act/venue resource; add/edit availability; inspect request/booking; release hold where allowed. Confirmed blocks are immutable except through authorized booking lifecycle operations.
-
-**Responsive transformation:** switch from seven-column month grid to an agenda/week-first view below tablet width; never create an unreadable squeezed month. Preserve status labels, expiry, time, and resource context. Offer month view through an explicit toggle if useful.
+**Responsive:** agenda/week below tablet; never an unreadable squeezed month.
 
 ### 6.7 Dual-role profile
 
 Reference: [dual-role-profile.png](./design-reference/dual-role-profile.png)
 
-**Purpose:** let one approved person maintain venue and entertainer identities while understanding manual approval readiness.
+**Purpose:** maintain venue and/or entertainer identities; show approval readiness.
 
-**Hierarchy:** dual-role eyebrow → title/supporting line + save action → main profile editor and right-side approval panel → role tabs → structured form sections.
+**Hierarchy:** eyebrow → title → role tabs → **sectioned forms** → approval panel.
 
-**Required modules:** person avatar/name/approval status; venue and entertainer tabs; unsaved/submit state; fields required by the product specification; production-resource/rider/media sections; contact privacy explanation; availability link; approval checklist; submit-for-review action; validation, save, upload, and review states.
+**Required modules:** tabs with weight + underline; sectioned field groups; contact privacy copy; rider/portfolio; approval checklist; save/submit; validation and `aria-live` success.
 
-**Data/actions:** switch role profile; save draft; upload through the future secure boundary; manage contact method; submit for manual review. Make re-review consequences explicit before submission.
-
-**Responsive transformation:** approval panel moves before or directly after the active form summary; role tabs remain sticky/scrollable; two-column fields become one; save action becomes a safe sticky footer only when it does not obscure errors; preserve label/input association and error placement.
+**Responsive:** approval panel adjacent/above form; sticky safe save; preserve label/error association.
 
 ## 7. Responsive and state requirements
 
-- Desktop: authenticated shell uses the `280px` rail and a consistent max-width content canvas; collections use three columns where shown.
-- Tablet: two-column collections, collapsed navigation, reduced page padding, no loss of primary actions.
-- Mobile: single-column content; compact header and bottom navigation; drawer filters; vertical booking progress; agenda calendar.
-- Never scale the desktop screenshot down wholesale. Recompose modules around user priority.
-- Provide skeleton/loading states that mirror final geometry without shimmering excessively.
-- Empty states explain why the area is empty and offer the permitted next action.
-- Errors state what failed, preserve user input, and provide retry/recovery.
-- Forbidden, unapproved, and suspended states must be intentional screens, not blank pages.
-- Focus is visible on every interactive element. Dialogs/sheets trap and restore focus. Touch targets are at least `44 × 44px`.
-- Support 200% text zoom and narrow screens without clipped controls or horizontal page scrolling.
+- Desktop: `280px` rail + consistent max-width canvas
+- Tablet: two-column collections; collapsed nav
+- Mobile: single column; bottom nav; drawer filters; agenda calendar
+- Recompose modules; never scale desktop mockups wholesale
+- Skeleton/empty/error/forbidden/suspended states are intentional
+- Visible focus; ≥44×44px targets; 200% zoom without clipping
 
 ## 8. Must-match checklist
 
-Cursor must verify each implemented route against its screenshot at desktop and against this spec at smaller widths.
-
-- [ ] Warm ivory canvas and off-white bordered surfaces, not cold gray/white SaaS defaults
-- [ ] Near-black forest rail/ink and solid dark-green primary actions
-- [ ] Muted terracotta used sparingly for uppercase labels, selection, and emphasis
-- [ ] Soft blue, ochre, and rose identity fields remain muted and flat
-- [ ] High-contrast serif hierarchy plus restrained sans-serif UI typography
-- [ ] `280px` desktop rail, slim white top bar, breadcrumb, and consistent content width
-- [ ] Thin warm-gray rules, square/small-radius cards, no heavy shadows
-- [ ] Three-column desktop collections where contracted, with generous gutters/whitespace
-- [ ] Monograms/avatar initials replace generic stock imagery
-- [ ] Controls, lifecycle states, and icons are consistent and purposeful
-- [ ] Every loading, empty, error, forbidden, suspended, and stale-conflict state is designed
-- [ ] Responsive layouts are recomposed, not merely shrunk
-- [ ] WCAG 2.2 AA contrast, visible focus, keyboard operation, semantics, and 44px targets pass
-- [ ] No gradients, glassmorphism, neon, oversized rounded cards, generic SaaS dashboard patterns, or arbitrary iconography
-- [ ] Screenshot content is not hard-coded; real authorized data and locale catalogs drive the UI
+- [ ] Cool stone canvas + white surfaces (not warm ivory default, not cold gray SaaS)
+- [ ] Near-black green rail and solid deeper-green primary actions
+- [ ] Terracotta used sparingly for eyebrows/emphasis only
+- [ ] Muted text `#5C635F` (or darker) passes AA at rendered size
+- [ ] Outfit for authenticated UI; Fraunces limited to brand/hero/monogram accents
+- [ ] Form controls: 44px, 8px radius, visible focus, section groups
+- [ ] `280px` desktop rail, slim top bar, consistent content width
+- [ ] Thin rules; small radii; no heavy shadows
+- [ ] Monograms replace stock imagery
+- [ ] Loading/empty/error/forbidden/suspended states designed
+- [ ] Responsive recomposition
+- [ ] WCAG 2.2 AA, keyboard, semantics, 44px targets
+- [ ] No gradients, glass, neon, purple templates, pill-everything
+- [ ] No hard-coded screenshot demo content; real data + locales
 
 ## 9. Cursor implementation order
 
-Implement visual parity one route at a time. Do not style all routes broadly and promise a later polish pass.
+Implement visual evolution against `DESIGN.md` tokens one shared layer / route at a time:
 
-1. Build shared tokens, font loading, primitives, and authenticated shell. Compare the shell against dashboard/discovery references before feature pages.
-2. Implement the public landing route. Render at the screenshot viewport, compare side by side, fix hierarchy/spacing/type/color, then verify mobile.
-3. Implement dashboard using real slice data and all required states. Compare before continuing.
-4. Implement private discovery and its filter/card responsive contracts. Compare before continuing.
-5. Implement opportunities and role-aware actions. Compare before continuing.
-6. Implement bookings, lifecycle, agreement, and deposit presentation. Compare before continuing.
-7. Implement calendar desktop month and responsive agenda. Compare before continuing.
-8. Implement dual-role profile, approval panel, forms, and upload placeholders. Compare before continuing.
-9. Run the must-match checklist across every route in English and German, desktop/tablet/mobile, keyboard-only, loading/empty/error, approved/unapproved/suspended roles.
+1. Tokens, font loading (Fraunces + Outfit), form primitives, authenticated shell
+2. Public landing (Fraunces hero retained)
+3. Dashboard
+4. Discovery (role-segregated)
+5. Opportunities
+6. Bookings
+7. Calendar
+8. Dual-role profile + form sections
+9. EN/DE, desktop/tablet/mobile, keyboard, loading/empty/error, role gates
 
-For each route, keep a short parity note in the implementation change: reference used, viewport compared, intentional differences, accessibility corrections, and remaining gap. Do not move to the next route while a material visual mismatch remains.
+For each change: note intentional differences from historical screenshots, accessibility fixes, and remaining gaps.

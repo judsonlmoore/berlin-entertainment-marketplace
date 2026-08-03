@@ -2,8 +2,6 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { SiteHeader } from "@/src/components/site-header";
-import { auth } from "@/src/auth";
 import { routing } from "@/src/i18n/routing";
 
 export const dynamic = "force-dynamic";
@@ -25,19 +23,10 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   setRequestLocale(locale);
   const messages = await getMessages();
-  const session = await auth();
 
   return (
     <NextIntlClientProvider messages={messages}>
-      <div className="min-h-screen">
-        <SiteHeader
-          locale={locale}
-          signedIn={Boolean(session?.user)}
-          isStaff={Boolean(session?.user?.isPlatformStaff)}
-          isApproved={session?.user?.approvalState === "approved"}
-        />
-        <main className="shell py-10">{children}</main>
-      </div>
+      {children}
     </NextIntlClientProvider>
   );
 }

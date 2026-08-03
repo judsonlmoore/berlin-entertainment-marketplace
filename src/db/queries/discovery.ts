@@ -1,9 +1,10 @@
-import { and, eq, gte, ilike, lte } from "drizzle-orm";
+import { and, count, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   contactMethods,
   contactUnlocks,
   entertainerProfiles,
+  portfolioItems,
   venues,
 } from "@/src/db/schema/marketplace";
 import {
@@ -26,11 +27,21 @@ export type EntertainerDiscoveryCard = {
   durationMinutes: number;
 };
 
+export type PortfolioDiscoveryItem = {
+  id: string;
+  kind: "image" | "link" | "youtube";
+  caption: string | null;
+  altText: string | null;
+  url: string | null;
+  sortOrder: number;
+};
+
 export type EntertainerDiscoveryDetail = EntertainerDiscoveryCard & {
   userId: string;
   technicalRequirements: string;
   contacts: RevealedContact[] | null;
   contactLocked: boolean;
+  portfolio: PortfolioDiscoveryItem[] | null;
 };
 
 export type VenueDiscoveryCard = {
@@ -58,6 +69,7 @@ export type VenueDiscoveryDetail = VenueDiscoveryCard & {
 };
 
 export type EntertainerFilters = {
+  q?: string;
   category?: string;
   berlinBase?: string;
   groupSizeMin?: number;
@@ -67,10 +79,19 @@ export type EntertainerFilters = {
 };
 
 export type VenueFilters = {
+  q?: string;
   district?: string;
   venueType?: string;
   capacityMin?: number;
   capacityMax?: number;
+};
+
+export type DiscoveryPage<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
 };
 
 function asStoredContacts(
@@ -89,12 +110,20 @@ function asStoredContacts(
   }));
 }
 
-export async function listDiscoverableEntertainers(
-  filters: EntertainerFilters = {},
-): Promise<EntertainerDiscoveryCard[]> {
-  const db = getDb();
+function entertainerFilterConditions(filters: EntertainerFilters) {
   const conditions = [eq(entertainerProfiles.publicationState, "approved")];
 
+  if (filters.q) {
+    const term = `%${filters.q}%`;
+    conditions.push(
+      or(
+        ilike(entertainerProfiles.actName, term),
+        ilike(entertainerProfiles.category, term),
+        ilike(entertainerProfiles.description, term),
+        ilike(entertainerProfiles.berlinBase, term),
+      )!,
+    );
+  }
   if (filters.category) {
     conditions.push(
       ilike(entertainerProfiles.category, `%${filters.category}%`),
@@ -122,7 +151,66 @@ export async function listDiscoverableEntertainers(
     );
   }
 
-  const rows = await db
+  return and(...conditions);
+}
+
+function venueFilterConditions(filters: VenueFilters) {
+  const conditions = [eq(venues.publicationState, "approved")];
+
+  if (filters.q) {
+    const term = `%${filters.q}%`;
+    conditions.push(
+      or(
+        ilike(venues.name, term),
+        ilike(venues.district, term),
+        ilike(venues.venueType, term),
+        ilike(venues.shortDescription, term),
+      )!,
+    );
+  }
+  if (filters.district) {
+    conditions.push(ilike(venues.district, `%${filters.district}%`));
+  }
+  if (filters.venueType) {
+    conditions.push(ilike(venues.venueType, `%${filters.venueType}%`));
+  }
+  if (typeof filters.capacityMin === "number") {
+    conditions.push(gte(venues.capacity, filters.capacityMin));
+  }
+  if (typeof filters.capacityMax === "number") {
+    conditions.push(lte(venues.capacity, filters.capacityMax));
+  }
+
+  return and(...conditions);
+}
+
+function normalizePage(page?: number, pageSize = 12) {
+  const safePage = Math.max(1, page ?? 1);
+  const safeSize = Math.min(48, Math.max(1, pageSize));
+  return {
+    page: safePage,
+    pageSize: safeSize,
+    offset: (safePage - 1) * safeSize,
+  };
+}
+
+export async function listDiscoverableEntertainers(
+  filters: EntertainerFilters = {},
+  options: { page?: number; pageSize?: number } = {},
+): Promise<DiscoveryPage<EntertainerDiscoveryCard>> {
+  const db = getDb();
+  const where = entertainerFilterConditions(filters);
+  const { page, pageSize, offset } = normalizePage(
+    options.page,
+    options.pageSize ?? 12,
+  );
+
+  const [totalRow] = await db
+    .select({ value: count() })
+    .from(entertainerProfiles)
+    .where(where);
+
+  const items = await db
     .select({
       id: entertainerProfiles.id,
       actName: entertainerProfiles.actName,
@@ -137,32 +225,38 @@ export async function listDiscoverableEntertainers(
       durationMinutes: entertainerProfiles.durationMinutes,
     })
     .from(entertainerProfiles)
-    .where(and(...conditions))
-    .orderBy(entertainerProfiles.actName);
+    .where(where)
+    .orderBy(entertainerProfiles.actName)
+    .limit(pageSize)
+    .offset(offset);
 
-  return rows;
+  const total = totalRow?.value ?? 0;
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
+  };
 }
 
 export async function listDiscoverableVenues(
   filters: VenueFilters = {},
-): Promise<VenueDiscoveryCard[]> {
+  options: { page?: number; pageSize?: number } = {},
+): Promise<DiscoveryPage<VenueDiscoveryCard>> {
   const db = getDb();
-  const conditions = [eq(venues.publicationState, "approved")];
+  const where = venueFilterConditions(filters);
+  const { page, pageSize, offset } = normalizePage(
+    options.page,
+    options.pageSize ?? 12,
+  );
 
-  if (filters.district) {
-    conditions.push(ilike(venues.district, `%${filters.district}%`));
-  }
-  if (filters.venueType) {
-    conditions.push(ilike(venues.venueType, `%${filters.venueType}%`));
-  }
-  if (typeof filters.capacityMin === "number") {
-    conditions.push(gte(venues.capacity, filters.capacityMin));
-  }
-  if (typeof filters.capacityMax === "number") {
-    conditions.push(lte(venues.capacity, filters.capacityMax));
-  }
+  const [totalRow] = await db
+    .select({ value: count() })
+    .from(venues)
+    .where(where);
 
-  return db
+  const items = await db
     .select({
       id: venues.id,
       name: venues.name,
@@ -174,8 +268,34 @@ export async function listDiscoverableVenues(
       capacityContext: venues.capacityContext,
     })
     .from(venues)
-    .where(and(...conditions))
-    .orderBy(venues.name);
+    .where(where)
+    .orderBy(venues.name)
+    .limit(pageSize)
+    .offset(offset);
+
+  const total = totalRow?.value ?? 0;
+  return {
+    items,
+    total,
+    page,
+    pageSize,
+    pageCount: Math.max(1, Math.ceil(total / pageSize)),
+  };
+}
+
+export async function listEntertainerCategoryFacets(limit = 8) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      category: entertainerProfiles.category,
+      value: count(),
+    })
+    .from(entertainerProfiles)
+    .where(eq(entertainerProfiles.publicationState, "approved"))
+    .groupBy(entertainerProfiles.category)
+    .orderBy(sql`count(*) desc`)
+    .limit(limit);
+  return rows.map((row) => row.category).filter(Boolean);
 }
 
 async function hasContactUnlockForViewer(input: {
@@ -229,6 +349,7 @@ async function hasContactUnlockForViewer(input: {
 export async function getDiscoverableEntertainerDetail(input: {
   entertainerProfileId: string;
   viewerUserId: string;
+  includePortfolio?: boolean;
 }): Promise<EntertainerDiscoveryDetail | null> {
   const db = getDb();
   const profile = await db.query.entertainerProfiles.findFirst({
@@ -262,6 +383,22 @@ export async function getDiscoverableEntertainerDetail(input: {
   });
   const contacts = projectContactMethods(asStoredContacts(methods), unlocked);
 
+  let portfolio: PortfolioDiscoveryItem[] | null = null;
+  if (input.includePortfolio) {
+    portfolio = await db
+      .select({
+        id: portfolioItems.id,
+        kind: portfolioItems.kind,
+        caption: portfolioItems.caption,
+        altText: portfolioItems.altText,
+        url: portfolioItems.url,
+        sortOrder: portfolioItems.sortOrder,
+      })
+      .from(portfolioItems)
+      .where(eq(portfolioItems.entertainerProfileId, profile.id))
+      .orderBy(portfolioItems.sortOrder, portfolioItems.createdAt);
+  }
+
   return {
     id: profile.id,
     userId: profile.userId,
@@ -278,6 +415,7 @@ export async function getDiscoverableEntertainerDetail(input: {
     technicalRequirements: profile.technicalRequirements,
     contacts,
     contactLocked: !unlocked,
+    portfolio,
   };
 }
 

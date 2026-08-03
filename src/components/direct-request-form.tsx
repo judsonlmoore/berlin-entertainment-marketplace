@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { sendDirectRequest } from "@/src/actions/direct-requests";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 type VenueOption = { id: string; name: string };
@@ -20,6 +21,7 @@ export function DirectRequestForm({
 }: Props) {
   const t = useTranslations("directRequests");
   const errors = useTranslations("errors");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +78,7 @@ export function DirectRequestForm({
         <select
           name="venueId"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
           defaultValue={venues[0]?.id}
         >
           {venues.map((venue) => (
@@ -93,7 +95,7 @@ export function DirectRequestForm({
             name="startsAt"
             type="datetime-local"
             required
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -102,7 +104,7 @@ export function DirectRequestForm({
             name="endsAt"
             type="datetime-local"
             required
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -111,7 +113,7 @@ export function DirectRequestForm({
         <input
           name="formatCategory"
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -121,7 +123,7 @@ export function DirectRequestForm({
           type="number"
           min={0}
           required
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -129,7 +131,7 @@ export function DirectRequestForm({
         <textarea
           name="notes"
           rows={3}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (
@@ -137,14 +139,19 @@ export function DirectRequestForm({
           {error}
         </p>
       ) : null}
-      {message ? <p className="text-sm">{message}</p> : null}
-      <button
+      {message ? (
+        <p aria-live="polite" className="text-sm text-[var(--muted)]">
+          {message}
+        </p>
+      ) : null}
+      <Button
         type="submit"
-        disabled={pending}
-        className="bg-[var(--accent)] px-4 py-3 text-[var(--background)] disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
       >
         {t("send")}
-      </button>
+      </Button>
     </form>
   );
 }

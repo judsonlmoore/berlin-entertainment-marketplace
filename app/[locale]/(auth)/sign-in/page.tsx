@@ -1,6 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { listConfiguredProviders } from "@/src/auth";
 import { signInWithProvider } from "@/src/actions/auth";
+import { PendingSubmitButton } from "@/src/components/pending-submit-button";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -12,8 +13,10 @@ export default async function SignInPage({ params }: Props) {
 
   return (
     <section className="mx-auto max-w-lg">
-      <h1 className="display text-4xl">{t("title")}</h1>
-      <p className="mt-4 text-[var(--muted)]">{t("body")}</p>
+      <h1 className="page-title text-[clamp(1.75rem,2.5vw,2.5rem)]">
+        {t("title")}
+      </h1>
+      <p className="mt-4 font-medium text-[var(--text-muted)]">{t("body")}</p>
 
       <div className="panel mt-8 grid gap-3 p-6">
         {providers.includes("github") ? (
@@ -23,12 +26,9 @@ export default async function SignInPage({ params }: Props) {
               await signInWithProvider("github");
             }}
           >
-            <button
-              type="submit"
-              className="w-full bg-[var(--accent)] px-4 py-3 text-[var(--background)]"
-            >
+            <PendingSubmitButton className="w-full">
               {t("github")}
-            </button>
+            </PendingSubmitButton>
           </form>
         ) : null}
 
@@ -39,12 +39,9 @@ export default async function SignInPage({ params }: Props) {
               await signInWithProvider("google");
             }}
           >
-            <button
-              type="submit"
-              className="w-full bg-[var(--accent)] px-4 py-3 text-[var(--background)]"
-            >
+            <PendingSubmitButton className="w-full">
               {t("google")}
-            </button>
+            </PendingSubmitButton>
           </form>
         ) : null}
 

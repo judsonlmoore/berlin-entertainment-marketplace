@@ -11,6 +11,7 @@ import {
   contactMethods,
   entertainerProfiles,
   venueMemberships,
+  venueSpaces,
   venues,
 } from "@/src/db/schema/marketplace";
 import { AppError } from "@/src/domain/errors";
@@ -25,6 +26,39 @@ export type ActionResult =
   { ok: true; id?: string } | { ok: false; code: string; message: string };
 
 const localeSchema = z.enum(["en", "de"]).default("en");
+
+const optionalUrlField = z
+  .string()
+  .trim()
+  .url()
+  .max(500)
+  .optional()
+  .or(z.literal(""));
+
+const socialLinksSchema = z
+  .object({
+    instagram: optionalUrlField,
+    facebook: optionalUrlField,
+    tiktok: optionalUrlField,
+    spotify: optionalUrlField,
+    soundcloud: optionalUrlField,
+  })
+  .optional();
+
+function compactSocialLinks(
+  links?: z.infer<typeof socialLinksSchema>,
+): Record<string, string> {
+  if (!links) return {};
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(links)) {
+    const trimmed = value?.trim();
+    if (trimmed) out[key] = trimmed;
+  }
+  return out;
+}
+
+const optionalText = (max: number) =>
+  z.string().trim().max(max).optional().or(z.literal(""));
 
 const entertainerSchema = z.object({
   actName: z.string().trim().min(1).max(160),
@@ -41,9 +75,18 @@ const entertainerSchema = z.object({
     .min(1)
     .max(24 * 60),
   technicalRequirements: z.string().trim().min(1).max(4000),
+  genres: optionalText(500),
+  performanceFormats: optionalText(500),
+  languages: optionalText(500),
+  accessibilityNotes: optionalText(2000),
+  equipmentSupplied: optionalText(2000),
+  websiteUrl: optionalUrlField,
+  socialLinks: socialLinksSchema,
   contactEmail: z.string().trim().email().max(320),
   locale: localeSchema,
 });
+
+const venueProductionField = optionalText(500);
 
 const venueSchema = z.object({
   name: z.string().trim().min(1).max(160),
@@ -59,10 +102,48 @@ const venueSchema = z.object({
   capacity: z.coerce.number().int().min(1).max(100000),
   capacityContext: z.string().trim().max(500).optional(),
   productionNotes: z.string().trim().max(4000).optional(),
+  productionPa: venueProductionField,
+  productionMixer: venueProductionField,
+  productionMics: venueProductionField,
+  productionLighting: venueProductionField,
+  productionBackline: venueProductionField,
+  productionPower: venueProductionField,
+  productionStage: venueProductionField,
+  houseRules: optionalText(4000),
+  loadInNotes: optionalText(4000),
+  accessibilityNotes: optionalText(2000),
+  socialLinks: socialLinksSchema,
   websiteUrl: z.string().trim().url().max(500).optional().or(z.literal("")),
   contactEmail: z.string().trim().email().max(320),
   locale: localeSchema,
 });
+
+function buildVenueProductionResources(
+  data: z.infer<typeof venueSchema>,
+): Record<string, string> {
+  const resources: Record<string, string> = {
+    notes: data.productionNotes?.trim() ?? "",
+  };
+  const structured: Record<string, string | undefined> = {
+    pa: data.productionPa,
+    mixer: data.productionMixer,
+    mics: data.productionMics,
+    lighting: data.productionLighting,
+    backline: data.productionBackline,
+    power: data.productionPower,
+    stage: data.productionStage,
+  };
+  for (const [key, value] of Object.entries(structured)) {
+    const trimmed = value?.trim();
+    if (trimmed) resources[key] = trimmed;
+  }
+  return resources;
+}
+
+function optionalNullableText(value?: string) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
 
 async function requireActor() {
   const session = await auth();
@@ -117,6 +198,13 @@ export async function upsertEntertainerProfile(
       priceMaxCents: parsed.data.priceMaxCents,
       durationMinutes: parsed.data.durationMinutes,
       technicalRequirements: parsed.data.technicalRequirements,
+      genres: optionalNullableText(parsed.data.genres),
+      performanceFormats: optionalNullableText(parsed.data.performanceFormats),
+      languages: optionalNullableText(parsed.data.languages),
+      accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
+      equipmentSupplied: optionalNullableText(parsed.data.equipmentSupplied),
+      websiteUrl: optionalNullableText(parsed.data.websiteUrl),
+      socialLinks: compactSocialLinks(parsed.data.socialLinks),
       publicationState:
         existing?.publicationState === "approved" ||
         existing?.publicationState === "submitted"
@@ -255,9 +343,11 @@ export async function createVenue(
           ...(parsed.data.capacityContext
             ? { capacityContext: parsed.data.capacityContext }
             : {}),
-          productionResources: {
-            notes: parsed.data.productionNotes ?? "",
-          },
+          productionResources: buildVenueProductionResources(parsed.data),
+          houseRules: optionalNullableText(parsed.data.houseRules),
+          loadInNotes: optionalNullableText(parsed.data.loadInNotes),
+          accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
+          socialLinks: compactSocialLinks(parsed.data.socialLinks),
           ...(parsed.data.websiteUrl
             ? { websiteUrl: parsed.data.websiteUrl }
             : {}),
@@ -348,9 +438,11 @@ export async function updateVenue(
           audienceDescription: parsed.data.audienceDescription,
           capacity: parsed.data.capacity,
           capacityContext: parsed.data.capacityContext ?? null,
-          productionResources: {
-            notes: parsed.data.productionNotes ?? "",
-          },
+          productionResources: buildVenueProductionResources(parsed.data),
+          houseRules: optionalNullableText(parsed.data.houseRules),
+          loadInNotes: optionalNullableText(parsed.data.loadInNotes),
+          accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
+          socialLinks: compactSocialLinks(parsed.data.socialLinks),
           websiteUrl: parsed.data.websiteUrl || null,
           publicationState: nextState,
           updatedAt: new Date(),
@@ -542,6 +634,75 @@ export async function staffReviewProfile(
     revalidatePath(`/${parsed.data.locale}/admin`);
     revalidatePath(`/${parsed.data.locale}/profile`);
     return { ok: true, id: parsed.data.subjectId };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+const venueSpaceSchema = z.object({
+  venueId: z.string().uuid(),
+  spaceId: z.string().uuid().optional(),
+  name: z.string().trim().min(1).max(160),
+  capacity: z.coerce.number().int().min(1).max(100000),
+  stageDimensions: optionalText(200),
+  accessibilityNotes: optionalText(2000),
+  locale: localeSchema,
+});
+
+export async function upsertVenueSpace(
+  input: z.infer<typeof venueSpaceSchema>,
+): Promise<ActionResult> {
+  try {
+    const { session, actor } = await requireActor();
+    const parsed = venueSpaceSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid venue space");
+    }
+    if (!can(actor, "venue.manage", { venueId: parsed.data.venueId })) {
+      throw new AppError("forbidden", "Venue owner required");
+    }
+
+    const db = getDb();
+    const now = new Date();
+    const values = {
+      venueId: parsed.data.venueId,
+      name: parsed.data.name,
+      capacity: parsed.data.capacity,
+      stageDimensions: optionalNullableText(parsed.data.stageDimensions),
+      accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
+      updatedAt: now,
+    };
+
+    let spaceId = parsed.data.spaceId;
+    if (parsed.data.spaceId) {
+      const existing = await db.query.venueSpaces.findFirst({
+        where: eq(venueSpaces.id, parsed.data.spaceId),
+      });
+      if (!existing || existing.venueId !== parsed.data.venueId) {
+        throw new AppError("not_found", "Venue space not found");
+      }
+      await db
+        .update(venueSpaces)
+        .set(values)
+        .where(eq(venueSpaces.id, parsed.data.spaceId));
+    } else {
+      const [created] = await db
+        .insert(venueSpaces)
+        .values({ ...values, createdAt: now })
+        .returning();
+      spaceId = created?.id;
+    }
+
+    await db.insert(auditEvents).values({
+      actorUserId: session.user.id,
+      action: parsed.data.spaceId ? "venue_space.updated" : "venue_space.created",
+      subjectType: "venue_space",
+      subjectId: spaceId ?? parsed.data.venueId,
+      metadata: { venueId: parsed.data.venueId },
+    });
+
+    revalidatePath(`/${parsed.data.locale}/profile/venues/${parsed.data.venueId}`);
+    return { ok: true, ...(spaceId ? { id: spaceId } : {}) };
   } catch (error) {
     return toActionError(error);
   }

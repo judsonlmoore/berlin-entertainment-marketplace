@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { proposeBookingTerms } from "@/src/actions/bookings";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 type Defaults = {
@@ -27,6 +28,7 @@ export function BookingTermsForm({
 }: Props) {
   const t = useTranslations("bookings");
   const errors = useTranslations("errors");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export function BookingTermsForm({
             type="datetime-local"
             required
             defaultValue={defaults.startsAtLocal}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
@@ -89,7 +91,7 @@ export function BookingTermsForm({
             type="datetime-local"
             required
             defaultValue={defaults.endsAtLocal}
-            className="border border-[var(--line)] bg-transparent px-3 py-2"
+            className="field"
           />
         </label>
       </div>
@@ -101,7 +103,7 @@ export function BookingTermsForm({
           min={0}
           required
           defaultValue={defaults.feeEur}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -110,7 +112,7 @@ export function BookingTermsForm({
           name="performanceFormat"
           required
           defaultValue={defaults.performanceFormat}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -120,7 +122,7 @@ export function BookingTermsForm({
           required
           rows={3}
           defaultValue={t("cancellationDefault")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -130,7 +132,7 @@ export function BookingTermsForm({
           required
           rows={3}
           defaultValue={t("productionDefault")}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       <label className="grid gap-1 text-sm">
@@ -138,7 +140,7 @@ export function BookingTermsForm({
         <textarea
           name="depositTerms"
           rows={2}
-          className="border border-[var(--line)] bg-transparent px-3 py-2"
+          className="field"
         />
       </label>
       {error ? (
@@ -146,13 +148,14 @@ export function BookingTermsForm({
           {error}
         </p>
       ) : null}
-      <button
+      <Button
         type="submit"
-        disabled={pending}
-        className="bg-[var(--accent)] px-4 py-3 text-[var(--background)] disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
       >
         {t("propose")}
-      </button>
+      </Button>
     </form>
   );
 }

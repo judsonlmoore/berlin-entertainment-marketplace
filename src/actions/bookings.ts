@@ -7,6 +7,11 @@ import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
 import { getActorContext } from "@/src/db/queries/actor";
 import {
+  clearBookingCalendarEntries,
+  upsertBookingCalendarEntry,
+} from "@/src/db/queries/calendar";
+import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
+import {
   auditEvents,
   bookingTerms,
   bookings,
@@ -305,6 +310,31 @@ export async function acceptBookingTerms(
         state: "terms_agreed",
       });
 
+      const { spaceId } = await assertNoHardCalendarConflict({
+        entertainerProfileId: booking.entertainerProfileId,
+        venueId: booking.venueId,
+        startsAt: terms.startsAt,
+        endsAt: terms.endsAt,
+        excludeBookingId: booking.id,
+      });
+
+      await upsertBookingCalendarEntry(tx, {
+        ownerType: "entertainer",
+        ownerId: booking.entertainerProfileId,
+        startsAt: terms.startsAt,
+        endsAt: terms.endsAt,
+        state: "requested",
+        bookingId: booking.id,
+      });
+      await upsertBookingCalendarEntry(tx, {
+        ownerType: "venue_space",
+        ownerId: spaceId,
+        startsAt: terms.startsAt,
+        endsAt: terms.endsAt,
+        state: "requested",
+        bookingId: booking.id,
+      });
+
       await tx.insert(auditEvents).values({
         actorUserId: session.user.id,
         action: "booking.terms_agreed",
@@ -322,6 +352,7 @@ export async function acceptBookingTerms(
     revalidatePath(
       `/${parsed.data.locale}/marketplace/bookings/${parsed.data.bookingId}`,
     );
+    revalidatePath(`/${parsed.data.locale}/marketplace/calendar`);
     return { ok: true, id: parsed.data.bookingId };
   } catch (error) {
     return toActionError(error);
@@ -367,6 +398,8 @@ export async function cancelBooking(
         cancelledReason: parsed.data.reason,
       });
 
+      await clearBookingCalendarEntries(tx, booking.id);
+
       await tx.insert(auditEvents).values({
         actorUserId: session.user.id,
         action: "booking.cancelled",
@@ -383,6 +416,7 @@ export async function cancelBooking(
     revalidatePath(
       `/${parsed.data.locale}/marketplace/bookings/${parsed.data.bookingId}`,
     );
+    revalidatePath(`/${parsed.data.locale}/marketplace/calendar`);
     return { ok: true, id: parsed.data.bookingId };
   } catch (error) {
     return toActionError(error);

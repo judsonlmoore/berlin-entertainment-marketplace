@@ -32,3 +32,13 @@ export function isOpportunityAcceptingApplications(
   if (deadline && deadline.getTime() < now.getTime()) return false;
   return true;
 }
+
+/** Staff may force-close an open opportunity or cancel a non-terminal one. */
+export function canStaffModerateOpportunity(
+  from: OpportunityState,
+  to: "closed" | "cancelled",
+): boolean {
+  if (from === "cancelled") return false;
+  if (to === "closed") return from === "open";
+  return to === "cancelled";
+}

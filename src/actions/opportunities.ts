@@ -6,8 +6,11 @@ import { z } from "zod";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
 import { getActorContext } from "@/src/db/queries/actor";
+import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
+import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
 import {
   applications,
+  applicationClarificationNotes,
   auditEvents,
   bookings,
   contactMethods,
@@ -29,6 +32,7 @@ import {
   isOpportunityAcceptingApplications,
   type OpportunityState,
 } from "@/src/domain/opportunity";
+import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 
 export type ActionResult =
   { ok: true; id?: string } | { ok: false; code: string; message: string };
@@ -193,9 +197,10 @@ export async function transitionOpportunity(input: {
 
 const applySchema = z.object({
   opportunityId: z.string().uuid(),
-  message: z.string().trim().min(1).max(4000),
-  quoteMinEur: z.coerce.number().min(0),
-  quoteMaxEur: z.coerce.number().min(0),
+  message: z.string().trim().max(4000).default(""),
+  quoteMinEur: z.coerce.number().min(0).default(0),
+  quoteMaxEur: z.coerce.number().min(0).default(0),
+  intent: z.enum(["draft", "submit"]).default("submit"),
   locale: localeSchema,
 });
 
@@ -204,6 +209,12 @@ export async function applyToOpportunity(
 ): Promise<ActionResult> {
   try {
     const { session, actor } = await requireActor();
+    checkRateLimit({
+      key: rateLimitKey("opportunity.apply", session.user.id),
+      limit: 20,
+      windowMs: 60_000,
+    });
+
     const parsed = applySchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid application");
@@ -211,7 +222,15 @@ export async function applyToOpportunity(
     if (!can(actor, "opportunity.apply")) {
       throw new AppError("forbidden", "Approved entertainer required");
     }
-    if (parsed.data.quoteMaxEur < parsed.data.quoteMinEur) {
+
+    const isSubmit = parsed.data.intent === "submit";
+    if (isSubmit && !parsed.data.message.trim()) {
+      throw new AppError("validation", "Message is required to submit");
+    }
+    if (
+      isSubmit &&
+      parsed.data.quoteMaxEur < parsed.data.quoteMinEur
+    ) {
       throw new AppError("validation", "Quote max must be >= min");
     }
 
@@ -253,21 +272,81 @@ export async function applyToOpportunity(
         eq(applications.entertainerProfileId, profile.id),
       ),
     });
+
+    const nextState: ApplicationState = isSubmit ? "submitted" : "draft";
+    const message = parsed.data.message.trim() || "Draft application";
+    const quoteMinCents = Math.round(parsed.data.quoteMinEur * 100);
+    const quoteMaxCents = Math.round(parsed.data.quoteMaxEur * 100);
+
     if (existing) {
-      throw new AppError("conflict", "You already applied to this opportunity");
+      const from = existing.state as ApplicationState;
+      if (from === "draft" && isSubmit) {
+        if (!canApplicantTransitionApplication(from, "submitted")) {
+          throw new AppError("invalid_transition", `Cannot submit from ${from}`);
+        }
+      } else if (from === "draft" && !isSubmit) {
+        // update draft in place
+      } else {
+        throw new AppError("conflict", "You already applied to this opportunity");
+      }
     }
 
     let applicationId: string | undefined;
     await db.transaction(async (tx) => {
+      if (existing) {
+        await tx
+          .update(applications)
+          .set({
+            message,
+            quoteMinCents,
+            quoteMaxCents,
+            state: nextState,
+            updatedAt: new Date(),
+          })
+          .where(eq(applications.id, existing.id));
+        applicationId = existing.id;
+
+        if (isSubmit) {
+          const bookingExists = await tx.query.bookings.findFirst({
+            where: and(
+              eq(bookings.originType, "application"),
+              eq(bookings.originId, existing.id),
+            ),
+          });
+          if (!bookingExists) {
+            await tx.insert(bookings).values({
+              originType: "application",
+              originId: existing.id,
+              venueId: opportunity.venueId,
+              entertainerProfileId: profile.id,
+              state: "applied",
+            });
+          }
+        }
+
+        await tx.insert(auditEvents).values({
+          actorUserId: session.user.id,
+          action: isSubmit ? "application.submitted" : "application.draft_saved",
+          subjectType: "application",
+          subjectId: existing.id,
+          metadata: {
+            opportunityId: opportunity.id,
+            from: existing.state,
+            to: nextState,
+          },
+        });
+        return;
+      }
+
       const [created] = await tx
         .insert(applications)
         .values({
           opportunityId: opportunity.id,
           entertainerProfileId: profile.id,
-          message: parsed.data.message,
-          quoteMinCents: Math.round(parsed.data.quoteMinEur * 100),
-          quoteMaxCents: Math.round(parsed.data.quoteMaxEur * 100),
-          state: "submitted",
+          message,
+          quoteMinCents,
+          quoteMaxCents,
+          state: nextState,
         })
         .returning();
       if (!created) {
@@ -275,20 +354,22 @@ export async function applyToOpportunity(
       }
       applicationId = created.id;
 
-      await tx.insert(bookings).values({
-        originType: "application",
-        originId: created.id,
-        venueId: opportunity.venueId,
-        entertainerProfileId: profile.id,
-        state: "applied",
-      });
+      if (isSubmit) {
+        await tx.insert(bookings).values({
+          originType: "application",
+          originId: created.id,
+          venueId: opportunity.venueId,
+          entertainerProfileId: profile.id,
+          state: "applied",
+        });
+      }
 
       await tx.insert(auditEvents).values({
         actorUserId: session.user.id,
-        action: "application.submitted",
+        action: isSubmit ? "application.submitted" : "application.draft_saved",
         subjectType: "application",
         subjectId: created.id,
-        metadata: { opportunityId: opportunity.id },
+        metadata: { opportunityId: opportunity.id, state: nextState },
       });
     });
 
@@ -296,6 +377,167 @@ export async function applyToOpportunity(
       `/${parsed.data.locale}/marketplace/opportunities/${opportunity.id}`,
     );
     return { ok: true, ...(applicationId ? { id: applicationId } : {}) };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+const clarificationNoteSchema = z.object({
+  applicationId: z.string().uuid(),
+  body: z.string().trim().min(1).max(4000),
+  locale: localeSchema,
+});
+
+export async function requestClarification(
+  input: z.infer<typeof clarificationNoteSchema>,
+): Promise<ActionResult> {
+  try {
+    const { session, actor } = await requireActor();
+    const parsed = clarificationNoteSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid clarification request");
+    }
+
+    const db = getDb();
+    const application = await db.query.applications.findFirst({
+      where: eq(applications.id, parsed.data.applicationId),
+    });
+    if (!application) {
+      throw new AppError("not_found", "Application not found");
+    }
+
+    const opportunity = await db.query.opportunities.findFirst({
+      where: eq(opportunities.id, application.opportunityId),
+    });
+    if (!opportunity) {
+      throw new AppError("not_found", "Opportunity not found");
+    }
+    if (!can(actor, "application.review", { venueId: opportunity.venueId })) {
+      throw new AppError("forbidden", "Venue operator required");
+    }
+
+    const from = application.state as ApplicationState;
+    if (!canVenueTransitionApplication(from, "clarification_requested")) {
+      throw new AppError(
+        "invalid_transition",
+        `Cannot request clarification from ${from}`,
+      );
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.insert(applicationClarificationNotes).values({
+        applicationId: application.id,
+        authorUserId: session.user.id,
+        body: parsed.data.body,
+      });
+      await tx
+        .update(applications)
+        .set({ state: "clarification_requested", updatedAt: new Date() })
+        .where(eq(applications.id, application.id));
+      await tx.insert(auditEvents).values({
+        actorUserId: session.user.id,
+        action: "application.clarification_requested",
+        subjectType: "application",
+        subjectId: application.id,
+        metadata: { from, to: "clarification_requested" },
+      });
+    });
+
+    revalidatePath(
+      `/${parsed.data.locale}/marketplace/opportunities/${opportunity.id}`,
+    );
+    return { ok: true, id: application.id };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function replyClarification(
+  input: z.infer<typeof clarificationNoteSchema>,
+): Promise<ActionResult> {
+  try {
+    const { session, actor } = await requireActor();
+    checkRateLimit({
+      key: rateLimitKey("opportunity.apply", session.user.id),
+      limit: 20,
+      windowMs: 60_000,
+    });
+
+    const parsed = clarificationNoteSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid clarification reply");
+    }
+    if (!can(actor, "opportunity.apply")) {
+      throw new AppError("forbidden", "Approved entertainer required");
+    }
+
+    const db = getDb();
+    const application = await db.query.applications.findFirst({
+      where: eq(applications.id, parsed.data.applicationId),
+    });
+    if (!application) {
+      throw new AppError("not_found", "Application not found");
+    }
+
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, application.entertainerProfileId),
+    });
+    if (!profile || profile.userId !== session.user.id) {
+      throw new AppError("forbidden", "Only the applicant can reply");
+    }
+
+    const from = application.state as ApplicationState;
+    if (!canApplicantTransitionApplication(from, "submitted")) {
+      throw new AppError("invalid_transition", `Cannot reply from ${from}`);
+    }
+
+    const opportunity = await db.query.opportunities.findFirst({
+      where: eq(opportunities.id, application.opportunityId),
+    });
+    if (!opportunity) {
+      throw new AppError("not_found", "Opportunity not found");
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.insert(applicationClarificationNotes).values({
+        applicationId: application.id,
+        authorUserId: session.user.id,
+        body: parsed.data.body,
+      });
+      await tx
+        .update(applications)
+        .set({ state: "submitted", updatedAt: new Date() })
+        .where(eq(applications.id, application.id));
+
+      const bookingExists = await tx.query.bookings.findFirst({
+        where: and(
+          eq(bookings.originType, "application"),
+          eq(bookings.originId, application.id),
+        ),
+      });
+      if (!bookingExists) {
+        await tx.insert(bookings).values({
+          originType: "application",
+          originId: application.id,
+          venueId: opportunity.venueId,
+          entertainerProfileId: profile.id,
+          state: "applied",
+        });
+      }
+
+      await tx.insert(auditEvents).values({
+        actorUserId: session.user.id,
+        action: "application.clarification_replied",
+        subjectType: "application",
+        subjectId: application.id,
+        metadata: { from, to: "submitted" },
+      });
+    });
+
+    revalidatePath(
+      `/${parsed.data.locale}/marketplace/opportunities/${opportunity.id}`,
+    );
+    return { ok: true, id: application.id };
   } catch (error) {
     return toActionError(error);
   }
@@ -335,15 +577,20 @@ export async function withdrawApplication(
         .update(applications)
         .set({ state: "withdrawn", updatedAt: new Date() })
         .where(eq(applications.id, applicationId));
-      await tx
-        .update(bookings)
-        .set({ state: "withdrawn", updatedAt: new Date() })
-        .where(
-          and(
-            eq(bookings.originType, "application"),
-            eq(bookings.originId, applicationId),
-          ),
-        );
+
+      const booking = await tx.query.bookings.findFirst({
+        where: and(
+          eq(bookings.originType, "application"),
+          eq(bookings.originId, applicationId),
+        ),
+      });
+      if (booking) {
+        await tx
+          .update(bookings)
+          .set({ state: "withdrawn", updatedAt: new Date() })
+          .where(eq(bookings.id, booking.id));
+      }
+
       await tx.insert(auditEvents).values({
         actorUserId: session.user.id,
         action: "application.withdrawn",
@@ -393,6 +640,15 @@ export async function reviewApplication(input: {
         "invalid_transition",
         `Cannot move application from ${from} to ${input.nextState}`,
       );
+    }
+
+    if (input.nextState === "shortlisted") {
+      await assertNoHardCalendarConflict({
+        entertainerProfileId: application.entertainerProfileId,
+        venueId: opportunity.venueId,
+        startsAt: opportunity.startsAt,
+        endsAt: opportunity.endsAt,
+      });
     }
 
     await db.transaction(async (tx) => {
@@ -490,6 +746,32 @@ export async function reviewApplication(input: {
             reason: "application_shortlisted",
           });
         }
+
+        if (booking) {
+          const { spaceId } = await assertNoHardCalendarConflict({
+            entertainerProfileId: application.entertainerProfileId,
+            venueId: opportunity.venueId,
+            startsAt: opportunity.startsAt,
+            endsAt: opportunity.endsAt,
+            excludeBookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "entertainer",
+            ownerId: application.entertainerProfileId,
+            startsAt: opportunity.startsAt,
+            endsAt: opportunity.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "venue_space",
+            ownerId: spaceId,
+            startsAt: opportunity.startsAt,
+            endsAt: opportunity.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+        }
       }
 
       await tx.insert(auditEvents).values({
@@ -502,6 +784,7 @@ export async function reviewApplication(input: {
     });
 
     revalidatePath(`/${locale}/marketplace/opportunities/${opportunity.id}`);
+    revalidatePath(`/${locale}/marketplace/calendar`);
     return { ok: true, id: application.id };
   } catch (error) {
     return toActionError(error);

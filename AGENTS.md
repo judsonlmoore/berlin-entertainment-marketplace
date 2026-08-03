@@ -1,0 +1,9 @@
+# AGENTS.md
+
+## Design System
+
+Always read `DESIGN.md` before making any visual or UI decisions.
+Route layout contracts and implementation order live in `docs/VISUAL_DESIGN_SPEC.md`.
+All font choices, colors, spacing, form patterns, and aesthetic direction are defined in `DESIGN.md`.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match `DESIGN.md` (especially warm-ivory defaults, low-contrast muted text, Instrument Serif on every ops heading, or bare under-styled form fields).

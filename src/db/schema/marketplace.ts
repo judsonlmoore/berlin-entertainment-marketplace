@@ -19,6 +19,8 @@ import {
   bookingStateEnum,
   calendarEntryStateEnum,
   calendarOwnerTypeEnum,
+  calendarSyncProviderEnum,
+  calendarSyncStatusEnum,
   contactKindEnum,
   contactOwnerTypeEnum,
   depositStatusEnum,
@@ -26,6 +28,7 @@ import {
   marketplaceRoleEnum,
   membershipStatusEnum,
   opportunityStateEnum,
+  portfolioItemKindEnum,
   profilePublicationStateEnum,
   venueMembershipRoleEnum,
 } from "./enums";
@@ -149,6 +152,13 @@ export const venues = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default({}),
+    houseRules: text("house_rules"),
+    loadInNotes: text("load_in_notes"),
+    accessibilityNotes: text("accessibility_notes"),
+    socialLinks: jsonb("social_links")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default({}),
     websiteUrl: text("website_url"),
     publicationState: profilePublicationStateEnum("publication_state")
       .notNull()
@@ -201,6 +211,8 @@ export const venueSpaces = pgTable("venue_spaces", {
     .references(() => venues.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   capacity: integer("capacity").notNull(),
+  stageDimensions: text("stage_dimensions"),
+  accessibilityNotes: text("accessibility_notes"),
   productionResources: jsonb("production_resources")
     .$type<Record<string, unknown>>()
     .notNull()
@@ -223,6 +235,7 @@ export const entertainerProfiles = pgTable(
       .unique(),
     actName: text("act_name").notNull(),
     category: text("category").notNull(),
+    genres: text("genres"),
     description: text("description").notNull(),
     groupSize: integer("group_size").notNull(),
     berlinBase: text("berlin_base").notNull(),
@@ -231,7 +244,16 @@ export const entertainerProfiles = pgTable(
     priceMaxCents: integer("price_max_cents").notNull(),
     currency: text("currency").notNull().default("EUR"),
     durationMinutes: integer("duration_minutes").notNull(),
+    performanceFormats: text("performance_formats"),
     technicalRequirements: text("technical_requirements").notNull(),
+    languages: text("languages"),
+    accessibilityNotes: text("accessibility_notes"),
+    equipmentSupplied: text("equipment_supplied"),
+    websiteUrl: text("website_url"),
+    socialLinks: jsonb("social_links")
+      .$type<Record<string, string>>()
+      .notNull()
+      .default({}),
     publicationState: profilePublicationStateEnum("publication_state")
       .notNull()
       .default("draft"),
@@ -329,6 +351,23 @@ export const applications = pgTable(
   ],
 );
 
+export const applicationClarificationNotes = pgTable(
+  "application_clarification_notes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    applicationId: uuid("application_id")
+      .notNull()
+      .references(() => applications.id, { onDelete: "cascade" }),
+    authorUserId: text("author_user_id")
+      .notNull()
+      .references(() => users.id),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
 export const directRequests = pgTable("direct_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
   venueId: uuid("venue_id")
@@ -350,6 +389,10 @@ export const directRequests = pgTable("direct_requests", {
   currency: text("currency").notNull().default("EUR"),
   formatCategory: text("format_category").notNull(),
   notes: text("notes"),
+  responseDeadlineAt: timestamp("response_deadline_at", {
+    withTimezone: true,
+    mode: "date",
+  }),
   state: directRequestStateEnum("state").notNull().default("requested"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .notNull()
@@ -585,6 +628,7 @@ export const riderFiles = pgTable("rider_files", {
     () => entertainerProfiles.id,
   ),
   blobKey: text("blob_key").notNull(),
+  originalFilename: text("original_filename"),
   mimeType: text("mime_type").notNull(),
   sizeBytes: integer("size_bytes").notNull(),
   checksum: text("checksum").notNull(),
@@ -593,3 +637,65 @@ export const riderFiles = pgTable("rider_files", {
     .notNull()
     .defaultNow(),
 });
+
+export const portfolioItems = pgTable(
+  "portfolio_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entertainerProfileId: uuid("entertainer_profile_id")
+      .notNull()
+      .references(() => entertainerProfiles.id, { onDelete: "cascade" }),
+    kind: portfolioItemKindEnum("kind").notNull(),
+    caption: text("caption"),
+    altText: text("alt_text"),
+    url: text("url"),
+    blobKey: text("blob_key"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("portfolio_items_profile_sort_idx").on(
+      table.entertainerProfileId,
+      table.sortOrder,
+    ),
+  ],
+);
+
+export const calendarConnections = pgTable(
+  "calendar_connections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ownerType: calendarOwnerTypeEnum("owner_type").notNull(),
+    ownerId: uuid("owner_id").notNull(),
+    provider: calendarSyncProviderEnum("provider").notNull(),
+    status: calendarSyncStatusEnum("status").notNull().default("disconnected"),
+    externalAccountLabel: text("external_account_label"),
+    lastSyncAt: timestamp("last_sync_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("calendar_connections_owner_provider_uidx").on(
+      table.ownerType,
+      table.ownerId,
+      table.provider,
+    ),
+    index("calendar_connections_user_idx").on(table.userId),
+  ],
+);

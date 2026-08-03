@@ -107,9 +107,11 @@ Representative pages:
 - Public: `/[locale]`, `/[locale]/apply`, `/[locale]/privacy`, `/[locale]/terms`
 - Auth: `/[locale]/sign-in`, `/api/auth/[...nextauth]`
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
-- Marketplace: `/[locale]/marketplace/discover`, `/opportunities`, `/opportunities/[id]`, `/bookings/[id]`, `/calendar`, `/profile`
+- Marketplace: `/[locale]/marketplace` (role-segregated entertainer vs venue discovery), `/opportunities`, `/opportunities/[id]`, `/bookings/[id]`, `/calendar`, `/profile`
 - Admin: `/[locale]/admin/reviews`, `/accounts/[id]`, `/operations`
 - Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, authorized download route
+
+Discovery authorization is role-scoped: `discover.entertainers` for venue operators/staff; `discover.venues` for entertainers/staff. Dual-role actors may hold both. Queries and pages must enforce this; navigation alone is insufficient.
 
 Use Server Components for initial reads. Use Server Actions for same-origin form mutations where progressive enhancement helps; use Route Handlers for Auth.js, webhooks, uploads/downloads, and external APIs. Every mutation validates Zod input, authorizes, uses an idempotency/concurrency strategy, writes audit events, and returns typed expected errors. Revalidate affected paths/tags after commit.
 
@@ -124,6 +126,7 @@ Key actions include: submit onboarding/profile; invite/manage venue member; publ
 - Use exclusion constraints for confirmed overlaps and application-level checks for requested/active unexpired holds.
 - Expire holds by timestamp during reads and a scheduled Vercel Cron reconciliation job; expiry jobs must be idempotent.
 - Store UTC instants and an IANA timezone; format in `Europe/Berlin` by default. Explicitly test DST boundaries.
+- External calendar synchronization is a later milestone. Keep a narrow `CalendarSyncProvider` boundary and connection model when that phase begins; do not claim sync operational beforehand.
 
 ## 8. Files and privacy
 

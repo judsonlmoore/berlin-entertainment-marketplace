@@ -1,15 +1,19 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   applications,
+  applicationClarificationNotes,
   entertainerProfiles,
   opportunities,
   venues,
 } from "@/src/db/schema/marketplace";
 
-export async function listOpenOpportunities() {
+export async function listOpenOpportunities(input?: {
+  viewerVenueIds?: string[];
+  entertainerProfileId?: string | null;
+}) {
   const db = getDb();
-  return db
+  const rows = await db
     .select({
       id: opportunities.id,
       title: opportunities.title,
@@ -19,6 +23,8 @@ export async function listOpenOpportunities() {
       budgetMinCents: opportunities.budgetMinCents,
       budgetMaxCents: opportunities.budgetMaxCents,
       currency: opportunities.currency,
+      actSizeMin: opportunities.actSizeMin,
+      actSizeMax: opportunities.actSizeMax,
       applicationDeadline: opportunities.applicationDeadline,
       venueId: venues.id,
       venueName: venues.name,
@@ -28,6 +34,50 @@ export async function listOpenOpportunities() {
     .innerJoin(venues, eq(venues.id, opportunities.venueId))
     .where(eq(opportunities.state, "open"))
     .orderBy(opportunities.startsAt);
+
+  const opportunityIds = rows.map((row) => row.id);
+  const countRows =
+    opportunityIds.length > 0
+      ? await db
+          .select({
+            opportunityId: applications.opportunityId,
+            value: count(),
+          })
+          .from(applications)
+          .where(inArray(applications.opportunityId, opportunityIds))
+          .groupBy(applications.opportunityId)
+      : [];
+  const counts = new Map(
+    countRows.map((row) => [row.opportunityId, Number(row.value)]),
+  );
+
+  const ownApps =
+    input?.entertainerProfileId && opportunityIds.length > 0
+      ? await db
+          .select({
+            opportunityId: applications.opportunityId,
+            state: applications.state,
+          })
+          .from(applications)
+          .where(
+            and(
+              eq(applications.entertainerProfileId, input.entertainerProfileId),
+              inArray(applications.opportunityId, opportunityIds),
+            ),
+          )
+      : [];
+
+  const appByOpportunity = new Map(
+    ownApps.map((row) => [row.opportunityId, row.state]),
+  );
+  const ownedVenueIds = new Set(input?.viewerVenueIds ?? []);
+
+  return rows.map((row) => ({
+    ...row,
+    applicationCount: counts.get(row.id) ?? 0,
+    ownApplicationState: appByOpportunity.get(row.id) ?? null,
+    canSeeApplicationCount: ownedVenueIds.has(row.venueId),
+  }));
 }
 
 export async function listVenueOpportunities(venueId: string) {
@@ -90,7 +140,12 @@ export async function listApplicationsForOpportunity(opportunityId: string) {
       entertainerProfiles,
       eq(entertainerProfiles.id, applications.entertainerProfileId),
     )
-    .where(eq(applications.opportunityId, opportunityId))
+    .where(
+      and(
+        eq(applications.opportunityId, opportunityId),
+        ne(applications.state, "draft"),
+      ),
+    )
     .orderBy(desc(applications.createdAt));
 }
 
@@ -106,3 +161,20 @@ export async function getApplicationForEntertainer(input: {
     ),
   });
 }
+
+export async function listClarificationNotesForApplication(
+  applicationId: string,
+) {
+  const db = getDb();
+  return db
+    .select({
+      id: applicationClarificationNotes.id,
+      body: applicationClarificationNotes.body,
+      createdAt: applicationClarificationNotes.createdAt,
+      authorUserId: applicationClarificationNotes.authorUserId,
+    })
+    .from(applicationClarificationNotes)
+    .where(eq(applicationClarificationNotes.applicationId, applicationId))
+    .orderBy(applicationClarificationNotes.createdAt);
+}
+
