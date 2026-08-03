@@ -173,6 +173,8 @@ export default async function HomePage({ params }: Props) {
               {" · "}
               <Link href="/terms">{t("footerTerms")}</Link>
               {" · "}
+              <Link href="/cookies">Cookie Policy</Link>
+              {" · "}
               <Link href="/sign-in">{t("ctaSignIn")}</Link>
             </p>
           </div>
