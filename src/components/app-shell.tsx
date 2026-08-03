@@ -39,7 +39,7 @@ function isActive(pathname: string, match: string) {
 type Props = {
   children: ReactNode;
   userName: string;
-  userImage?: string | null;
+  userImage?: string | null | undefined;
   approvalLabel: string;
   isStaff: boolean;
   isApproved: boolean;
@@ -101,7 +101,7 @@ function RailNav({
   items: NavItem[];
   pathname: string;
   userName: string;
-  userImage?: string | null;
+  userImage?: string | null | undefined;
   approvalLabel: string;
   navId?: string;
   onNavigate?: () => void;

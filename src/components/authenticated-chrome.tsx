@@ -5,7 +5,7 @@ type Props = {
   children: React.ReactNode;
   locale: string;
   userName: string;
-  userImage?: string | null;
+  userImage?: string | null | undefined;
   approvalState: string | null;
   isStaff: boolean;
   isApproved: boolean;

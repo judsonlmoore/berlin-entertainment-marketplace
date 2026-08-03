@@ -58,7 +58,7 @@ export function Avatar({
   tone,
 }: {
   name: string;
-  src?: string | null;
+  src?: string | null | undefined;
   size?: number;
   className?: string;
   tone?: Tone;
