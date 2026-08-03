@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { proposeBookingTerms } from "@/src/actions/bookings";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 type Defaults = {
@@ -27,6 +28,7 @@ export function BookingTermsForm({
 }: Props) {
   const t = useTranslations("bookings");
   const errors = useTranslations("errors");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -146,13 +148,14 @@ export function BookingTermsForm({
           {error}
         </p>
       ) : null}
-      <button
+      <Button
         type="submit"
-        disabled={pending}
-        className="bg-[var(--accent)] px-4 py-3 text-[var(--background)] disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
       >
         {t("propose")}
-      </button>
+      </Button>
     </form>
   );
 }

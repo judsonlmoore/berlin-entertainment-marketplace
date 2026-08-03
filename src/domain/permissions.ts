@@ -21,6 +21,7 @@ export type Permission =
   | "admin.review_accounts"
   | "admin.change_approval"
   | "admin.review_profiles"
+  | "admin.operations"
   | "venue.create"
   | "venue.manage"
   | "venue.operate"
@@ -34,7 +35,10 @@ export type Permission =
   | "booking.propose_terms"
   | "booking.accept_terms"
   | "booking.cancel"
-  | "booking.record_deposit";
+  | "booking.record_deposit"
+  | "booking.generate_agreement"
+  | "booking.sign_agreement"
+  | "calendar.manage";
 
 function isActiveVenueMember(
   actor: ActorContext,
@@ -61,6 +65,7 @@ export function can(
     case "admin.review_accounts":
     case "admin.change_approval":
     case "admin.review_profiles":
+    case "admin.operations":
       return actor.isPlatformStaff;
 
     case "marketplace.discover":
@@ -112,6 +117,8 @@ export function can(
     case "booking.propose_terms":
     case "booking.accept_terms":
     case "booking.cancel":
+    case "booking.generate_agreement":
+    case "booking.sign_agreement":
       return (
         actor.isPlatformStaff ||
         (actor.approvalState !== null &&
@@ -125,6 +132,15 @@ export function can(
           isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
           actor.approvalState !== null &&
           hasMarketplaceAccess(actor.approvalState))
+      );
+
+    case "calendar.manage":
+      return (
+        actor.isPlatformStaff ||
+        (actor.approvalState !== null &&
+          hasMarketplaceAccess(actor.approvalState) &&
+          (actor.roles.includes("entertainer") ||
+            actor.venueMemberships.some((m) => m.status === "active")))
       );
 
     default:

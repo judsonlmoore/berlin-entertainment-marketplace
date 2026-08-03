@@ -6,6 +6,7 @@ import {
   respondToDirectRequest,
   withdrawDirectRequest,
 } from "@/src/actions/direct-requests";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 export function RespondDirectRequestButtons({
@@ -18,6 +19,7 @@ export function RespondDirectRequestButtons({
   state: string;
 }) {
   const t = useTranslations("directRequests");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -25,10 +27,11 @@ export function RespondDirectRequestButtons({
 
   return (
     <div className="flex flex-wrap gap-2">
-      <button
+      <Button
         type="button"
-        disabled={pending}
-        className="bg-[var(--accent)] px-3 py-2 text-sm text-[var(--background)]"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
         onClick={() => {
           startTransition(async () => {
             await respondToDirectRequest({
@@ -41,11 +44,12 @@ export function RespondDirectRequestButtons({
         }}
       >
         {t("accept")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        disabled={pending}
-        className="border border-[var(--line)] px-3 py-2 text-sm"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="secondary"
         onClick={() => {
           startTransition(async () => {
             await respondToDirectRequest({
@@ -58,7 +62,7 @@ export function RespondDirectRequestButtons({
         }}
       >
         {t("decline")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -73,16 +77,18 @@ export function WithdrawDirectRequestButton({
   state: string;
 }) {
   const t = useTranslations("directRequests");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   if (state !== "requested") return null;
 
   return (
-    <button
+    <Button
       type="button"
-      disabled={pending}
-      className="border border-[var(--line)] px-3 py-2 text-sm"
+      pending={pending}
+      pendingLabel={ui("working")}
+      variant="secondary"
       onClick={() => {
         startTransition(async () => {
           await withdrawDirectRequest(requestId, locale);
@@ -91,6 +97,6 @@ export function WithdrawDirectRequestButton({
       }}
     >
       {t("withdraw")}
-    </button>
+    </Button>
   );
 }

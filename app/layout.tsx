@@ -1,21 +1,22 @@
 import type { ReactNode } from "react";
-import { Fraunces, Source_Serif_4 } from "next/font/google";
+import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
-const display = Fraunces({
+const display = Instrument_Serif({
   subsets: ["latin"],
+  weight: "400",
   variable: "--font-display",
 });
 
-const body = Source_Serif_4({
+const ui = Instrument_Sans({
   subsets: ["latin"],
-  variable: "--font-body",
+  variable: "--font-ui",
 });
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
-      className={`${display.variable} ${body.variable}`}
+      className={`${display.variable} ${ui.variable}`}
       suppressHydrationWarning
     >
       <body>{children}</body>

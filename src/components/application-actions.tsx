@@ -8,6 +8,7 @@ import {
   transitionOpportunity,
   withdrawApplication,
 } from "@/src/actions/opportunities";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 export function ApplyForm({
@@ -19,6 +20,7 @@ export function ApplyForm({
 }) {
   const t = useTranslations("opportunities");
   const errors = useTranslations("errors");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -87,13 +89,14 @@ export function ApplyForm({
           {error}
         </p>
       ) : null}
-      <button
+      <Button
         type="submit"
-        disabled={pending}
-        className="bg-[var(--accent)] px-4 py-3 text-[var(--background)] disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
       >
         {t("apply")}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -106,14 +109,16 @@ export function WithdrawButton({
   applicationId: string;
 }) {
   const t = useTranslations("opportunities");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
-    <button
+    <Button
       type="button"
-      disabled={pending}
-      className="border border-[var(--line)] px-4 py-2 text-sm disabled:opacity-60"
+      pending={pending}
+      pendingLabel={ui("working")}
+      variant="secondary"
       onClick={() => {
         startTransition(async () => {
           await withdrawApplication(applicationId, locale);
@@ -122,7 +127,7 @@ export function WithdrawButton({
       }}
     >
       {t("withdraw")}
-    </button>
+    </Button>
   );
 }
 
@@ -136,6 +141,7 @@ export function OpportunityStateButtons({
   state: string;
 }) {
   const t = useTranslations("opportunities");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -149,44 +155,48 @@ export function OpportunityStateButtons({
   return (
     <div className="flex flex-wrap gap-2">
       {state === "draft" ? (
-        <button
+        <Button
           type="button"
-          disabled={pending}
-          className="bg-[var(--accent)] px-3 py-2 text-sm text-[var(--background)]"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="primary"
           onClick={() => transition("open")}
         >
           {t("publish")}
-        </button>
+        </Button>
       ) : null}
       {state === "open" ? (
-        <button
+        <Button
           type="button"
-          disabled={pending}
-          className="border border-[var(--line)] px-3 py-2 text-sm"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="secondary"
           onClick={() => transition("closed")}
         >
           {t("close")}
-        </button>
+        </Button>
       ) : null}
       {state === "closed" ? (
-        <button
+        <Button
           type="button"
-          disabled={pending}
-          className="bg-[var(--accent)] px-3 py-2 text-sm text-[var(--background)]"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="primary"
           onClick={() => transition("open")}
         >
           {t("reopen")}
-        </button>
+        </Button>
       ) : null}
       {state === "draft" || state === "open" ? (
-        <button
+        <Button
           type="button"
-          disabled={pending}
-          className="border border-[var(--line)] px-3 py-2 text-sm"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="secondary"
           onClick={() => transition("cancelled")}
         >
           {t("cancel")}
-        </button>
+        </Button>
       ) : null}
     </div>
   );
@@ -202,6 +212,7 @@ export function ReviewApplicationButtons({
   state: string;
 }) {
   const t = useTranslations("opportunities");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -209,10 +220,11 @@ export function ReviewApplicationButtons({
 
   return (
     <div className="flex gap-2">
-      <button
+      <Button
         type="button"
-        disabled={pending}
-        className="bg-[var(--accent)] px-3 py-2 text-sm text-[var(--background)]"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
         onClick={() => {
           startTransition(async () => {
             await reviewApplication({
@@ -225,11 +237,12 @@ export function ReviewApplicationButtons({
         }}
       >
         {t("shortlist")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        disabled={pending}
-        className="border border-[var(--line)] px-3 py-2 text-sm"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="secondary"
         onClick={() => {
           startTransition(async () => {
             await reviewApplication({
@@ -242,7 +255,7 @@ export function ReviewApplicationButtons({
         }}
       >
         {t("reject")}
-      </button>
+      </Button>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   submitEntertainerProfile,
   upsertEntertainerProfile,
 } from "@/src/actions/profiles";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 type Props = {
@@ -35,6 +36,7 @@ export function EntertainerProfileForm({
   const t = useTranslations("profile");
   const errors = useTranslations("errors");
   const status = useTranslations("publication");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
@@ -220,20 +222,22 @@ export function EntertainerProfileForm({
           </p>
         ) : null}
         {message ? <p className="text-sm">{message}</p> : null}
-        <button
+        <Button
           type="submit"
-          disabled={pending}
-          className="bg-[var(--accent)] px-4 py-3 text-[var(--background)] disabled:opacity-60"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="primary"
         >
           {t("saveDraft")}
-        </button>
+        </Button>
       </form>
 
       {defaultValues ? (
-        <button
+        <Button
           type="button"
-          disabled={pending}
-          className="border border-[var(--line)] px-4 py-3 disabled:opacity-60"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="secondary"
           onClick={() => {
             setError(null);
             setMessage(null);
@@ -253,7 +257,7 @@ export function EntertainerProfileForm({
           }}
         >
           {t("submitForReview")}
-        </button>
+        </Button>
       ) : null}
     </div>
   );

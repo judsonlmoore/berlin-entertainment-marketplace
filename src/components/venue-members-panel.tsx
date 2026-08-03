@@ -7,6 +7,7 @@ import {
   inviteVenueMember,
   removeVenueMember,
 } from "@/src/actions/venue-membership";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 type Member = {
@@ -35,6 +36,7 @@ export function VenueMembersPanel({
 }: Props) {
   const t = useTranslations("membership");
   const errors = useTranslations("errors");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +50,11 @@ export function VenueMembersPanel({
       <h2 className="display text-2xl">{t("title")}</h2>
 
       {pendingInvite ? (
-        <button
+        <Button
           type="button"
-          disabled={pending}
-          className="bg-[var(--accent)] px-4 py-3 text-[var(--background)]"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="primary"
           onClick={() => {
             setError(null);
             startTransition(async () => {
@@ -68,7 +71,7 @@ export function VenueMembersPanel({
           }}
         >
           {t("acceptInvite")}
-        </button>
+        </Button>
       ) : null}
 
       <ul className="grid gap-2">
@@ -86,10 +89,11 @@ export function VenueMembersPanel({
                 </p>
               </div>
               {canManage && member.status === "active" ? (
-                <button
+                <Button
                   type="button"
-                  disabled={pending}
-                  className="underline"
+                  pending={pending}
+                  pendingLabel={ui("working")}
+                  variant="ghost"
                   onClick={() => {
                     setError(null);
                     startTransition(async () => {
@@ -107,7 +111,7 @@ export function VenueMembersPanel({
                   }}
                 >
                   {t("remove")}
-                </button>
+                </Button>
               ) : null}
             </li>
           ))}
@@ -164,13 +168,14 @@ export function VenueMembersPanel({
               <option value="owner">{t("roleOwner")}</option>
             </select>
           </label>
-          <button
+          <Button
             type="submit"
-            disabled={pending}
-            className="bg-[var(--ink)] px-4 py-2 text-[var(--background)] disabled:opacity-60"
+            pending={pending}
+            pendingLabel={ui("working")}
+            variant="primary"
           >
             {t("invite")}
-          </button>
+          </Button>
         </form>
       ) : null}
 

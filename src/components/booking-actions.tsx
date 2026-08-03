@@ -7,6 +7,11 @@ import {
   cancelBooking,
   recordDepositStatus,
 } from "@/src/actions/bookings";
+import {
+  generateAgreement,
+  signAgreementSandbox,
+} from "@/src/actions/agreements";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 export function AcceptTermsButton({
@@ -21,16 +26,18 @@ export function AcceptTermsButton({
   expectedVersion: number;
 }) {
   const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="grid gap-2">
-      <button
+      <Button
         type="button"
-        disabled={pending}
-        className="bg-[var(--accent)] px-3 py-2 text-sm text-[var(--background)] disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
         onClick={() => {
           setError(null);
           startTransition(async () => {
@@ -49,7 +56,7 @@ export function AcceptTermsButton({
         }}
       >
         {t("acceptTerms")}
-      </button>
+      </Button>
       {error ? (
         <p role="alert" className="text-sm text-red-800">
           {error}
@@ -69,6 +76,7 @@ export function CancelBookingForm({
   expectedVersion: number;
 }) {
   const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -110,14 +118,116 @@ export function CancelBookingForm({
           {error}
         </p>
       ) : null}
-      <button
+      <Button
         type="submit"
-        disabled={pending}
-        className="border border-[var(--line)] px-3 py-2 text-sm disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="secondary"
       >
         {t("cancel")}
-      </button>
+      </Button>
     </form>
+  );
+}
+
+export function GenerateAgreementButton({
+  locale,
+  bookingId,
+  expectedVersion,
+}: {
+  locale: "en" | "de";
+  bookingId: string;
+  expectedVersion: number;
+}) {
+  const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="grid gap-2">
+      <Button
+        type="button"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            const result = await generateAgreement({
+              bookingId,
+              expectedVersion,
+              locale,
+            });
+            if (!result.ok) {
+              setError(result.message);
+              return;
+            }
+            router.refresh();
+          });
+        }}
+      >
+        {t("generateAgreement")}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function SignAgreementButton({
+  locale,
+  bookingId,
+  agreementId,
+  expectedVersion,
+}: {
+  locale: "en" | "de";
+  bookingId: string;
+  agreementId: string;
+  expectedVersion: number;
+}) {
+  const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="grid gap-2">
+      <Button
+        type="button"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            const result = await signAgreementSandbox({
+              bookingId,
+              agreementId,
+              expectedVersion,
+              locale,
+            });
+            if (!result.ok) {
+              setError(result.message);
+              return;
+            }
+            router.refresh();
+          });
+        }}
+      >
+        {t("signSandbox")}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -131,6 +241,7 @@ export function DepositStatusForm({
   currentStatus: string;
 }) {
   const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -190,13 +301,14 @@ export function DepositStatusForm({
           {error}
         </p>
       ) : null}
-      <button
+      <Button
         type="submit"
-        disabled={pending}
-        className="border border-[var(--line)] px-3 py-2 text-sm disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="secondary"
       >
         {t("depositSave")}
-      </button>
+      </Button>
     </form>
   );
 }

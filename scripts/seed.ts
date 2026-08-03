@@ -3,6 +3,7 @@ import { getDb } from "../src/db/client";
 import { users } from "../src/db/schema";
 import {
   auditEvents,
+  agreementTemplates,
   bookings,
   contactMethods,
   directRequests,
@@ -310,6 +311,55 @@ async function main() {
       users: [staffEmail, entertainerEmail, venueEmail],
     },
   });
+
+  async function ensureTemplate(
+    locale: "de" | "en",
+    version: string,
+    body: string,
+  ) {
+    const existing = await db.query.agreementTemplates.findFirst({
+      where: and(
+        eq(agreementTemplates.locale, locale),
+        eq(agreementTemplates.version, version),
+      ),
+    });
+    if (existing) return;
+    await db.insert(agreementTemplates).values({
+      locale,
+      version,
+      legalReviewStatus: "sandbox",
+      body,
+    });
+  }
+
+  await ensureTemplate(
+    "de",
+    "de-sandbox-1",
+    [
+      "SANDBOX — kein rechtsverbindliches Dokument.",
+      "Vereinbarung v{{termsVersion}} zwischen {{venueName}} und {{actName}}.",
+      "Leistung: {{startsAt}}–{{endsAt}} ({{timezone}}).",
+      "Honorar: {{fee}}. Format: {{performanceFormat}}.",
+      "Storno: {{cancellationTerms}}.",
+      "Produktion: {{productionObligations}}.",
+      "Kaution: {{depositTerms}}.",
+      "Deutscher Text ist maßgeblich.",
+    ].join("\n"),
+  );
+  await ensureTemplate(
+    "en",
+    "en-sandbox-1",
+    [
+      "SANDBOX — not a legally binding document.",
+      "Agreement v{{termsVersion}} between {{venueName}} and {{actName}}.",
+      "Performance: {{startsAt}}–{{endsAt}} ({{timezone}}).",
+      "Fee: {{fee}}. Format: {{performanceFormat}}.",
+      "Cancellation: {{cancellationTerms}}.",
+      "Production: {{productionObligations}}.",
+      "Deposit: {{depositTerms}}.",
+      "German text is controlling; English is a convenience translation.",
+    ].join("\n"),
+  );
 
   console.log(
     "Seeded synthetic Salon fixtures (idempotent users/roles/profiles).",

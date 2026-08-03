@@ -7,6 +7,7 @@ import {
   submitVenueProfile,
   updateVenue,
 } from "@/src/actions/profiles";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 type Props = {
@@ -42,6 +43,7 @@ export function VenueProfileForm({
   const t = useTranslations("profile");
   const errors = useTranslations("errors");
   const status = useTranslations("publication");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -258,20 +260,22 @@ export function VenueProfileForm({
           </p>
         ) : null}
         {message ? <p className="text-sm">{message}</p> : null}
-        <button
+        <Button
           type="submit"
-          disabled={pending}
-          className="bg-[var(--accent)] px-4 py-3 text-[var(--background)] disabled:opacity-60"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="primary"
         >
           {venueId ? t("saveDraft") : t("createVenue")}
-        </button>
+        </Button>
       </form>
 
       {venueId ? (
-        <button
+        <Button
           type="button"
-          disabled={pending}
-          className="border border-[var(--line)] px-4 py-3 disabled:opacity-60"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="secondary"
           onClick={() => {
             setError(null);
             setMessage(null);
@@ -291,7 +295,7 @@ export function VenueProfileForm({
           }}
         >
           {t("submitForReview")}
-        </button>
+        </Button>
       ) : null}
     </div>
   );

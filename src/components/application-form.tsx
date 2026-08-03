@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { submitMarketplaceApplication } from "@/src/actions/onboarding";
+import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
   const t = useTranslations("apply");
   const errors = useTranslations("errors");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -133,13 +135,14 @@ export function ApplicationForm({ locale, defaultName, defaultEmail }: Props) {
       ) : null}
       {success ? <p className="text-sm">{t("success")}</p> : null}
 
-      <button
+      <Button
         type="submit"
-        disabled={pending}
-        className="bg-[var(--accent)] px-4 py-3 text-[var(--background)] disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
       >
         {t("submit")}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -6,6 +6,8 @@ import { z } from "zod";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
 import { getActorContext } from "@/src/db/queries/actor";
+import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
+import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
 import {
   applications,
   auditEvents,
@@ -395,6 +397,15 @@ export async function reviewApplication(input: {
       );
     }
 
+    if (input.nextState === "shortlisted") {
+      await assertNoHardCalendarConflict({
+        entertainerProfileId: application.entertainerProfileId,
+        venueId: opportunity.venueId,
+        startsAt: opportunity.startsAt,
+        endsAt: opportunity.endsAt,
+      });
+    }
+
     await db.transaction(async (tx) => {
       await tx
         .update(applications)
@@ -490,6 +501,32 @@ export async function reviewApplication(input: {
             reason: "application_shortlisted",
           });
         }
+
+        if (booking) {
+          const { spaceId } = await assertNoHardCalendarConflict({
+            entertainerProfileId: application.entertainerProfileId,
+            venueId: opportunity.venueId,
+            startsAt: opportunity.startsAt,
+            endsAt: opportunity.endsAt,
+            excludeBookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "entertainer",
+            ownerId: application.entertainerProfileId,
+            startsAt: opportunity.startsAt,
+            endsAt: opportunity.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "venue_space",
+            ownerId: spaceId,
+            startsAt: opportunity.startsAt,
+            endsAt: opportunity.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+        }
       }
 
       await tx.insert(auditEvents).values({
@@ -502,6 +539,7 @@ export async function reviewApplication(input: {
     });
 
     revalidatePath(`/${locale}/marketplace/opportunities/${opportunity.id}`);
+    revalidatePath(`/${locale}/marketplace/calendar`);
     return { ok: true, id: application.id };
   } catch (error) {
     return toActionError(error);

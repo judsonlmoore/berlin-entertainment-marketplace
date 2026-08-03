@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { changeApprovalState } from "@/src/actions/approval";
+import { Button } from "@/src/components/ui/button";
 import { APPROVAL_STATES, type ApprovalState } from "@/src/domain/approval";
 import { useRouter } from "@/src/i18n/navigation";
 
@@ -20,6 +21,7 @@ export function ApprovalForm({
   const t = useTranslations("admin");
   const status = useTranslations("status");
   const errors = useTranslations("errors");
+  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -85,13 +87,14 @@ export function ApprovalForm({
           {error}
         </p>
       ) : null}
-      <button
+      <Button
         type="submit"
-        disabled={pending}
-        className="bg-[var(--accent)] px-3 py-2 text-sm text-[var(--background)] disabled:opacity-60"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
       >
         {t("update")}
-      </button>
+      </Button>
     </form>
   );
 }

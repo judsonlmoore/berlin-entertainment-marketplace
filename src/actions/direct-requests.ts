@@ -6,6 +6,8 @@ import { z } from "zod";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
 import { getActorContext } from "@/src/db/queries/actor";
+import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
+import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
 import {
   auditEvents,
   bookings,
@@ -201,6 +203,15 @@ export async function respondToDirectRequest(input: {
       );
     }
 
+    if (input.nextState === "accepted") {
+      await assertNoHardCalendarConflict({
+        entertainerProfileId: request.entertainerProfileId,
+        venueId: request.venueId,
+        startsAt: request.startsAt,
+        endsAt: request.endsAt,
+      });
+    }
+
     await db.transaction(async (tx) => {
       await tx
         .update(directRequests)
@@ -294,6 +305,32 @@ export async function respondToDirectRequest(input: {
             reason: "direct_request_accepted",
           });
         }
+
+        if (booking) {
+          const { spaceId } = await assertNoHardCalendarConflict({
+            entertainerProfileId: request.entertainerProfileId,
+            venueId: request.venueId,
+            startsAt: request.startsAt,
+            endsAt: request.endsAt,
+            excludeBookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "entertainer",
+            ownerId: request.entertainerProfileId,
+            startsAt: request.startsAt,
+            endsAt: request.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+          await upsertBookingCalendarEntry(tx, {
+            ownerType: "venue_space",
+            ownerId: spaceId,
+            startsAt: request.startsAt,
+            endsAt: request.endsAt,
+            state: "requested",
+            bookingId: booking.id,
+          });
+        }
       }
 
       await tx.insert(auditEvents).values({
@@ -309,6 +346,7 @@ export async function respondToDirectRequest(input: {
     revalidatePath(
       `/${locale}/marketplace/entertainers/${request.entertainerProfileId}`,
     );
+    revalidatePath(`/${locale}/marketplace/calendar`);
     return { ok: true, id: request.id };
   } catch (error) {
     return toActionError(error);
