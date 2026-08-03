@@ -1,0 +1,14 @@
+---
+description: Database, authentication, authorization, and privacy constraints
+globs: "{src,app,drizzle,scripts}/**/*.{ts,tsx,sql}"
+alwaysApply: false
+---
+
+- Use Neon via Vercel Marketplace, Drizzle, committed SQL migrations, and Auth.js with the Drizzle adapter. Never use legacy `@vercel/postgres`.
+- Authorize every protected read/mutation on the server using identity, approval, capability role, venue membership, and ownership.
+- Never rely on route hiding, client state, or opaque IDs for authorization.
+- Use transactions, expected versions, database constraints, and idempotency for booking/calendar/signature mutations.
+- Separate private contacts from discovery projections and audit every unlock.
+- Store uploads privately via the file abstraction; validate type/size/ownership and authorize reads. Never store permanent public rider URLs.
+- Do not log or commit secrets, contact values, OAuth tokens, agreement contents, or signed URLs.
+- Never edit an applied migration. Inspect generated SQL and test clean/upgrade migration paths.

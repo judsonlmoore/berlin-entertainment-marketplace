@@ -1,0 +1,11 @@
+---
+description: Testing, validation, and change-quality requirements
+alwaysApply: true
+---
+
+- Derive tests from the acceptance criteria in `docs/PRODUCT_SPEC.md` and boundaries in `docs/TECHNICAL_SPEC.md`.
+- Test domain invariants and permission denials, not only happy-path UI.
+- Add concurrency/idempotency tests for booking confirmation, calendar conflicts, signatures, webhooks, and hold expiry.
+- Test both locales and critical accessibility behavior. Use synthetic data only.
+- Validate schema generation, inspect migrations, and test clean apply plus upgrade path for data changes.
+- Before commit run typecheck, lint, affected tests, and production build when build/runtime inputs change. Never weaken checks to make a change pass.

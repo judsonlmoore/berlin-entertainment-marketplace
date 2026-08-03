@@ -1,0 +1,14 @@
+---
+description: Non-negotiable Salon product and domain invariants
+alwaysApply: true
+---
+
+- Treat `docs/PRODUCT_SPEC.md` as the product source of truth; do not silently broaden MVP scope.
+- Preserve central account states: applied, invited, approved, suspended. Only staff change them.
+- Allow one person to hold entertainer and venue roles. Model venues as organizations with owner/member membership.
+- Keep profiles/opportunities private to approved users and contact values hidden until shortlist or accepted direct request.
+- Route applications and direct requests into one booking state machine.
+- Confirm only after both parties sign the current agreement version; deposit status is independent.
+- German agreement text controls; English is a labeled convenience translation.
+- Confirmed bookings block both calendars. Holds expire. Never permit overlapping confirmed resource bookings.
+- Do not add public directories/events/reviews, chat, payments/escrow, external calendar sync, live legal claims, or automatic verification without a spec change.

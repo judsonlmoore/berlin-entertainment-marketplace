@@ -1,0 +1,13 @@
+---
+description: Next.js App Router and TypeScript architecture rules
+globs: "{app,src}/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+- Follow `docs/TECHNICAL_SPEC.md`; use App Router and strict TypeScript.
+- Default to Server Components. Add `use client` only at the smallest interactive boundary.
+- Use Server Actions for same-origin form mutations and Route Handlers for auth, webhooks, uploads, downloads, and external APIs.
+- Keep domain logic framework-light in `src/domain`; keep database and secrets server-only.
+- Validate external input with schemas and return typed expected errors. Do not throw away authorization or concurrency failures.
+- Use Node.js runtime for Neon, Auth.js, Blob, and webhook work unless compatibility is proven.
+- Keep build-time module evaluation safe when environment variables are absent.

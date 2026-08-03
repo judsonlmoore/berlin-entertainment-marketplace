@@ -1,0 +1,12 @@
+---
+description: UI, bilingual copy, responsive design, and accessibility rules
+globs: "{app,src,messages}/**/*.{ts,tsx,json,css}"
+alwaysApply: false
+---
+
+- Ship English default/fallback and German together for every user-facing change; never hard-code translatable product copy in domain/database code.
+- Format dates, times, currency, numbers, and plurals with the active locale and explicit IANA timezone.
+- Do not auto-translate user content. Clearly label German agreement text as controlling and English as convenience only.
+- Use semantic HTML, labeled inputs, keyboard operation, visible focus, sufficient contrast, and screen-reader announcements for async outcomes.
+- Represent lifecycle states with text/icons in addition to color. Include loading, empty, error, forbidden, suspended, and stale-conflict states.
+- Preserve privacy in previews: do not leak hidden contacts or file URLs in markup, metadata, logs, or client payloads.
