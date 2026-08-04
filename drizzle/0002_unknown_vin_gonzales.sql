@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "active_role_mode" "marketplace_role";
