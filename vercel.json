@@ -4,5 +4,6 @@
       "path": "/api/cron/expire-holds",
       "schedule": "0 0 * * *"
     }
-  ]
+  ],
+  "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ] || [ \"$VERCEL_GIT_COMMIT_REF\" = \"staging\" ]; then exit 1; else echo \"Skipping deploy for $VERCEL_GIT_COMMIT_REF (only main/staging)\"; exit 0; fi"
 }
