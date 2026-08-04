@@ -599,5 +599,25 @@
     "invalid_transition": "That state change is not allowed.",
     "stale_version": "This booking changed. Refresh and try again.",
     "conflict": "That action conflicts with the current state."
+  },
+  "accountDeletion": {
+    "dangerZoneTitle": "Danger Zone",
+    "dangerZoneBody": "Account deletion is permanent and cannot be undone. Your data will be anonymized for legal and business purposes, but all personal information will be removed.",
+    "deleteAccountTitle": "Delete Account",
+    "deleteAccountDescription": "Once you delete your account, all your personal information will be permanently anonymized. This action cannot be reversed.",
+    "deleteAccountButton": "Delete My Account",
+    "modalTitle": "Permanently Delete Account",
+    "modalEyebrow": "This action is irreversible",
+    "warningTitle": "What will happen:",
+    "warningPoint1": "Your personal information (name, email, image) will be permanently anonymized",
+    "warningPoint2": "All your contact methods will be anonymized",
+    "warningPoint3": "You will be immediately signed out",
+    "warningPoint4": "Your data will be kept for business analysis but will not identify you",
+    "challengeInstructions": "To confirm deletion, type DELETE or your email address:",
+    "challengeLabel": "Confirmation",
+    "closeButton": "Close",
+    "cancelButton": "Cancel",
+    "deleteButton": "Permanently Delete Account",
+    "deletingButton": "Deleting…"
   }
 }

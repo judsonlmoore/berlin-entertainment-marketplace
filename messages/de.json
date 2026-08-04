@@ -599,5 +599,25 @@
     "invalid_transition": "Diese Statusänderung ist nicht erlaubt.",
     "stale_version": "Dieses Booking hat sich geändert. Bitte neu laden und erneut versuchen.",
     "conflict": "Diese Aktion widerspricht dem aktuellen Status."
+  },
+  "accountDeletion": {
+    "dangerZoneTitle": "Gefahrenzone",
+    "dangerZoneBody": "Die Kontolöschung ist dauerhaft und kann nicht rückgängig gemacht werden. Ihre Daten werden zu rechtlichen und geschäftlichen Zwecken anonymisiert, aber alle persönlichen Informationen werden entfernt.",
+    "deleteAccountTitle": "Konto löschen",
+    "deleteAccountDescription": "Sobald Sie Ihr Konto löschen, werden alle Ihre persönlichen Informationen dauerhaft anonymisiert. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteAccountButton": "Mein Konto löschen",
+    "modalTitle": "Konto dauerhaft löschen",
+    "modalEyebrow": "Diese Aktion ist irreversibel",
+    "warningTitle": "Was wird passieren:",
+    "warningPoint1": "Ihre persönlichen Informationen (Name, E-Mail, Bild) werden dauerhaft anonymisiert",
+    "warningPoint2": "Alle Ihre Kontaktmethoden werden anonymisiert",
+    "warningPoint3": "Sie werden sofort abgemeldet",
+    "warningPoint4": "Ihre Daten werden für geschäftliche Analysen aufbewahrt, identifizieren Sie aber nicht mehr",
+    "challengeInstructions": "Zur Bestätigung der Löschung geben Sie DELETE oder Ihre E-Mail-Adresse ein:",
+    "challengeLabel": "Bestätigung",
+    "closeButton": "Schließen",
+    "cancelButton": "Abbrechen",
+    "deleteButton": "Konto dauerhaft löschen",
+    "deletingButton": "Wird gelöscht…"
   }
 }
