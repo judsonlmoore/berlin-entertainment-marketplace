@@ -10,11 +10,12 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/src/i18n/navigation";
-import { LocaleSwitcher } from "@/src/components/locale-switcher";
 import {
   AccountMenu,
   type AccountNavItem,
 } from "@/src/components/account-menu";
+import { RailRoleContext } from "@/src/components/rail-role-context";
+import type { RailRoleContextData } from "@/src/lib/rail-role-context";
 
 type NavItem = {
   href: string;
@@ -36,6 +37,7 @@ function isActive(pathname: string, match: string) {
 
 type Props = {
   children: ReactNode;
+  locale: "en" | "de";
   userName: string;
   userImage?: string | null | undefined;
   approvalLabel: string;
@@ -43,22 +45,8 @@ type Props = {
   isApproved: boolean;
   canDiscoverEntertainers: boolean;
   canDiscoverVenues: boolean;
+  roleContext?: RailRoleContextData | null;
 };
-
-function breadcrumbKeyFromPath(
-  pathname: string,
-): NavItem["labelKey"] | AccountNavItem["labelKey"] | "marketplace" {
-  if (pathname.startsWith("/admin")) return "admin";
-  if (pathname.startsWith("/onboarding")) return "onboarding";
-  if (pathname.startsWith("/profile")) return "profile";
-  if (pathname.includes("/opportunities")) return "opportunities";
-  if (pathname.includes("/bookings")) return "bookings";
-  if (pathname.includes("/calendar")) return "calendar";
-  if (pathname.includes("/requests")) return "requests";
-  if (pathname.includes("/entertainers")) return "discoverActs";
-  if (pathname.includes("/venues")) return "discoverVenues";
-  return "marketplace";
-}
 
 function MenuIcon({ open }: { open: boolean }) {
   return (
@@ -94,6 +82,8 @@ function RailNav({
   userName,
   userImage,
   approvalLabel,
+  roleContext,
+  locale,
   navId,
   onNavigate,
 }: {
@@ -103,6 +93,8 @@ function RailNav({
   userName: string;
   userImage?: string | null | undefined;
   approvalLabel: string;
+  roleContext?: RailRoleContextData | null;
+  locale: "en" | "de";
   navId?: string;
   onNavigate?: () => void;
 }) {
@@ -117,10 +109,20 @@ function RailNav({
       >
         Salon
       </Link>
+      {roleContext ? (
+        <RailRoleContext
+          mode={roleContext.mode}
+          label={roleContext.label}
+          canSwitch={roleContext.canSwitch}
+          otherMode={roleContext.otherMode}
+          locale={locale}
+          onNavigate={onNavigate}
+        />
+      ) : null}
       <nav
         id={navId}
         aria-label={t("primary")}
-        className="mt-10 grid flex-1 content-start gap-1 overflow-y-auto"
+        className="mt-8 grid flex-1 content-start gap-1 overflow-y-auto"
       >
         {items.map((item) => {
           const active = isActive(pathname, item.match);
@@ -155,6 +157,7 @@ function RailNav({
 
 export function AppShell({
   children,
+  locale,
   userName,
   userImage,
   approvalLabel,
@@ -162,10 +165,11 @@ export function AppShell({
   isApproved,
   canDiscoverEntertainers,
   canDiscoverVenues,
+  roleContext = null,
 }: Props) {
   const t = useTranslations("nav");
+  const tRole = useTranslations("roleMode");
   const pathname = usePathname();
-  const breadcrumbKey = breadcrumbKeyFromPath(pathname);
   const drawerTitleId = useId();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -268,6 +272,14 @@ export function AppShell({
     };
   }, [menuOpen, closeMenu]);
 
+  const mobileContextLabel =
+    roleContext?.label?.trim() ||
+    (roleContext
+      ? roleContext.mode === "entertainer"
+        ? tRole("entertainerMode")
+        : tRole("venueMode")
+      : null);
+
   return (
     <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[280px_1fr]">
       <aside className="hidden bg-[var(--rail)] text-[var(--primary-foreground)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:px-5 lg:py-6">
@@ -278,6 +290,8 @@ export function AppShell({
           userName={userName}
           userImage={userImage}
           approvalLabel={approvalLabel}
+          roleContext={roleContext}
+          locale={locale}
         />
       </aside>
 
@@ -334,44 +348,49 @@ export function AppShell({
             userName={userName}
             userImage={userImage}
             approvalLabel={approvalLabel}
+            roleContext={roleContext}
+            locale={locale}
             onNavigate={closeMenu}
           />
         </div>
       </div>
 
       <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-20 border-b border-[var(--rule)] bg-[var(--surface)]">
-          <div className="flex min-h-[72px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-10">
-            <div className="flex min-w-0 items-center gap-2">
-              <button
-                ref={menuButtonRef}
-                type="button"
-                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] text-[var(--ink)] lg:hidden"
-                aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
-                aria-expanded={menuOpen}
-                aria-controls="mobile-nav-drawer"
-                onClick={toggleMenu}
-              >
-                <MenuIcon open={menuOpen} />
-              </button>
-              <p className="truncate text-xs tracking-[0.14em] text-[var(--text-muted)] uppercase">
-                {t(breadcrumbKey)}
-              </p>
+        {/* Mobile-only chrome: menu + role context + account. No desktop top bar. */}
+        <div className="sticky top-0 z-20 flex min-h-14 items-center justify-between gap-3 border-b border-[var(--rule)] bg-[var(--canvas)] px-4 py-2 sm:px-6 lg:hidden">
+          <button
+            ref={menuButtonRef}
+            type="button"
+            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] text-[var(--ink)]"
+            aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav-drawer"
+            onClick={toggleMenu}
+          >
+            <MenuIcon open={menuOpen} />
+          </button>
+          {roleContext && mobileContextLabel ? (
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--surface)] px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-[0.1em] text-[var(--ink)] uppercase">
+                {roleContext.mode === "entertainer"
+                  ? tRole("actBadge")
+                  : tRole("venueBadge")}
+              </span>
+              <span className="min-w-0 truncate text-sm font-medium text-[var(--ink)]">
+                {mobileContextLabel}
+              </span>
             </div>
-            <div className="flex items-center gap-2">
-              <LocaleSwitcher className="border-[var(--rule)]" />
-              <div className="lg:hidden">
-                <AccountMenu
-                  userName={userName}
-                  userImage={userImage}
-                  approvalLabel={approvalLabel}
-                  items={accountItems}
-                  variant="header"
-                />
-              </div>
-            </div>
-          </div>
-        </header>
+          ) : (
+            <div className="flex-1" />
+          )}
+          <AccountMenu
+            userName={userName}
+            userImage={userImage}
+            approvalLabel={approvalLabel}
+            items={accountItems}
+            variant="header"
+          />
+        </div>
 
         <main className="mx-auto w-full max-w-[1480px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
           {children}

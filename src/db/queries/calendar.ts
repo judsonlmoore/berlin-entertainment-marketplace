@@ -1,7 +1,8 @@
-import { and, eq, gte, lt, or } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lt, or } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   calendarEntries,
+  calendarRecurrenceExceptions,
   entertainerProfiles,
   venueMemberships,
   venueSpaces,
@@ -11,6 +12,7 @@ import {
   isBlockingCalendarState,
   type CalendarOwnerType,
 } from "@/src/domain/calendar";
+import { expandRecurringOccurrences } from "@/src/domain/calendar-recurrence";
 
 export async function listCalendarResourcesForUser(userId: string) {
   const db = getDb();
@@ -91,14 +93,19 @@ export async function ensureDefaultVenueSpace(
   return created;
 }
 
+export type CalendarEntryView = typeof calendarEntries.$inferSelect & {
+  /** Synthetic id for expanded recurrence instances. */
+  occurrenceId?: string;
+};
+
 export async function listCalendarEntriesInRange(input: {
   ownerType: CalendarOwnerType;
   ownerId: string;
   rangeStart: Date;
   rangeEnd: Date;
-}) {
+}): Promise<CalendarEntryView[]> {
   const db = getDb();
-  return db
+  const rows = await db
     .select()
     .from(calendarEntries)
     .where(
@@ -110,6 +117,69 @@ export async function listCalendarEntriesInRange(input: {
       ),
     )
     .orderBy(calendarEntries.startsAt);
+
+  const recurringParents = await db
+    .select()
+    .from(calendarEntries)
+    .where(
+      and(
+        eq(calendarEntries.ownerType, input.ownerType),
+        eq(calendarEntries.ownerId, input.ownerId),
+        isNotNull(calendarEntries.recurrenceRule),
+      ),
+    );
+
+  const parentIds = recurringParents.map((p) => p.id);
+  const exceptions =
+    parentIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(calendarRecurrenceExceptions)
+          .where(
+            inArray(calendarRecurrenceExceptions.parentEntryId, parentIds),
+          );
+
+  const exByParent = new Map<string, Date[]>();
+  for (const ex of exceptions) {
+    if (ex.kind !== "skip") continue;
+    const list = exByParent.get(ex.parentEntryId) ?? [];
+    list.push(ex.exceptionStartsAt);
+    exByParent.set(ex.parentEntryId, list);
+  }
+
+  const expanded: CalendarEntryView[] = [];
+  const recurringIds = new Set(recurringParents.map((p) => p.id));
+
+  for (const row of rows) {
+    if (row.recurrenceRule) continue;
+    expanded.push(row);
+  }
+
+  for (const parent of recurringParents) {
+    if (!parent.recurrenceRule) continue;
+    const occurrences = expandRecurringOccurrences({
+      startsAt: parent.startsAt,
+      endsAt: parent.endsAt,
+      recurrenceRule: parent.recurrenceRule,
+      rangeStart: input.rangeStart,
+      rangeEnd: input.rangeEnd,
+      exdates: exByParent.get(parent.id) ?? [],
+    });
+    for (const occ of occurrences) {
+      expanded.push({
+        ...parent,
+        startsAt: occ.startsAt,
+        endsAt: occ.endsAt,
+        occurrenceId: `${parent.id}:${occ.startsAt.toISOString()}`,
+      });
+    }
+  }
+
+  // Drop non-expanded parents that only appeared because their seed window overlapped.
+  void recurringIds;
+
+  return expanded.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
 }
 
 export async function findOverlappingBlockingEntries(input: {
@@ -130,8 +200,6 @@ export async function findOverlappingBlockingEntries(input: {
       and(
         eq(calendarEntries.ownerType, input.ownerType),
         eq(calendarEntries.ownerId, input.ownerId),
-        lt(calendarEntries.startsAt, input.endsAt),
-        gte(calendarEntries.endsAt, input.startsAt),
         or(
           eq(calendarEntries.state, "confirmed"),
           eq(calendarEntries.state, "requested"),
@@ -141,12 +209,36 @@ export async function findOverlappingBlockingEntries(input: {
       ),
     );
 
-  return rows.filter(
-    (row) =>
-      row.id !== input.excludeId &&
-      row.bookingId !== input.excludeBookingId &&
-      isBlockingCalendarState(row.state, row.holdExpiresAt, now),
-  );
+  const candidates: Array<(typeof rows)[number]> = [];
+
+  for (const row of rows) {
+    if (row.id === input.excludeId) continue;
+    if (row.bookingId && row.bookingId === input.excludeBookingId) continue;
+    if (!isBlockingCalendarState(row.state, row.holdExpiresAt, now)) continue;
+
+    if (row.recurrenceRule) {
+      const occurrences = expandRecurringOccurrences({
+        startsAt: row.startsAt,
+        endsAt: row.endsAt,
+        recurrenceRule: row.recurrenceRule,
+        rangeStart: input.startsAt,
+        rangeEnd: input.endsAt,
+      });
+      if (occurrences.length > 0) {
+        candidates.push(row);
+      }
+      continue;
+    }
+
+    if (
+      row.startsAt.getTime() < input.endsAt.getTime() &&
+      row.endsAt.getTime() > input.startsAt.getTime()
+    ) {
+      candidates.push(row);
+    }
+  }
+
+  return candidates;
 }
 
 /** Used inside booking transactions — pass drizzle tx client. */

@@ -198,6 +198,8 @@ Reference: [calendar.png](./design-reference/calendar.png)
 
 **Required modules:** navigation; resource selector; five-state legend with text; entries; conflict/loading states.
 
+**Implementation note:** the calendar workspace is implemented with FullCalendar React v7 (month/day/week/list views + selection, drag, and resize). Scheduler/resource views are not used in the MVP.
+
 **Responsive:** agenda/week below tablet; never an unreadable squeezed month.
 
 ### 6.7 Dual-role profile

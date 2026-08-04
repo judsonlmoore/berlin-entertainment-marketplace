@@ -8,6 +8,7 @@ import { getActorContext } from "@/src/db/queries/actor";
 import { can } from "@/src/domain/permissions";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
+import { loadRailRoleContext } from "@/src/lib/rail-role-context";
 
 type Props = {
   children: ReactNode;
@@ -42,6 +43,7 @@ export default async function AppLayout({ children, params }: Props) {
   let isApproved = user.approvalState === "approved" || isStaff;
   let canDiscoverEntertainers = isStaff;
   let canDiscoverVenues = isStaff;
+  let roleContext = null;
 
   if (process.env.DATABASE_URL) {
     const actor = await getActorContext(user.id!);
@@ -49,6 +51,7 @@ export default async function AppLayout({ children, params }: Props) {
       isApproved = can(actor, "marketplace.discover");
       canDiscoverEntertainers = can(actor, "discover.entertainers");
       canDiscoverVenues = can(actor, "discover.venues");
+      roleContext = await loadRailRoleContext(actor);
     }
   }
 
@@ -62,6 +65,7 @@ export default async function AppLayout({ children, params }: Props) {
       isApproved={isApproved}
       canDiscoverEntertainers={canDiscoverEntertainers}
       canDiscoverVenues={canDiscoverVenues}
+      roleContext={roleContext}
     >
       {children}
     </AuthenticatedChrome>

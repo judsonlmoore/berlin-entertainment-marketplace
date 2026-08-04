@@ -78,7 +78,11 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 
 ### Calendar
 
-- `calendar_entries`: owner type/ID, start/end UTC, display timezone, state, hold expiry, booking/source reference, version
+- `calendar_entries`: owner type/ID, start/end UTC, display timezone, state, hold expiry, booking/source reference, version, optional title/private note/all-day, optional `recurrence_rule` for **manual** series only
+- `calendar_recurrence_exceptions`: skipped/overridden occurrence starts for a recurring parent
+- `external_calendar_subscriptions` / `cached_external_events`: server-side ICS feed import (busy overlays; no titles)
+- `calendar_export_tokens`: revocable secret hashes for confirmed-booking ICS export URLs
+- `calendar_connections`: OAuth provider connection stubs (disconnected by default; Phase 10b)
 - Use Postgres range types or equivalent exclusion constraints to prevent overlapping `confirmed` entries for the same bookable resource.
 - Index approval/discovery filters, open opportunity dates, booking party/state, active calendar ranges, and audit subject/time based on real query plans.
 
@@ -127,7 +131,10 @@ Key actions include: submit onboarding/profile; invite/manage venue member; publ
 - Use exclusion constraints for confirmed overlaps and application-level checks for requested/active unexpired holds.
 - Expire holds by timestamp during reads and a scheduled Vercel Cron reconciliation job; expiry jobs must be idempotent.
 - Store UTC instants and an IANA timezone; format in `Europe/Berlin` by default. Explicitly test DST boundaries.
-- External calendar synchronization is a later milestone. Keep a narrow `CalendarSyncProvider` boundary and connection model when that phase begins; do not claim sync operational beforehand.
+- External calendar synchronization is a later milestone delivered in phases:
+  - Phase A: secure server-side iCalendar/ICS import (busy overlays only) and revocable ICS export for confirmed bookings.
+  - Phase B: OAuth-based provider implementations (Google/Microsoft/Apple).
+  Keep a narrow `CalendarSyncProvider` boundary and connection model when that work begins; do not claim sync operational beforehand.
 
 ## 8. Files and privacy
 
