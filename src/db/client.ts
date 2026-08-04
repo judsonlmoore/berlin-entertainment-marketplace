@@ -35,3 +35,12 @@ export function getDb(): Database {
   cached = createDb(databaseUrl);
   return cached;
 }
+
+/**
+ * Convenience export for most queries (lazy initialization)
+ */
+export const db = new Proxy({} as Database, {
+  get(target, prop) {
+    return getDb()[prop as keyof Database];
+  },
+});
