@@ -216,8 +216,7 @@ export async function upsertAvailability(
       }
 
       await db.transaction(async (tx) => {
-        const expectedVersion =
-          parsed.data.expectedVersion ?? existing.version;
+        const expectedVersion = parsed.data.expectedVersion ?? existing.version;
         const [updated] = await tx
           .update(calendarEntries)
           .set({

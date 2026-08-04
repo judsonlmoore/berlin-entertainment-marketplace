@@ -30,10 +30,7 @@ export async function assertSafeFeedUrl(rawUrl: string): Promise<URL> {
     throw new AppError("validation", "Enter a valid calendar feed URL.");
   }
   if (url.protocol !== "https:" && url.protocol !== "http:") {
-    throw new AppError(
-      "validation",
-      "Calendar feeds must use http or https.",
-    );
+    throw new AppError("validation", "Calendar feeds must use http or https.");
   }
   if (url.username || url.password) {
     throw new AppError(

@@ -236,9 +236,7 @@ export function FullCalendarWorkspace({
           }
 
           const holdIso = info.event.extendedProps?.holdExpiresAt as
-            | string
-            | null
-            | undefined;
+            string | null | undefined;
 
           setDraft({
             mode: "edit",
@@ -326,8 +324,7 @@ export function FullCalendarWorkspace({
           const start = toJsDate(dropInfo.event.start);
           const end = toJsDate(dropInfo.event.end);
           const expectedVersion = dropInfo.event.extendedProps?.version as
-            | number
-            | undefined;
+            number | undefined;
 
           if (!eventId || !start || !end) {
             dropInfo.revert();
@@ -361,8 +358,7 @@ export function FullCalendarWorkspace({
           const start = toJsDate(resizeInfo.event.start);
           const end = toJsDate(resizeInfo.event.end);
           const expectedVersion = resizeInfo.event.extendedProps?.version as
-            | number
-            | undefined;
+            number | undefined;
 
           if (!eventId || !start || !end) {
             resizeInfo.revert();

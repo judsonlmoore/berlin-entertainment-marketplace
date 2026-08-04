@@ -1,8 +1,5 @@
 import { listCalendarResourcesForUser } from "@/src/db/queries/calendar";
-import type {
-  ActorContext,
-  MarketplaceRole,
-} from "@/src/domain/permissions";
+import type { ActorContext, MarketplaceRole } from "@/src/domain/permissions";
 
 export type RailRoleContextData = {
   mode: MarketplaceRole;

@@ -2,10 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import {
-  deleteAvailability,
-  upsertAvailability,
-} from "@/src/actions/calendar";
+import { deleteAvailability, upsertAvailability } from "@/src/actions/calendar";
 import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 import {
@@ -383,10 +380,7 @@ export function CalendarEntryForm({
                 aria-checked={active}
                 onClick={() => {
                   setState(option.value);
-                  if (
-                    option.value === "tentative_hold" &&
-                    !holdExpiresLocal
-                  ) {
+                  if (option.value === "tentative_hold" && !holdExpiresLocal) {
                     setHoldExpiresLocal(defaultHoldExpiryLocal());
                   }
                 }}

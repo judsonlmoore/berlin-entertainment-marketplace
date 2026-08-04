@@ -29,8 +29,7 @@ export function RailRoleContext({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const modeBadge =
-    mode === "entertainer" ? t("actBadge") : t("venueBadge");
+  const modeBadge = mode === "entertainer" ? t("actBadge") : t("venueBadge");
   const modeName =
     mode === "entertainer" ? t("entertainerMode") : t("venueMode");
   const displayName = label?.trim() || modeName;
@@ -60,7 +59,7 @@ export function RailRoleContext({
 
   const content = (
     <>
-      <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-white/20 bg-white/10 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-white">
+      <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-white/20 bg-white/10 px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-[0.1em] text-white uppercase">
         {modeBadge}
       </span>
       <span className="min-w-0 truncate text-sm font-medium text-white/90">
@@ -88,7 +87,7 @@ export function RailRoleContext({
                 ? t("entertainerMode")
                 : t("venueMode"),
           })}
-          className="flex w-full min-h-11 max-w-full items-center gap-2 rounded-[var(--radius-md)] border border-white/15 bg-white/5 px-2.5 py-2 text-left transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-50"
+          className="flex min-h-11 w-full max-w-full items-center gap-2 rounded-[var(--radius-md)] border border-white/15 bg-white/5 px-2.5 py-2 text-left transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-50"
         >
           {content}
         </button>

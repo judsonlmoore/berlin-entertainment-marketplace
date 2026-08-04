@@ -371,7 +371,7 @@ export function AppShell({
           </button>
           {roleContext && mobileContextLabel ? (
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--surface)] px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-[0.1em] text-[var(--ink)]">
+              <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--surface)] px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-[0.1em] text-[var(--ink)] uppercase">
                 {roleContext.mode === "entertainer"
                   ? tRole("actBadge")
                   : tRole("venueBadge")}

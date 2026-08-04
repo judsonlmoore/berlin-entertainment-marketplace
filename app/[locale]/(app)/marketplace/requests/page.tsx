@@ -51,11 +51,7 @@ export default async function DirectRequestsPage({ params }: Props) {
 
   return (
     <section className="grid gap-8">
-      <PageHeader
-        eyebrow={t("eyebrow")}
-        title={t("title")}
-        body={t("body")}
-      />
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} body={t("body")} />
 
       {can(access.actor, "direct_request.respond") ? (
         <div className="panel grid gap-3 p-6">

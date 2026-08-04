@@ -55,9 +55,9 @@ END:VCALENDAR`;
   });
 
   it("rejects private/local feed hosts", async () => {
-    await expect(assertSafeFeedUrl("http://localhost/feed.ics")).rejects.toThrow(
-      /not allowed/i,
-    );
+    await expect(
+      assertSafeFeedUrl("http://localhost/feed.ics"),
+    ).rejects.toThrow(/not allowed/i);
     await expect(
       assertSafeFeedUrl("https://127.0.0.1/feed.ics"),
     ).rejects.toThrow(/not allowed|private/i);

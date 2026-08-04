@@ -104,8 +104,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
   const query = await searchParams;
 
   const viewRaw = first(query.view);
-  const view: CalendarViewParam =
-    viewRaw === "week" ? "week" : "month";
+  const view: CalendarViewParam = viewRaw === "week" ? "week" : "month";
 
   const today = berlinTodayUTC();
   const activeDate = parseDateParam(first(query.date)) ?? today;
@@ -329,11 +328,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
 
   return (
     <section className="grid gap-8">
-      <PageHeader
-        eyebrow={t("eyebrow")}
-        title={t("title")}
-        body={t("body")}
-      />
+      <PageHeader eyebrow={t("eyebrow")} title={t("title")} body={t("body")} />
 
       {needsScopeSwitcher ? (
         <div className="flex flex-wrap gap-2">
@@ -356,7 +351,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
 
       {/* Mobile: 3 full-width rows. Desktop: single inline toolbar. */}
       <div className="grid gap-3 md:hidden">
-        <h2 className="page-title min-w-0 text-xl leading-tight break-words tabular">
+        <h2 className="page-title tabular min-w-0 text-xl leading-tight break-words">
           {pageTitle}
         </h2>
 
@@ -447,7 +442,7 @@ export default async function CalendarPage({ params, searchParams }: Props) {
       </div>
 
       <div className="hidden items-center gap-4 md:flex">
-        <h2 className="page-title shrink-0 whitespace-nowrap text-2xl tabular">
+        <h2 className="page-title tabular shrink-0 text-2xl whitespace-nowrap">
           {pageTitle}
         </h2>
 

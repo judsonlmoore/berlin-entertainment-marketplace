@@ -61,10 +61,7 @@ export function generateExportToken(): string {
  * Stable subscribe token for one calendar resource.
  * Deterministic so the URL can be shown again without storing the raw secret.
  */
-export function deriveExportToken(
-  ownerType: string,
-  ownerId: string,
-): string {
+export function deriveExportToken(ownerType: string, ownerId: string): string {
   return createHmac("sha256", getKey())
     .update(`calendar-export:v1:${ownerType}:${ownerId}`)
     .digest("base64url");
