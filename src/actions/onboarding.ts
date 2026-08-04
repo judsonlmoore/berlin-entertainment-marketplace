@@ -18,6 +18,165 @@ import { can } from "@/src/domain/permissions";
 import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 import { getActorContext } from "@/src/db/queries/actor";
 
+const roleSelectionSchema = z.object({
+  role: z.enum(["entertainer", "venue"]),
+  locale: z.enum(["en", "de"]).default("en"),
+});
+
+export async function selectInitialRole(
+  input: z.infer<typeof roleSelectionSchema>,
+): Promise<ActionResult> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new AppError("unauthorized", "Sign in required");
+    }
+    checkRateLimit({
+      key: rateLimitKey("onboarding.roleselection", session.user.id),
+      limit: 5,
+      windowMs: 60_000,
+    });
+
+    const parsed = roleSelectionSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid role selection", {
+        issues: parsed.error.issues,
+      });
+    }
+
+    const db = getDb();
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+    });
+
+    if (existingUser?.activeRoleMode) {
+      throw new AppError(
+        "conflict",
+        "Role already selected; continue to onboarding",
+      );
+    }
+
+    const now = new Date();
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          activeRoleMode: parsed.data.role,
+          updatedAt: now,
+        })
+        .where(eq(users.id, session.user.id));
+
+      const existing = await tx.query.marketplaceAccounts.findFirst({
+        where: eq(marketplaceAccounts.userId, session.user.id),
+      });
+
+      if (!existing) {
+        await tx.insert(marketplaceAccounts).values({
+          userId: session.user.id,
+          approvalState: "applied",
+          termsAcceptedAt: now,
+        });
+      }
+
+      const existingRole = await tx.query.userRoles.findFirst({
+        where: eq(userRoles.userId, session.user.id),
+      });
+
+      if (!existingRole) {
+        await tx.insert(userRoles).values({
+          userId: session.user.id,
+          role: parsed.data.role,
+        });
+      }
+
+      await tx.insert(auditEvents).values({
+        actorUserId: session.user.id,
+        action: "onboarding.role_selected",
+        subjectType: "user",
+        subjectId: session.user.id,
+        metadata: {
+          role: parsed.data.role,
+        },
+      });
+    });
+
+    revalidatePath(`/${parsed.data.locale}/onboarding`);
+    return { ok: true };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+const switchRoleModeSchema = z.object({
+  mode: z.enum(["entertainer", "venue"]),
+  locale: z.enum(["en", "de"]).default("en"),
+});
+
+export async function switchActiveRoleMode(
+  input: z.infer<typeof switchRoleModeSchema>,
+): Promise<ActionResult> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new AppError("unauthorized", "Sign in required");
+    }
+    checkRateLimit({
+      key: rateLimitKey("onboarding.switchmode", session.user.id),
+      limit: 20,
+      windowMs: 60_000,
+    });
+
+    const parsed = switchRoleModeSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid mode selection", {
+        issues: parsed.error.issues,
+      });
+    }
+
+    const actor = await getActorContext(session.user.id);
+    if (!actor) {
+      throw new AppError("forbidden", "Cannot switch role mode");
+    }
+
+    if (!actor.roles.includes(parsed.data.mode)) {
+      throw new AppError(
+        "forbidden",
+        `You do not have the ${parsed.data.mode} role`,
+      );
+    }
+
+    const db = getDb();
+    const now = new Date();
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          activeRoleMode: parsed.data.mode,
+          updatedAt: now,
+        })
+        .where(eq(users.id, session.user.id));
+
+      await tx.insert(auditEvents).values({
+        actorUserId: session.user.id,
+        action: "user.role_mode_switched",
+        subjectType: "user",
+        subjectId: session.user.id,
+        metadata: {
+          newMode: parsed.data.mode,
+        },
+      });
+    });
+
+    revalidatePath(`/${parsed.data.locale}`);
+    revalidatePath(`/${parsed.data.locale}/marketplace`);
+    return { ok: true };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
 const applicationSchema = z.object({
   name: z.string().trim().min(1).max(120),
   berlinConnection: z.string().trim().min(1).max(500),

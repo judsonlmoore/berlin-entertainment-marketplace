@@ -26,11 +26,13 @@ declare module "next-auth" {
       isPlatformStaff: boolean;
       approvalState: ApprovalState | null;
       roles: MarketplaceRole[];
+      activeRoleMode: MarketplaceRole | null;
     };
   }
 
   interface User {
     isPlatformStaff?: boolean;
+    activeRoleMode?: MarketplaceRole | null;
   }
 }
 
@@ -40,6 +42,7 @@ async function loadMarketplaceSessionFields(userId: string) {
       isPlatformStaff: false,
       approvalState: null as ApprovalState | null,
       roles: [] as MarketplaceRole[],
+      activeRoleMode: null as MarketplaceRole | null,
     };
   }
 
@@ -59,6 +62,8 @@ async function loadMarketplaceSessionFields(userId: string) {
     approvalState:
       (account?.approvalState as ApprovalState | undefined) ?? null,
     roles: roles.map((role) => role.role as MarketplaceRole),
+    activeRoleMode:
+      (user?.activeRoleMode as MarketplaceRole | undefined) ?? null,
   };
 }
 
@@ -135,6 +140,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.isPlatformStaff = fields.isPlatformStaff;
         token.approvalState = fields.approvalState;
         token.roles = fields.roles;
+        token.activeRoleMode = fields.activeRoleMode;
       }
       return token;
     },
@@ -151,6 +157,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             approvalState:
               (token.approvalState as ApprovalState | null) ?? null,
             roles: (token.roles as MarketplaceRole[] | undefined) ?? [],
+            activeRoleMode:
+              (token.activeRoleMode as MarketplaceRole | null | undefined) ??
+              null,
           };
 
       session.user.id = userId;
@@ -158,6 +167,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       session.user.isPlatformStaff = fields.isPlatformStaff;
       session.user.approvalState = fields.approvalState;
       session.user.roles = fields.roles;
+      session.user.activeRoleMode = fields.activeRoleMode;
       return session;
     },
   },

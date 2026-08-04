@@ -15,6 +15,13 @@
       "when": 1785799293170,
       "tag": "0001_greedy_kabuki",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785823951613,
+      "tag": "0002_unknown_vin_gonzales",
+      "breakpoints": true
     }
   ]
 }

@@ -123,6 +123,25 @@
     "ctaApply": "Start application",
     "ctaProfile": "Continue to profiles"
   },
+  "roleSelection": {
+    "title": "Choose your role",
+    "body": "To create a focused onboarding experience, first tell us whether you're joining as an entertainer or venue operator. You can apply to add the other role later from your profile.",
+    "entertainer": "I'm an entertainer",
+    "venue": "I'm a venue operator",
+    "entertainerDesc": "Performers, musicians, and small acts seeking bookings",
+    "venueDesc": "Venue owners and operators posting opportunities and booking acts",
+    "continue": "Continue",
+    "required": "Please select a role to continue"
+  },
+  "roleMode": {
+    "switchTo": "Switch to {role} mode",
+    "currentMode": "Current mode: {role}",
+    "entertainerMode": "Entertainer",
+    "venueMode": "Venue",
+    "explainer": "You have both entertainer and venue roles. Toggle to see the right discovery and features.",
+    "applyForSecondRole": "Apply to add {role} role",
+    "applyExplainer": "You currently have only the {currentRole} role. To access {targetRole} features, submit an application for that role."
+  },
   "profile": {
     "title": "Profiles",
     "eyebrow": "Dual-role profiles",
