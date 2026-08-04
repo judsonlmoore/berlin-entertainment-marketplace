@@ -5,7 +5,6 @@ import { redirect } from "@/src/i18n/navigation";
 import { Link } from "@/src/i18n/navigation";
 import { auth } from "@/src/auth";
 import { signOutAction } from "@/src/actions/auth";
-import { resolveOnboardingDestination } from "@/src/lib/onboarding-gate";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
 
@@ -28,6 +27,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /**
  * Sidebar-free shell for XOR onboarding (role + profile setup).
+ * Destination redirects live on individual pages so the setup completion
+ * screen can stay mounted after profile submit until the user continues.
  */
 export default async function OnboardingLayout({ children, params }: Props) {
   const { locale } = await params;
@@ -37,17 +38,6 @@ export default async function OnboardingLayout({ children, params }: Props) {
 
   if (!session?.user?.id) {
     redirect({ href: "/sign-in", locale: locale as AppLocale });
-  }
-
-  const user = session!.user!;
-  const destination = await resolveOnboardingDestination({
-    userId: user.id!,
-    isPlatformStaff: Boolean(user.isPlatformStaff),
-    sessionRoles: user.roles,
-  });
-
-  if (destination === "none") {
-    redirect({ href: "/marketplace", locale: locale as AppLocale });
   }
 
   return (

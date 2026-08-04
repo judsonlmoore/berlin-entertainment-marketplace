@@ -43,8 +43,10 @@ export default async function OnboardingSetupPage({ params }: Props) {
       locale: locale as AppLocale,
     });
   }
+
+  // Profile already created — never re-show onboarding setup.
   if (destination === "none") {
-    redirect({ href: "/marketplace", locale: locale as AppLocale });
+    redirect({ href: "/profile", locale: locale as AppLocale });
   }
 
   const db = getDb();
@@ -60,56 +62,29 @@ export default async function OnboardingSetupPage({ params }: Props) {
     });
   }
   const setupRole = role as "entertainer" | "venue";
+  const accountEmail = session!.user!.email ?? "";
 
-  const defaultEmail = session!.user!.email ?? "";
-
-  let entertainerDraft: EntertainerDraft = {
+  const entertainerDraft: EntertainerDraft = {
     actName: "",
     category: "",
+    genres: "",
     description: "",
-    groupSize: "1",
-    berlinBase: "",
-    travelRadiusKm: "25",
-    priceMinEur: "0",
-    priceMaxEur: "0",
-    durationMinutes: "60",
-    technicalRequirements: "",
-    contactEmail: defaultEmail,
   };
 
-  let venueDraft: VenueDraft = {
+  const venueDraft: VenueDraft = {
     venueId: null,
     name: "",
-    shortDescription: "",
     venueType: "",
-    addressLine1: "",
-    district: "",
-    postalCode: "",
-    audienceDescription: "",
-    capacity: "50",
-    capacityContext: "",
-    productionNotes: "",
-    contactEmail: defaultEmail,
+    shortDescription: "",
   };
 
   if (setupRole === "entertainer") {
     const profile = await db.query.entertainerProfiles.findFirst({
       where: eq(entertainerProfiles.userId, userId),
+      columns: { id: true },
     });
     if (profile) {
-      entertainerDraft = {
-        actName: profile.actName,
-        category: profile.category,
-        description: profile.description,
-        groupSize: String(profile.groupSize),
-        berlinBase: profile.berlinBase,
-        travelRadiusKm: String(profile.travelRadiusKm),
-        priceMinEur: String(Math.round(profile.priceMinCents / 100)),
-        priceMaxEur: String(Math.round(profile.priceMaxCents / 100)),
-        durationMinutes: String(profile.durationMinutes),
-        technicalRequirements: profile.technicalRequirements,
-        contactEmail: defaultEmail,
-      };
+      redirect({ href: "/profile", locale: locale as AppLocale });
     }
   } else {
     const membership = await db.query.venueMemberships.findFirst({
@@ -118,27 +93,15 @@ export default async function OnboardingSetupPage({ params }: Props) {
         eq(venueMemberships.status, "active"),
         eq(venueMemberships.role, "owner"),
       ),
+      columns: { venueId: true },
     });
     if (membership) {
       const venue = await db.query.venues.findFirst({
         where: eq(venues.id, membership.venueId),
+        columns: { id: true },
       });
       if (venue) {
-        const production = venue.productionResources as Record<string, string>;
-        venueDraft = {
-          venueId: venue.id,
-          name: venue.name,
-          shortDescription: venue.shortDescription,
-          venueType: venue.venueType,
-          addressLine1: venue.addressLine1,
-          district: venue.district,
-          postalCode: venue.postalCode,
-          audienceDescription: venue.audienceDescription,
-          capacity: String(venue.capacity),
-          capacityContext: venue.capacityContext ?? "",
-          productionNotes: production.notes ?? "",
-          contactEmail: defaultEmail,
-        };
+        redirect({ href: "/profile", locale: locale as AppLocale });
       }
     }
   }
@@ -147,6 +110,7 @@ export default async function OnboardingSetupPage({ params }: Props) {
     <OnboardingSetupWizard
       locale={locale as "en" | "de"}
       role={setupRole}
+      accountEmail={accountEmail}
       entertainerDraft={entertainerDraft}
       venueDraft={venueDraft}
     />

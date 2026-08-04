@@ -24,25 +24,44 @@ import {
   canStaffTransitionProfile,
   type ProfilePublicationState,
 } from "@/src/domain/profile-publication";
+import {
+  DESCRIPTION_MAX,
+  DESCRIPTION_MIN,
+  TECHNICAL_MAX,
+  TECHNICAL_MIN,
+  sanitizePlainText,
+  validateRichTextField,
+} from "@/src/domain/sanitize-input";
 
 const localeSchema = z.enum(["en", "de"]).default("en");
 
-const optionalUrlField = z
-  .string()
-  .trim()
-  .url()
-  .max(500)
-  .optional()
-  .or(z.literal(""));
+/** Soft URL: invalid mid-edit values become empty so drafts can autosave. */
+function softOptionalUrl(value: unknown): string {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim().slice(0, 500);
+  if (!trimmed) return "";
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return trimmed;
+  } catch {
+    return "";
+  }
+}
+
+const softUrlField = z.preprocess(softOptionalUrl, z.string().max(500));
 
 const socialLinksSchema = z
   .object({
-    instagram: optionalUrlField,
-    facebook: optionalUrlField,
-    tiktok: optionalUrlField,
-    spotify: optionalUrlField,
-    soundcloud: optionalUrlField,
+    instagram: softUrlField,
+    facebook: softUrlField,
+    tiktok: softUrlField,
+    spotify: softUrlField,
+    soundcloud: softUrlField,
+    linkedin: softUrlField,
+    youtube: softUrlField,
   })
+  .partial()
   .optional();
 
 function compactSocialLinks(
@@ -51,7 +70,7 @@ function compactSocialLinks(
   if (!links) return {};
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(links)) {
-    const trimmed = value?.trim();
+    const trimmed = softOptionalUrl(value);
     if (trimmed) out[key] = trimmed;
   }
   return out;
@@ -60,29 +79,34 @@ function compactSocialLinks(
 const optionalText = (max: number) =>
   z.string().trim().max(max).optional().or(z.literal(""));
 
+/** Draft upsert: allow incomplete fields; submit-for-review enforces completeness. */
 const entertainerSchema = z.object({
   actName: z.string().trim().min(1).max(160),
-  category: z.string().trim().min(1).max(120),
-  description: z.string().trim().min(1).max(4000),
-  groupSize: z.coerce.number().int().min(1).max(50),
-  berlinBase: z.string().trim().min(1).max(200),
-  travelRadiusKm: z.coerce.number().int().min(0).max(500),
-  priceMinCents: z.coerce.number().int().min(0),
-  priceMaxCents: z.coerce.number().int().min(0),
+  category: z.string().trim().max(120).optional().or(z.literal("")),
+  description: z.string().max(8000).optional().or(z.literal("")),
+  groupSize: z.coerce.number().int().min(1).max(50).default(1),
+  berlinBase: z.string().trim().max(300).optional().or(z.literal("")),
+  baseLatitude: z.string().trim().max(32).optional().or(z.literal("")),
+  baseLongitude: z.string().trim().max(32).optional().or(z.literal("")),
+  travelRadiusKm: z.coerce.number().int().min(0).max(500).default(25),
+  priceMinCents: z.coerce.number().int().min(0).default(0),
+  priceMaxCents: z.coerce.number().int().min(0).default(0),
   durationMinutes: z.coerce
     .number()
     .int()
     .min(1)
-    .max(24 * 60),
-  technicalRequirements: z.string().trim().min(1).max(4000),
+    .max(24 * 60)
+    .default(60),
+  technicalRequirements: z.string().max(4000).optional().or(z.literal("")),
   genres: optionalText(500),
   performanceFormats: optionalText(500),
   languages: optionalText(500),
   accessibilityNotes: optionalText(2000),
   equipmentSupplied: optionalText(2000),
-  websiteUrl: optionalUrlField,
+  websiteUrl: softUrlField.optional().default(""),
   socialLinks: socialLinksSchema,
   contactEmail: z.string().trim().email().max(320),
+  contactPhone: z.string().trim().max(32).optional().or(z.literal("")),
   locale: localeSchema,
 });
 
@@ -90,16 +114,16 @@ const venueProductionField = optionalText(500);
 
 const venueSchema = z.object({
   name: z.string().trim().min(1).max(160),
-  shortDescription: z.string().trim().min(1).max(500),
-  addressLine1: z.string().trim().min(1).max(200),
+  shortDescription: z.string().trim().max(500).optional().or(z.literal("")),
+  addressLine1: z.string().trim().max(200).optional().or(z.literal("")),
   addressLine2: z.string().trim().max(200).optional(),
-  district: z.string().trim().min(1).max(120),
-  postalCode: z.string().trim().min(4).max(16),
+  district: z.string().trim().max(120).optional().or(z.literal("")),
+  postalCode: z.string().trim().max(16).optional().or(z.literal("")),
   latitude: z.string().trim().max(32).optional(),
   longitude: z.string().trim().max(32).optional(),
-  venueType: z.string().trim().min(1).max(120),
-  audienceDescription: z.string().trim().min(1).max(2000),
-  capacity: z.coerce.number().int().min(1).max(100000),
+  venueType: z.string().trim().max(120).optional().or(z.literal("")),
+  audienceDescription: z.string().trim().max(2000).optional().or(z.literal("")),
+  capacity: z.coerce.number().int().min(1).max(100000).default(50),
   capacityContext: z.string().trim().max(500).optional(),
   productionNotes: z.string().trim().max(4000).optional(),
   productionPa: venueProductionField,
@@ -113,8 +137,9 @@ const venueSchema = z.object({
   loadInNotes: optionalText(4000),
   accessibilityNotes: optionalText(2000),
   socialLinks: socialLinksSchema,
-  websiteUrl: z.string().trim().url().max(500).optional().or(z.literal("")),
+  websiteUrl: softUrlField.optional().default(""),
   contactEmail: z.string().trim().email().max(320),
+  contactPhone: z.string().trim().max(32).optional().or(z.literal("")),
   locale: localeSchema,
 });
 
@@ -145,8 +170,80 @@ function optionalNullableText(value?: string) {
   return trimmed ? trimmed : null;
 }
 
+function assertEntertainerReadyForSubmit(profile: {
+  actName: string;
+  category: string;
+  description: string;
+  berlinBase: string;
+  technicalRequirements: string;
+}) {
+  const nameCheck = sanitizePlainText(profile.actName, { min: 1, max: 160 });
+  if (!nameCheck.ok) {
+    throw new AppError("validation", nameCheck.reason);
+  }
+  if (!profile.category.trim() || profile.category === "uncategorized") {
+    throw new AppError("validation", "Category is required before submitting");
+  }
+  const descriptionCheck = validateRichTextField(profile.description, {
+    min: DESCRIPTION_MIN,
+    max: DESCRIPTION_MAX,
+  });
+  if (!descriptionCheck.ok) {
+    throw new AppError("validation", descriptionCheck.reason);
+  }
+  const locationCheck = sanitizePlainText(profile.berlinBase, {
+    min: 2,
+    max: 300,
+  });
+  if (!locationCheck.ok) {
+    throw new AppError(
+      "validation",
+      "Select a base location before submitting",
+    );
+  }
+  const technicalCheck = sanitizePlainText(profile.technicalRequirements, {
+    min: TECHNICAL_MIN,
+    max: TECHNICAL_MAX,
+  });
+  if (!technicalCheck.ok) {
+    throw new AppError("validation", technicalCheck.reason);
+  }
+}
+
+function assertVenueReadyForSubmit(venue: {
+  name: string;
+  shortDescription: string;
+  addressLine1: string;
+  district: string;
+  postalCode: string;
+  venueType: string;
+  audienceDescription: string;
+}) {
+  if (!venue.name.trim()) {
+    throw new AppError("validation", "Venue name is required");
+  }
+  if (!venue.shortDescription.trim()) {
+    throw new AppError("validation", "Short description is required");
+  }
+  if (!venue.addressLine1.trim()) {
+    throw new AppError("validation", "Address is required");
+  }
+  if (!venue.district.trim()) {
+    throw new AppError("validation", "District is required");
+  }
+  if (!venue.postalCode.trim()) {
+    throw new AppError("validation", "Postal code is required");
+  }
+  if (!venue.venueType.trim()) {
+    throw new AppError("validation", "Venue type is required");
+  }
+  if (!venue.audienceDescription.trim()) {
+    throw new AppError("validation", "Audience description is required");
+  }
+}
+
 export async function upsertEntertainerProfile(
-  input: z.infer<typeof entertainerSchema>,
+  input: z.input<typeof entertainerSchema>,
 ): Promise<ActionResult> {
   try {
     const { session, actor } = await requireActor();
@@ -158,7 +255,42 @@ export async function upsertEntertainerProfile(
     if (!parsed.success) {
       throw new AppError("validation", "Invalid entertainer profile");
     }
-    if (parsed.data.priceMaxCents < parsed.data.priceMinCents) {
+
+    const actNameCheck = sanitizePlainText(parsed.data.actName, {
+      min: 1,
+      max: 160,
+    });
+    if (!actNameCheck.ok) {
+      throw new AppError("validation", actNameCheck.reason);
+    }
+    const descriptionCheck = validateRichTextField(
+      parsed.data.description ?? "",
+      {
+        min: 0,
+        max: DESCRIPTION_MAX,
+      },
+    );
+    if (!descriptionCheck.ok) {
+      throw new AppError("validation", descriptionCheck.reason);
+    }
+    const technicalCheck = sanitizePlainText(
+      parsed.data.technicalRequirements ?? "",
+      { allowEmpty: true, max: TECHNICAL_MAX },
+    );
+    if (!technicalCheck.ok) {
+      throw new AppError("validation", technicalCheck.reason);
+    }
+    const locationCheck = sanitizePlainText(parsed.data.berlinBase ?? "", {
+      allowEmpty: true,
+      max: 300,
+    });
+    if (!locationCheck.ok) {
+      throw new AppError("validation", locationCheck.reason);
+    }
+    if (
+      parsed.data.priceMaxCents < parsed.data.priceMinCents &&
+      parsed.data.priceMaxCents > 0
+    ) {
       throw new AppError("validation", "Price max must be >= min");
     }
 
@@ -169,16 +301,18 @@ export async function upsertEntertainerProfile(
 
     const now = new Date();
     const values = {
-      actName: parsed.data.actName,
-      category: parsed.data.category,
-      description: parsed.data.description,
+      actName: actNameCheck.value,
+      category: parsed.data.category?.trim() || "uncategorized",
+      description: descriptionCheck.value || "",
       groupSize: parsed.data.groupSize,
-      berlinBase: parsed.data.berlinBase,
+      berlinBase: locationCheck.value || "",
+      baseLatitude: parsed.data.baseLatitude?.trim() || null,
+      baseLongitude: parsed.data.baseLongitude?.trim() || null,
       travelRadiusKm: parsed.data.travelRadiusKm,
       priceMinCents: parsed.data.priceMinCents,
       priceMaxCents: parsed.data.priceMaxCents,
       durationMinutes: parsed.data.durationMinutes,
-      technicalRequirements: parsed.data.technicalRequirements,
+      technicalRequirements: technicalCheck.value || "",
       genres: optionalNullableText(parsed.data.genres),
       performanceFormats: optionalNullableText(parsed.data.performanceFormats),
       languages: optionalNullableText(parsed.data.languages),
@@ -222,6 +356,15 @@ export async function upsertEntertainerProfile(
         value: parsed.data.contactEmail,
       });
 
+      if (parsed.data.contactPhone?.trim()) {
+        await upsertPreferredContact(tx, {
+          ownerType: "entertainer",
+          ownerId: profileId ?? session.user.id,
+          kind: "phone",
+          value: parsed.data.contactPhone.trim(),
+        });
+      }
+
       await tx.insert(auditEvents).values({
         actorUserId: session.user.id,
         action: "entertainer_profile.upserted",
@@ -231,7 +374,6 @@ export async function upsertEntertainerProfile(
       });
     });
 
-    revalidatePath(`/${parsed.data.locale}/profile`);
     revalidatePath(`/${parsed.data.locale}/admin`);
     return { ok: true, ...(profileId ? { id: profileId } : {}) };
   } catch (error) {
@@ -255,6 +397,8 @@ export async function submitEntertainerProfile(
     if (!profile) {
       throw new AppError("not_found", "Create a profile draft first");
     }
+
+    assertEntertainerReadyForSubmit(profile);
 
     const from = profile.publicationState as ProfilePublicationState;
     if (!canOwnerTransitionProfile(from, "submitted")) {
@@ -284,7 +428,7 @@ export async function submitEntertainerProfile(
 }
 
 export async function createVenue(
-  input: z.infer<typeof venueSchema>,
+  input: z.input<typeof venueSchema>,
 ): Promise<ActionResult> {
   try {
     const { session, actor } = await requireActor();
@@ -306,19 +450,19 @@ export async function createVenue(
         .insert(venues)
         .values({
           name: parsed.data.name,
-          shortDescription: parsed.data.shortDescription,
-          addressLine1: parsed.data.addressLine1,
+          shortDescription: parsed.data.shortDescription ?? "",
+          addressLine1: parsed.data.addressLine1 ?? "",
           ...(parsed.data.addressLine2
             ? { addressLine2: parsed.data.addressLine2 }
             : {}),
-          district: parsed.data.district,
-          postalCode: parsed.data.postalCode,
+          district: parsed.data.district ?? "",
+          postalCode: parsed.data.postalCode ?? "",
           ...(parsed.data.latitude ? { latitude: parsed.data.latitude } : {}),
           ...(parsed.data.longitude
             ? { longitude: parsed.data.longitude }
             : {}),
-          venueType: parsed.data.venueType,
-          audienceDescription: parsed.data.audienceDescription,
+          venueType: parsed.data.venueType ?? "",
+          audienceDescription: parsed.data.audienceDescription ?? "",
           capacity: parsed.data.capacity,
           ...(parsed.data.capacityContext
             ? { capacityContext: parsed.data.capacityContext }
@@ -365,6 +509,15 @@ export async function createVenue(
         value: parsed.data.contactEmail,
       });
 
+      if (parsed.data.contactPhone?.trim()) {
+        await upsertPreferredContact(tx, {
+          ownerType: "venue",
+          ownerId: created.id,
+          kind: "phone",
+          value: parsed.data.contactPhone.trim(),
+        });
+      }
+
       await tx.insert(auditEvents).values({
         actorUserId: session.user.id,
         action: "venue.created",
@@ -374,7 +527,7 @@ export async function createVenue(
       });
     });
 
-    revalidatePath(`/${parsed.data.locale}/profile`);
+    // Autosave owns client form state — do not revalidate /profile (avoids RSC remount).
     return { ok: true, ...(venueId ? { id: venueId } : {}) };
   } catch (error) {
     return toActionError(error);
@@ -383,7 +536,7 @@ export async function createVenue(
 
 export async function updateVenue(
   venueId: string,
-  input: z.infer<typeof venueSchema>,
+  input: z.input<typeof venueSchema>,
 ): Promise<ActionResult> {
   try {
     const { session, actor } = await requireActor();
@@ -415,15 +568,15 @@ export async function updateVenue(
         .update(venues)
         .set({
           name: parsed.data.name,
-          shortDescription: parsed.data.shortDescription,
-          addressLine1: parsed.data.addressLine1,
+          shortDescription: parsed.data.shortDescription ?? "",
+          addressLine1: parsed.data.addressLine1 ?? "",
           addressLine2: parsed.data.addressLine2 ?? null,
-          district: parsed.data.district,
-          postalCode: parsed.data.postalCode,
+          district: parsed.data.district ?? "",
+          postalCode: parsed.data.postalCode ?? "",
           latitude: parsed.data.latitude ?? null,
           longitude: parsed.data.longitude ?? null,
-          venueType: parsed.data.venueType,
-          audienceDescription: parsed.data.audienceDescription,
+          venueType: parsed.data.venueType ?? "",
+          audienceDescription: parsed.data.audienceDescription ?? "",
           capacity: parsed.data.capacity,
           capacityContext: parsed.data.capacityContext ?? null,
           productionResources: buildVenueProductionResources(parsed.data),
@@ -446,6 +599,15 @@ export async function updateVenue(
         value: parsed.data.contactEmail,
       });
 
+      if (parsed.data.contactPhone?.trim()) {
+        await upsertPreferredContact(tx, {
+          ownerType: "venue",
+          ownerId: venueId,
+          kind: "phone",
+          value: parsed.data.contactPhone.trim(),
+        });
+      }
+
       await tx.insert(auditEvents).values({
         actorUserId: session.user.id,
         action: "venue.updated",
@@ -455,8 +617,7 @@ export async function updateVenue(
       });
     });
 
-    revalidatePath(`/${parsed.data.locale}/profile`);
-    revalidatePath(`/${parsed.data.locale}/profile/venues/${venueId}`);
+    // Autosave owns client form state — do not revalidate profile routes.
     revalidatePath(`/${parsed.data.locale}/admin`);
     return { ok: true, id: venueId };
   } catch (error) {
@@ -481,6 +642,8 @@ export async function submitVenueProfile(
     if (!venue) {
       throw new AppError("not_found", "Venue not found");
     }
+
+    assertVenueReadyForSubmit(venue);
 
     const from = venue.publicationState as ProfilePublicationState;
     if (!canOwnerTransitionProfile(from, "submitted")) {

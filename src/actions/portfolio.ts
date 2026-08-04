@@ -146,6 +146,21 @@ export async function addPortfolioYouTube(
     const { session, profile, db } = await requireEntertainerOwner(
       parsed.data.entertainerProfileId,
     );
+
+    const existingYoutube = await db.query.portfolioItems.findFirst({
+      where: and(
+        eq(portfolioItems.entertainerProfileId, profile.id),
+        eq(portfolioItems.kind, "youtube"),
+      ),
+      columns: { id: true },
+    });
+    if (existingYoutube) {
+      throw new AppError(
+        "validation",
+        "Only one YouTube embed is allowed; remove the current one first",
+      );
+    }
+
     await assertPortfolioCapacity(db, profile.id);
 
     const sortOrder = await nextSortOrder(db, profile.id);

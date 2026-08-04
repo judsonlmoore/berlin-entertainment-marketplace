@@ -33,5 +33,5 @@ export default async function OnboardingIndexPage({ params }: Props) {
   if (destination === "setup") {
     redirect({ href: "/onboarding/setup", locale: locale as AppLocale });
   }
-  redirect({ href: "/marketplace", locale: locale as AppLocale });
+  redirect({ href: "/profile", locale: locale as AppLocale });
 }

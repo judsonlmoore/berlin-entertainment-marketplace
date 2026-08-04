@@ -238,6 +238,8 @@ export const entertainerProfiles = pgTable(
     description: text("description").notNull(),
     groupSize: integer("group_size").notNull(),
     berlinBase: text("berlin_base").notNull(),
+    baseLatitude: text("base_latitude"),
+    baseLongitude: text("base_longitude"),
     travelRadiusKm: integer("travel_radius_km").notNull().default(25),
     priceMinCents: integer("price_min_cents").notNull(),
     priceMaxCents: integer("price_max_cents").notNull(),
