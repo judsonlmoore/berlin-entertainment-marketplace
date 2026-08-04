@@ -148,6 +148,65 @@
     "required": "Bitte wählen Sie eine Rolle aus, um fortzufahren",
     "signInFirst": "Zum Fortfahren anmelden"
   },
+  "onboardingFlow": {
+    "entertainerPath": "Entertainer-Einrichtung",
+    "venuePath": "Venue-Einrichtung",
+    "stepOf": "Schritt {current} von {total}",
+    "next": "Weiter",
+    "back": "Zurück",
+    "submitForReview": "Zur Prüfung einreichen",
+    "continueToOverview": "Zur Übersicht",
+    "doneTitle": "Sie sind dabei — als Nächstes die Freigabe",
+    "doneBody": "Ihr Salon-Konto ist bereit. Sie können den Marktplatz schon erkunden, während das Team Ihr Profil prüft.",
+    "doneHighlight": "Konto erstellt",
+    "donePending": "Listing und Kontakt bleiben ausstehend, bis das Team Ihr Profil freigibt — in der Regel innerhalb von 3 Werktagen. Nutzen Sie die Zeit, um Details zu ergänzen und Verfügbarkeit zu setzen.",
+    "fieldsIncomplete": "Bitte füllen Sie alle erforderlichen Felder aus.",
+    "steps": {
+      "basics": {
+        "title": "Erzählen Sie, wer Sie sind",
+        "body": "Beginnen Sie mit den Basics. Später können Sie alles unter Profile bearbeiten."
+      },
+      "location": {
+        "title": "Wo liegt das Venue?",
+        "body": "Berliner Adressdaten helfen Entertainern, die richtigen Räume zu finden."
+      },
+      "details": {
+        "title": "Noch ein paar Details",
+        "body": "Diese Felder helfen der anderen Seite, vor dem Kontakt zu prüfen, ob es passt."
+      },
+      "contact": {
+        "title": "Privater Kontakt",
+        "body": "Wird privat gespeichert. Wird erst nach Shortlist oder angenommener Direktanfrage freigegeben."
+      },
+      "done": {
+        "title": "Sie sind dabei — als Nächstes die Freigabe",
+        "body": "Ihr Salon-Konto ist bereit."
+      }
+    },
+    "fields": {
+      "actName": "Act-Name",
+      "category": "Kategorie / Genre",
+      "description": "Beschreibung",
+      "groupSize": "Gruppengröße",
+      "berlinBase": "Berlin-Basis",
+      "travelRadiusKm": "Reiseradius (km)",
+      "durationMinutes": "Set-Dauer (Minuten)",
+      "priceMinEur": "Preisrichtwert min (EUR)",
+      "priceMaxEur": "Preisrichtwert max (EUR)",
+      "technicalRequirements": "Technische Anforderungen",
+      "contactEmail": "Private Kontakt-E-Mail",
+      "venueName": "Venue-Name",
+      "venueType": "Venue-Typ",
+      "shortDescription": "Kurzbeschreibung",
+      "addressLine1": "Adresszeile 1",
+      "district": "Bezirk",
+      "postalCode": "Postleitzahl",
+      "audienceDescription": "Publikumsbeschreibung",
+      "capacity": "Kapazität",
+      "capacityContext": "Kapazitätskontext (sitzend/stehend)",
+      "productionNotes": "Produktionshinweise"
+    }
+  },
   "roleMode": {
     "switchTo": "Zu {role}-Modus wechseln",
     "currentMode": "Aktueller Modus: {role}",
@@ -691,7 +750,7 @@
     "warningPoint2": "Alle Ihre Kontaktmethoden werden anonymisiert",
     "warningPoint3": "Sie werden sofort abgemeldet",
     "warningPoint4": "Ihre Daten werden für geschäftliche Analysen aufbewahrt, identifizieren Sie aber nicht mehr",
-    "challengeInstructions": "Zur Bestätigung der Löschung geben Sie DELETE oder Ihre E-Mail-Adresse ein:",
+    "challengeInstructions": "Zur Bestätigung der Löschung geben Sie DELETE in Großbuchstaben ein:",
     "challengeLabel": "Bestätigung",
     "closeButton": "Schließen",
     "cancelButton": "Abbrechen",

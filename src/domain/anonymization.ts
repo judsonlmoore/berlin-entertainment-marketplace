@@ -4,7 +4,9 @@
  * Account "deletion" is actually a permanent, irreversible anonymization:
  * - User data is kept for business analysis and legal compliance
  * - All PII is anonymized and cannot be recovered
- * - The user cannot use the account or be identified from it
+ * - OAuth/provider account links and sessions are removed so the same
+ *   identity can sign up again as a brand-new user
+ * - The anonymized shell cannot be used or identified from marketplace PII
  */
 
 export type AnonymizationReason =

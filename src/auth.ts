@@ -2,7 +2,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   accounts,
@@ -96,6 +96,55 @@ function buildProviders() {
   return providers;
 }
 
+/**
+ * Auth.js adapter that refuses to resurrect anonymized user shells.
+ * If an OAuth account still points at an anonymized user, unlink it and return
+ * null so Auth.js creates a fresh user for that identity.
+ */
+function createSalonAuthAdapter() {
+  const db = getDb();
+  const base = DrizzleAdapter(db, {
+    usersTable: users,
+    accountsTable: accounts,
+    sessionsTable: sessions,
+    verificationTokensTable: verificationTokens,
+    authenticatorsTable: authenticators,
+  });
+
+  return {
+    ...base,
+    async getUserByAccount(
+      providerAccountId: Parameters<
+        NonNullable<typeof base.getUserByAccount>
+      >[0],
+    ) {
+      const user = (await base.getUserByAccount?.(providerAccountId)) ?? null;
+      if (!user?.id) {
+        return null;
+      }
+
+      const row = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+        columns: { anonymizedAt: true },
+      });
+      if (!row?.anonymizedAt) {
+        return user;
+      }
+
+      await db
+        .delete(accounts)
+        .where(
+          and(
+            eq(accounts.provider, providerAccountId.provider),
+            eq(accounts.providerAccountId, providerAccountId.providerAccountId),
+          ),
+        );
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+      return null;
+    },
+  };
+}
+
 const databaseUrl = process.env.DATABASE_URL;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -104,13 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   basePath: "/api/session",
   ...(databaseUrl
     ? {
-        adapter: DrizzleAdapter(getDb(), {
-          usersTable: users,
-          accountsTable: accounts,
-          sessionsTable: sessions,
-          verificationTokensTable: verificationTokens,
-          authenticatorsTable: authenticators,
-        }),
+        adapter: createSalonAuthAdapter(),
       }
     : {}),
   session: {

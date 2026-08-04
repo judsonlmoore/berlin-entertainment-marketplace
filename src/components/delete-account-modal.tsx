@@ -130,11 +130,7 @@ export function DeleteAccountModal({ userEmail, isOpen, onClose }: Props) {
           </Button>
           <button
             onClick={handleDelete}
-            disabled={
-              pending ||
-              (confirmationText.toUpperCase() !== "DELETE" &&
-                confirmationText !== userEmail)
-            }
+            disabled={pending || confirmationText !== "DELETE"}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--danger)] bg-[var(--danger)] px-4 py-2.5 text-sm font-semibold text-white transition-opacity duration-150 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {pending ? (

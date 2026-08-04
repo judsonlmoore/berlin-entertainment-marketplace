@@ -148,6 +148,65 @@
     "required": "Please select a role to continue",
     "signInFirst": "Sign in to continue"
   },
+  "onboardingFlow": {
+    "entertainerPath": "Entertainer setup",
+    "venuePath": "Venue setup",
+    "stepOf": "Step {current} of {total}",
+    "next": "Continue",
+    "back": "Back",
+    "submitForReview": "Submit for verification",
+    "continueToOverview": "Continue to overview",
+    "doneTitle": "You're in — verification is next",
+    "doneBody": "Your Salon account is ready. You can explore the marketplace now while staff verify your profile.",
+    "doneHighlight": "Account created",
+    "donePending": "Marketplace listing and contact stay pending until staff verify your profile — usually within 3 business days. Use the wait to finish details and set availability.",
+    "fieldsIncomplete": "Please fill in all required fields.",
+    "steps": {
+      "basics": {
+        "title": "Tell us who you are",
+        "body": "Start with the basics. You can edit everything later from Profiles."
+      },
+      "location": {
+        "title": "Where is the venue?",
+        "body": "Berlin address details help entertainers find the right rooms."
+      },
+      "details": {
+        "title": "A few more details",
+        "body": "These fields help the other side understand fit before they reach out."
+      },
+      "contact": {
+        "title": "Private contact",
+        "body": "Stored privately. Revealed only after shortlist or an accepted direct request."
+      },
+      "done": {
+        "title": "You're in — verification is next",
+        "body": "Your Salon account is ready."
+      }
+    },
+    "fields": {
+      "actName": "Act name",
+      "category": "Category / genre",
+      "description": "Description",
+      "groupSize": "Group size",
+      "berlinBase": "Berlin base",
+      "travelRadiusKm": "Travel radius (km)",
+      "durationMinutes": "Set duration (minutes)",
+      "priceMinEur": "Indicative price min (EUR)",
+      "priceMaxEur": "Indicative price max (EUR)",
+      "technicalRequirements": "Technical requirements",
+      "contactEmail": "Private contact email",
+      "venueName": "Venue name",
+      "venueType": "Venue type",
+      "shortDescription": "Short description",
+      "addressLine1": "Address line 1",
+      "district": "District",
+      "postalCode": "Postal code",
+      "audienceDescription": "Audience description",
+      "capacity": "Capacity",
+      "capacityContext": "Capacity context (seated/standing)",
+      "productionNotes": "Production notes"
+    }
+  },
   "roleMode": {
     "switchTo": "Switch to {role} mode",
     "currentMode": "Current mode: {role}",
@@ -691,7 +750,7 @@
     "warningPoint2": "All your contact methods will be anonymized",
     "warningPoint3": "You will be immediately signed out",
     "warningPoint4": "Your data will be kept for business analysis but will not identify you",
-    "challengeInstructions": "To confirm deletion, type DELETE or your email address:",
+    "challengeInstructions": "To confirm deletion, type DELETE in all caps:",
     "challengeLabel": "Confirmation",
     "closeButton": "Close",
     "cancelButton": "Cancel",
