@@ -103,8 +103,8 @@ export function can(
       // For dual-role users, respect their active mode.
       return (
         actor.isPlatformStaff ||
-        (hasPrivateAccess(actor) && 
-          isActiveVenueOperator(actor) && 
+        (hasPrivateAccess(actor) &&
+          isActiveVenueOperator(actor) &&
           (actor.activeRoleMode === "venue" || actor.activeRoleMode === null))
       );
 
@@ -113,9 +113,10 @@ export function can(
       // For dual-role users, respect their active mode.
       return (
         actor.isPlatformStaff ||
-        (hasPrivateAccess(actor) && 
-          actor.roles.includes("entertainer") && 
-          (actor.activeRoleMode === "entertainer" || actor.activeRoleMode === null))
+        (hasPrivateAccess(actor) &&
+          actor.roles.includes("entertainer") &&
+          (actor.activeRoleMode === "entertainer" ||
+            actor.activeRoleMode === null))
       );
 
     case "entertainer.manage_own_profile":

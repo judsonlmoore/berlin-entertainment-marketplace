@@ -2,7 +2,6 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
 import { auth } from "@/src/auth";
 import { RoleSelectionForm } from "@/src/components/role-selection-form";
-import { Link } from "@/src/i18n/navigation";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -10,7 +9,6 @@ export default async function RoleSelectionPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("roleSelection");
-  const nav = await getTranslations("nav");
   const session = await auth();
 
   if (!session?.user) {

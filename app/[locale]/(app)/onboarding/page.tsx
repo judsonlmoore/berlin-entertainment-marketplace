@@ -56,7 +56,7 @@ export default async function OnboardingPage({ params }: Props) {
   return (
     <section className="mx-auto max-w-xl">
       <h1 className="page-title text-3xl">{t("title")}</h1>
-      
+
       {roles.length > 1 && (
         <div className="mt-6">
           <RoleModeToggle

@@ -62,7 +62,8 @@ async function loadMarketplaceSessionFields(userId: string) {
     approvalState:
       (account?.approvalState as ApprovalState | undefined) ?? null,
     roles: roles.map((role) => role.role as MarketplaceRole),
-    activeRoleMode: (user?.activeRoleMode as MarketplaceRole | undefined) ?? null,
+    activeRoleMode:
+      (user?.activeRoleMode as MarketplaceRole | undefined) ?? null,
   };
 }
 
@@ -156,7 +157,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             approvalState:
               (token.approvalState as ApprovalState | null) ?? null,
             roles: (token.roles as MarketplaceRole[] | undefined) ?? [],
-            activeRoleMode: (token.activeRoleMode as MarketplaceRole | null | undefined) ?? null,
+            activeRoleMode:
+              (token.activeRoleMode as MarketplaceRole | null | undefined) ??
+              null,
           };
 
       session.user.id = userId;

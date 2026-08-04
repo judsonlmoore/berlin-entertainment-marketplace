@@ -13,7 +13,12 @@ type Props = {
   existingRoles?: readonly string[];
 };
 
-export function ApplicationForm({ locale, defaultName, defaultEmail, existingRoles = [] }: Props) {
+export function ApplicationForm({
+  locale,
+  defaultName,
+  defaultEmail,
+  existingRoles = [],
+}: Props) {
   const t = useTranslations("apply");
   const errors = useTranslations("errors");
   const ui = useTranslations("ui");

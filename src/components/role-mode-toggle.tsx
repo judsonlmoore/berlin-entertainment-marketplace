@@ -12,11 +12,7 @@ type Props = {
   locale: "en" | "de";
 };
 
-export function RoleModeToggle({
-  currentMode,
-  availableRoles,
-  locale,
-}: Props) {
+export function RoleModeToggle({ currentMode, availableRoles, locale }: Props) {
   const t = useTranslations("roleMode");
   const errors = useTranslations("errors");
   const router = useRouter();
@@ -65,9 +61,7 @@ export function RoleModeToggle({
         <span className="text-sm">
           {t("currentMode", {
             role: t(
-              currentMode === "entertainer"
-                ? "entertainerMode"
-                : "venueMode",
+              currentMode === "entertainer" ? "entertainerMode" : "venueMode",
             ),
           })}
         </span>
@@ -81,9 +75,7 @@ export function RoleModeToggle({
             ? "..."
             : t("switchTo", {
                 role: t(
-                  otherRole === "entertainer"
-                    ? "entertainerMode"
-                    : "venueMode",
+                  otherRole === "entertainer" ? "entertainerMode" : "venueMode",
                 ),
               })}
         </button>
