@@ -7,6 +7,7 @@ function actor(overrides: Partial<ActorContext> = {}): ActorContext {
     isPlatformStaff: false,
     approvalState: "approved",
     roles: ["entertainer"],
+    activeRoleMode: null,
     venueMemberships: [],
     ...overrides,
   };
