@@ -60,3 +60,5 @@ npm run check
 - Honest unconfigured file/e-sign integration boundaries
 
 Do not claim Vercel, Neon, Blob, OAuth, or e-sign connectivity until credentials are present and smoke-tested.
+
+<!-- neon probe 1785824638 -->
