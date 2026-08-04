@@ -1,92 +1,77 @@
-import { eq } from "drizzle-orm";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { redirect } from "next/navigation";
+import { redirect } from "@/src/i18n/navigation";
+import { Link } from "@/src/i18n/navigation";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { marketplaceAccounts, userRoles } from "@/src/db/schema/marketplace";
-import { Link } from "@/src/i18n/navigation";
-import type { ApprovalState } from "@/src/domain/approval";
-import { RoleModeToggle } from "@/src/components/role-mode-toggle";
+import { eq } from "drizzle-orm";
+import { userRoles } from "@/src/db/schema/marketplace";
+import { getActorContext } from "@/src/db/queries/actor";
+import { VerificationBanner } from "@/src/components/verification-banner";
 
-type Props = { params: Promise<{ locale: string }> };
+type Props = {
+  params: Promise<{ locale: string }>;
+};
 
 export default async function OnboardingPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("onboarding");
-  const status = await getTranslations("status");
-  const nav = await getTranslations("nav");
   const session = await auth();
 
-  if (!session?.user) {
+  if (!session?.user?.id) {
     return (
-      <section className="mx-auto max-w-xl">
-        <h1 className="page-title text-3xl">{t("title")}</h1>
-        <p className="mt-4">
-          <Link href="/sign-in">{nav("signIn")}</Link>
+      <section className="grid gap-6">
+        <h1 className="page-title text-[clamp(1.75rem,2.5vw,2.25rem)]">
+          {t("title")}
+        </h1>
+        <p>
+          <Link href="/sign-in">{t("ctaApply")}</Link>
         </p>
       </section>
     );
   }
 
-  // Redirect to role selection if no active role mode is set
-  if (!session.user.activeRoleMode) {
-    redirect(`/${locale}/onboarding/role-selection`);
-  }
-
-  let account: { approvalState: ApprovalState } | null = null;
-  let roles: string[] = session.user.roles;
-
   if (process.env.DATABASE_URL) {
     const db = getDb();
-    const [row, roleRows] = await Promise.all([
-      db.query.marketplaceAccounts.findFirst({
-        where: eq(marketplaceAccounts.userId, session.user.id),
-      }),
-      db.query.userRoles.findMany({
-        where: eq(userRoles.userId, session.user.id),
-      }),
-    ]);
-    account = row
-      ? { approvalState: row.approvalState as ApprovalState }
-      : null;
-    roles = roleRows.map((role) => role.role);
+    const role = await db.query.userRoles.findFirst({
+      where: eq(userRoles.userId, session.user.id),
+    });
+    if (!role) {
+      redirect({
+        href: "/onboarding/role-selection",
+        locale: locale as "en" | "de",
+      });
+    }
+  } else if (!session.user.roles.length) {
+    redirect({
+      href: "/onboarding/role-selection",
+      locale: locale as "en" | "de",
+    });
   }
 
+  const actor = process.env.DATABASE_URL
+    ? await getActorContext(session.user.id)
+    : null;
+  const needsVerification =
+    actor &&
+    ((actor.roles.includes("entertainer") && !actor.entertainerVerified) ||
+      (actor.roles.includes("venue") && !actor.venueVerified));
+
   return (
-    <section className="mx-auto max-w-xl">
-      <h1 className="page-title text-3xl">{t("title")}</h1>
-
-      {roles.length > 1 && (
-        <div className="mt-6">
-          <RoleModeToggle
-            currentMode={session.user.activeRoleMode}
-            availableRoles={roles as Array<"entertainer" | "venue">}
-            locale={locale as "en" | "de"}
-          />
-        </div>
-      )}
-
-      <div className="panel mt-8 grid gap-3 p-6">
-        {account ? (
-          <>
-            <p>
-              {t("approvalLabel")}:{" "}
-              <strong>{status(account.approvalState)}</strong>
-            </p>
-            <p>
-              {t("rolesLabel")}: {roles.join(", ") || "—"}
-            </p>
-            <p>
-              <Link href="/profile">{t("ctaProfile")}</Link>
-            </p>
-          </>
-        ) : (
-          <>
-            <p>{t("noAccount")}</p>
-            <Link href="/apply">{t("ctaApply")}</Link>
-          </>
-        )}
+    <section className="grid gap-6">
+      <h1 className="page-title text-[clamp(1.75rem,2.5vw,2.25rem)]">
+        {t("title")}
+      </h1>
+      {needsVerification ? <VerificationBanner /> : null}
+      <div className="panel grid gap-3 p-6">
+        <p className="text-sm text-[var(--text-muted)]">{t("approvalLabel")}</p>
+        <p>
+          <Link href="/profile">{t("ctaProfile")}</Link>
+          {" · "}
+          <Link href="/marketplace/calendar">{t("ctaCalendar")}</Link>
+          {" · "}
+          <Link href="/marketplace">{t("ctaMarketplace")}</Link>
+        </p>
       </div>
     </section>
   );

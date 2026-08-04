@@ -161,8 +161,8 @@ export default async function CalendarPage({ params, searchParams }: Props) {
     })),
   ];
 
-  // Prefer resource for active role mode; dual-role can still switch explicitly.
-  const preferVenue = access.actor.activeRoleMode === "venue";
+  // Prefer calendar resource matching the account role.
+  const preferVenue = access.actor.roles.includes("venue");
   const preferredKey =
     (preferVenue
       ? resources.find((r) => r.kind === "venue")?.key

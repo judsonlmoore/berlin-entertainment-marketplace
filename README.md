@@ -55,7 +55,7 @@ npm run check
 
 - App Router + strict TypeScript + Tailwind foundation
 - Core Drizzle schema/migrations, Auth.js OAuth (Google/GitHub), database sessions
-- Account approval, dual-role profiles, venue membership, private discovery projections
+- Self-serve XOR signup (entertainer or venue), account suspend, venue membership, private discovery projections, profile verification
 - English/German catalogs and locale-prefixed routes
 - Honest unconfigured file/e-sign integration boundaries
 

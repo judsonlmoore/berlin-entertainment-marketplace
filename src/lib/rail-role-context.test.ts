@@ -6,9 +6,10 @@ function actor(partial: Partial<ActorContext>): ActorContext {
   return {
     userId: "user-1",
     isPlatformStaff: false,
-    approvalState: "approved",
+    accountStatus: "active",
     roles: [],
-    activeRoleMode: null,
+    entertainerVerified: false,
+    venueVerified: false,
     venueMemberships: [],
     ...partial,
   };
@@ -16,11 +17,9 @@ function actor(partial: Partial<ActorContext>): ActorContext {
 
 describe("resolveEffectiveRoleMode", () => {
   it("returns entertainer for act-only accounts", () => {
-    expect(
-      resolveEffectiveRoleMode(
-        actor({ roles: ["entertainer"], activeRoleMode: null }),
-      ),
-    ).toBe("entertainer");
+    expect(resolveEffectiveRoleMode(actor({ roles: ["entertainer"] }))).toBe(
+      "entertainer",
+    );
   });
 
   it("returns venue for venue-only accounts", () => {
@@ -28,7 +27,6 @@ describe("resolveEffectiveRoleMode", () => {
       resolveEffectiveRoleMode(
         actor({
           roles: ["venue"],
-          activeRoleMode: null,
           venueMemberships: [
             { venueId: "v1", role: "owner", status: "active" },
           ],
@@ -37,31 +35,16 @@ describe("resolveEffectiveRoleMode", () => {
     ).toBe("venue");
   });
 
-  it("honors explicit dual-role mode", () => {
+  it("returns venue for membership-only operators", () => {
     expect(
       resolveEffectiveRoleMode(
         actor({
-          roles: ["entertainer", "venue"],
-          activeRoleMode: "venue",
+          roles: [],
           venueMemberships: [
-            { venueId: "v1", role: "owner", status: "active" },
+            { venueId: "v1", role: "member", status: "active" },
           ],
         }),
       ),
     ).toBe("venue");
-  });
-
-  it("defaults dual-role without mode to entertainer", () => {
-    expect(
-      resolveEffectiveRoleMode(
-        actor({
-          roles: ["entertainer", "venue"],
-          activeRoleMode: null,
-          venueMemberships: [
-            { venueId: "v1", role: "owner", status: "active" },
-          ],
-        }),
-      ),
-    ).toBe("entertainer");
   });
 });

@@ -35,7 +35,8 @@ export default async function HomePage({ params }: Props) {
   const session = await auth();
   const signedIn = Boolean(session?.user);
   const canEnter =
-    session?.user?.approvalState === "approved" ||
+    session?.user?.accountStatus === "active" ||
+    Boolean(session?.user?.roles?.length) ||
     Boolean(session?.user?.isPlatformStaff);
 
   let venueNames: string[] = [];

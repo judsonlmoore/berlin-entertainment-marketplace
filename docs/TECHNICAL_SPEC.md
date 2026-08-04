@@ -49,8 +49,8 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 
 - `users`: Auth.js-compatible identity plus locale and platform staff flag
 - `accounts`, `sessions`, `verification_tokens`, `authenticators`: Auth.js adapter tables
-- `marketplace_accounts`: user ID, approval state, application metadata, reviewed by/at/reason
-- `user_roles`: user ID + `entertainer`/`venue`
+- `marketplace_accounts`: user ID, account status (`active`/`suspended`), terms acceptance, reviewed by/at/reason for suspend
+- `user_roles`: user ID + exactly one of `entertainer`/`venue` (unique per user)
 - `contact_methods`: owner type/ID, kind, encrypted-or-protected value, preferred flag
 - `audit_events`: actor, action, subject, structured metadata, request correlation, timestamp
 
@@ -100,7 +100,7 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 - Configure Auth.js in `src/auth.ts` with `@auth/drizzle-adapter` and the shared Drizzle client.
 - Persist sessions in the database. Use secure, HTTP-only, same-site cookies and trusted host/origin configuration.
 - Provider credentials remain environment configuration. A development-only demo bypass, if retained, must be explicit, impossible in production, visibly labeled, and never share production data.
-- Central permission functions evaluate authenticated user, approval state, platform staff role, requested capability, organization membership, and record ownership.
+- Central permission functions evaluate authenticated user, account status, profile publication verification for contact, platform staff role, requested capability, organization membership, and record ownership.
 - Suspended users lose private reads/writes immediately; preserve bookings/audit history for staff handling.
 - Protect at data access and mutation boundaries. A route proxy may redirect early but is not sufficient authorization.
 - Prevent open redirects and account-linking ambiguity; normalize and verify provider email behavior.

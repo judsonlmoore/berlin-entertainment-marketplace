@@ -1,24 +1,15 @@
-export const APPROVAL_STATES = [
-  "applied",
-  "invited",
-  "approved",
-  "suspended",
-  "rejected",
-] as const;
+export const ACCOUNT_STATUSES = ["active", "suspended"] as const;
 
-export type ApprovalState = (typeof APPROVAL_STATES)[number];
+export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 
-const STAFF_TRANSITIONS: Record<ApprovalState, readonly ApprovalState[]> = {
-  applied: ["invited", "approved", "suspended", "rejected"],
-  invited: ["applied", "approved", "suspended", "rejected"],
-  approved: ["suspended", "applied", "rejected"],
-  suspended: ["approved", "applied", "rejected"],
-  rejected: ["applied", "invited"],
+const STAFF_TRANSITIONS: Record<AccountStatus, readonly AccountStatus[]> = {
+  active: ["suspended"],
+  suspended: ["active"],
 };
 
-export function canTransitionApproval(
-  from: ApprovalState,
-  to: ApprovalState,
+export function canTransitionAccountStatus(
+  from: AccountStatus,
+  to: AccountStatus,
 ): boolean {
   if (from === to) {
     return false;
@@ -26,15 +17,22 @@ export function canTransitionApproval(
   return STAFF_TRANSITIONS[from].includes(to);
 }
 
-export function assertApprovalTransition(
-  from: ApprovalState,
-  to: ApprovalState,
+export function assertAccountStatusTransition(
+  from: AccountStatus,
+  to: AccountStatus,
 ): void {
-  if (!canTransitionApproval(from, to)) {
-    throw new Error(`Invalid approval transition: ${from} -> ${to}`);
+  if (!canTransitionAccountStatus(from, to)) {
+    throw new Error(`Invalid account status transition: ${from} -> ${to}`);
   }
 }
 
-export function hasMarketplaceAccess(state: ApprovalState): boolean {
-  return state === "approved";
+/** Active (non-suspended) accounts may use private marketplace surfaces. */
+export function hasMarketplaceAccess(status: AccountStatus): boolean {
+  return status === "active";
 }
+
+/** @deprecated Use AccountStatus / hasMarketplaceAccess(status) */
+export type ApprovalState = AccountStatus;
+export const APPROVAL_STATES = ACCOUNT_STATUSES;
+export const canTransitionApproval = canTransitionAccountStatus;
+export const assertApprovalTransition = assertAccountStatusTransition;

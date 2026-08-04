@@ -30,7 +30,7 @@ export default async function AuthLayout({ children }: Props) {
   const needsApplication =
     signedIn &&
     !session?.user?.isPlatformStaff &&
-    session?.user?.approvalState !== "approved";
+    (!session?.user?.roles || session.user.roles.length === 0);
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--canvas)]">

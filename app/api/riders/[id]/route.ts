@@ -38,7 +38,7 @@ export async function GET(_request: Request, { params }: Props) {
   }
   if (
     !actor.isPlatformStaff &&
-    (actor.approvalState === null || !hasMarketplaceAccess(actor.approvalState))
+    (actor.accountStatus === null || !hasMarketplaceAccess(actor.accountStatus))
   ) {
     return NextResponse.json(
       { ok: false, error: "forbidden" },

@@ -1,5 +1,5 @@
 import { AppError } from "./errors";
-import { hasMarketplaceAccess, type ApprovalState } from "./approval";
+import { hasMarketplaceAccess, type AccountStatus } from "./approval";
 
 export type MarketplaceRole = "entertainer" | "venue";
 export type VenueMembershipRole = "owner" | "member";
@@ -7,9 +7,12 @@ export type VenueMembershipRole = "owner" | "member";
 export type ActorContext = {
   userId: string;
   isPlatformStaff: boolean;
-  approvalState: ApprovalState | null;
+  accountStatus: AccountStatus | null;
   roles: readonly MarketplaceRole[];
-  activeRoleMode: MarketplaceRole | null;
+  /** Entertainer profile publication is staff-approved. */
+  entertainerVerified: boolean;
+  /** At least one venue org the user belongs to is staff-approved for publication. */
+  venueVerified: boolean;
   venueMemberships: readonly {
     venueId: string;
     role: VenueMembershipRole;
@@ -17,12 +20,11 @@ export type ActorContext = {
   }[];
 };
 
-/** Profile drafting before staff approval (not rejected/suspended). */
+/** Profile drafting for active members (and staff). */
 function canDraftProfiles(actor: ActorContext): boolean {
   return (
-    actor.approvalState === "applied" ||
-    actor.approvalState === "invited" ||
-    actor.approvalState === "approved"
+    actor.isPlatformStaff ||
+    (actor.accountStatus !== null && hasMarketplaceAccess(actor.accountStatus))
   );
 }
 
@@ -56,7 +58,7 @@ export type Permission =
 function hasPrivateAccess(actor: ActorContext): boolean {
   return (
     actor.isPlatformStaff ||
-    (actor.approvalState !== null && hasMarketplaceAccess(actor.approvalState))
+    (actor.accountStatus !== null && hasMarketplaceAccess(actor.accountStatus))
   );
 }
 
@@ -99,24 +101,15 @@ export function can(
       return hasPrivateAccess(actor);
 
     case "discover.entertainers":
-      // Venues (and staff) browse acts — never peer entertainers as the primary mode.
-      // For dual-role users, respect their active mode.
       return (
         actor.isPlatformStaff ||
-        (hasPrivateAccess(actor) &&
-          isActiveVenueOperator(actor) &&
-          (actor.activeRoleMode === "venue" || actor.activeRoleMode === null))
+        (hasPrivateAccess(actor) && isActiveVenueOperator(actor))
       );
 
     case "discover.venues":
-      // Entertainers (and staff) browse venues/opportunities.
-      // For dual-role users, respect their active mode.
       return (
         actor.isPlatformStaff ||
-        (hasPrivateAccess(actor) &&
-          actor.roles.includes("entertainer") &&
-          (actor.activeRoleMode === "entertainer" ||
-            actor.activeRoleMode === null))
+        (hasPrivateAccess(actor) && actor.roles.includes("entertainer"))
       );
 
     case "entertainer.manage_own_profile":
@@ -135,20 +128,26 @@ export function can(
     case "venue.operate":
     case "opportunity.manage":
     case "application.review":
+      return (
+        Boolean(resource?.venueId) &&
+        isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
+        hasPrivateAccess(actor)
+      );
+
     case "direct_request.send":
       return (
         Boolean(resource?.venueId) &&
         isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
-        actor.approvalState !== null &&
-        hasMarketplaceAccess(actor.approvalState)
+        hasPrivateAccess(actor) &&
+        actor.venueVerified
       );
 
     case "opportunity.apply":
     case "direct_request.respond":
       return (
         actor.roles.includes("entertainer") &&
-        actor.approvalState !== null &&
-        hasMarketplaceAccess(actor.approvalState)
+        hasPrivateAccess(actor) &&
+        actor.entertainerVerified
       );
 
     case "booking.view":
@@ -157,26 +156,20 @@ export function can(
     case "booking.cancel":
     case "booking.generate_agreement":
     case "booking.sign_agreement":
-      return (
-        actor.isPlatformStaff ||
-        (actor.approvalState !== null &&
-          hasMarketplaceAccess(actor.approvalState))
-      );
+      return actor.isPlatformStaff || hasPrivateAccess(actor);
 
     case "booking.record_deposit":
       return (
         actor.isPlatformStaff ||
         (Boolean(resource?.venueId) &&
           isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
-          actor.approvalState !== null &&
-          hasMarketplaceAccess(actor.approvalState))
+          hasPrivateAccess(actor))
       );
 
     case "calendar.manage":
       return (
         actor.isPlatformStaff ||
-        (actor.approvalState !== null &&
-          hasMarketplaceAccess(actor.approvalState) &&
+        (hasPrivateAccess(actor) &&
           (actor.roles.includes("entertainer") ||
             actor.venueMemberships.some((m) => m.status === "active")))
       );

@@ -5,9 +5,10 @@ function actor(overrides: Partial<ActorContext> = {}): ActorContext {
   return {
     userId: "user-1",
     isPlatformStaff: false,
-    approvalState: "approved",
+    accountStatus: "active",
     roles: ["entertainer"],
-    activeRoleMode: null,
+    entertainerVerified: true,
+    venueVerified: false,
     venueMemberships: [],
     ...overrides,
   };
@@ -29,15 +30,6 @@ describe("role-segregated discovery surfaces", () => {
     expect(can(a, "marketplace.discover")).toBe(true);
     expect(can(a, "discover.entertainers")).toBe(true);
     expect(can(a, "discover.venues")).toBe(false);
-  });
-
-  it("allows dual-role users both discovery modes", () => {
-    const a = actor({
-      roles: ["entertainer", "venue"],
-      venueMemberships: [{ venueId: "v1", role: "member", status: "active" }],
-    });
-    expect(can(a, "discover.entertainers")).toBe(true);
-    expect(can(a, "discover.venues")).toBe(true);
   });
 
   it("treats active venue membership as venue operator for act discovery", () => {

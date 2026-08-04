@@ -1,11 +1,8 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-export const approvalStateEnum = pgEnum("approval_state", [
-  "applied",
-  "invited",
-  "approved",
+export const accountStatusEnum = pgEnum("account_status", [
+  "active",
   "suspended",
-  "rejected",
 ]);
 
 export const marketplaceRoleEnum = pgEnum("marketplace_role", [

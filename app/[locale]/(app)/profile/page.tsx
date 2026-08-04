@@ -66,8 +66,8 @@ export default async function ProfilePage({ params }: Props) {
 
   const checklist = [
     {
-      ok: Boolean(session.user.approvalState === "approved"),
-      label: t("checkAccountApproved"),
+      ok: Boolean(session.user.accountStatus === "active"),
+      label: t("checkAccountActive"),
     },
     {
       ok: showEntertainer
@@ -228,7 +228,7 @@ export default async function ProfilePage({ params }: Props) {
               body={t("body")}
             />
             <div className="mt-2">
-              <StatusLabel>{session.user.approvalState ?? "—"}</StatusLabel>
+              <StatusLabel>{session.user.accountStatus ?? "—"}</StatusLabel>
             </div>
           </div>
         </div>

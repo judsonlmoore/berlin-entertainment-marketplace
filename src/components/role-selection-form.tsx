@@ -50,7 +50,7 @@ export function RoleSelectionForm({ locale }: Props) {
             return;
           }
 
-          router.push("/onboarding");
+          router.push("/marketplace");
           router.refresh();
         });
       }}

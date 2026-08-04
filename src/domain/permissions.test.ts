@@ -5,29 +5,30 @@ function actor(overrides: Partial<ActorContext> = {}): ActorContext {
   return {
     userId: "user-1",
     isPlatformStaff: false,
-    approvalState: "approved",
+    accountStatus: "active",
     roles: ["entertainer"],
-    activeRoleMode: null,
+    entertainerVerified: true,
+    venueVerified: false,
     venueMemberships: [],
     ...overrides,
   };
 }
 
 describe("permissions", () => {
-  it("denies marketplace discovery for unapproved users", () => {
+  it("denies marketplace discovery for suspended users", () => {
     expect(
-      can(actor({ approvalState: "applied" }), "marketplace.discover"),
+      can(actor({ accountStatus: "suspended" }), "marketplace.discover"),
     ).toBe(false);
   });
 
-  it("allows marketplace discovery for approved users", () => {
+  it("allows marketplace discovery for active users", () => {
     expect(can(actor(), "marketplace.discover")).toBe(true);
   });
 
-  it("allows staff to change approval even when not marketplace-approved", () => {
+  it("allows staff to change account status", () => {
     expect(
       can(
-        actor({ isPlatformStaff: true, approvalState: null, roles: [] }),
+        actor({ isPlatformStaff: true, accountStatus: null, roles: [] }),
         "admin.change_approval",
       ),
     ).toBe(true);
@@ -67,7 +68,7 @@ describe("permissions", () => {
     expect(
       can(
         actor({
-          approvalState: "suspended",
+          accountStatus: "suspended",
           roles: ["venue"],
           venueMemberships: [
             { venueId: "venue-1", role: "owner", status: "active" },
@@ -79,44 +80,61 @@ describe("permissions", () => {
     ).toBe(false);
   });
 
-  it("allows venue role holders to create venues before rejection/suspension", () => {
+  it("allows venue role holders to create venues when active", () => {
     expect(can(actor({ roles: ["venue"] }), "venue.create")).toBe(true);
     expect(
       can(
-        actor({ roles: ["venue"], approvalState: "applied" }),
-        "venue.create",
-      ),
-    ).toBe(true);
-    expect(
-      can(
-        actor({ roles: ["venue"], approvalState: "suspended" }),
-        "venue.create",
-      ),
-    ).toBe(false);
-    expect(
-      can(
-        actor({ roles: ["venue"], approvalState: "rejected" }),
+        actor({ roles: ["venue"], accountStatus: "suspended" }),
         "venue.create",
       ),
     ).toBe(false);
   });
 
-  it("allows approved entertainers to apply and venue operators to review", () => {
+  it("gates apply and respond on entertainer verification", () => {
     expect(can(actor({ roles: ["entertainer"] }), "opportunity.apply")).toBe(
       true,
     );
     expect(
       can(
+        actor({ roles: ["entertainer"], entertainerVerified: false }),
+        "opportunity.apply",
+      ),
+    ).toBe(false);
+    expect(
+      can(
+        actor({ roles: ["entertainer"], entertainerVerified: false }),
+        "direct_request.respond",
+      ),
+    ).toBe(false);
+  });
+
+  it("gates direct request send on venue verification", () => {
+    expect(
+      can(
         actor({
           roles: ["venue"],
+          venueVerified: true,
+          venueMemberships: [
+            { venueId: "venue-1", role: "member", status: "active" },
+          ],
+        }),
+        "direct_request.send",
+        { venueId: "venue-1" },
+      ),
+    ).toBe(true);
+    expect(
+      can(
+        actor({
+          roles: ["venue"],
+          venueVerified: false,
           venueMemberships: [
             { venueId: "venue-1", role: "owner", status: "active" },
           ],
         }),
-        "application.review",
+        "direct_request.send",
         { venueId: "venue-1" },
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("role-segregates entertainer vs venue discovery", () => {
@@ -151,61 +169,17 @@ describe("permissions", () => {
     ).toBe(false);
 
     expect(
-      can(actor({ roles: ["entertainer", "venue"] }), "discover.entertainers"),
-    ).toBe(true);
-    expect(
-      can(actor({ roles: ["entertainer", "venue"] }), "discover.venues"),
-    ).toBe(true);
-
-    expect(
       can(
-        actor({ isPlatformStaff: true, approvalState: null, roles: [] }),
+        actor({ isPlatformStaff: true, accountStatus: null, roles: [] }),
         "discover.entertainers",
       ),
     ).toBe(true);
   });
 
-  it("allows approved venue operators to send direct requests", () => {
-    expect(
-      can(
-        actor({
-          roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "member", status: "active" },
-          ],
-        }),
-        "direct_request.send",
-        { venueId: "venue-1" },
-      ),
-    ).toBe(true);
-    expect(
-      can(
-        actor({
-          approvalState: "applied",
-          roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "owner", status: "active" },
-          ],
-        }),
-        "direct_request.send",
-        { venueId: "venue-1" },
-      ),
-    ).toBe(false);
-  });
-
-  it("allows approved entertainers to respond to direct requests", () => {
-    expect(
-      can(actor({ roles: ["entertainer"] }), "direct_request.respond"),
-    ).toBe(true);
-    expect(can(actor({ roles: ["venue"] }), "direct_request.respond")).toBe(
-      false,
-    );
-  });
-
   it("gates booking mutations behind marketplace access", () => {
     expect(can(actor(), "booking.propose_terms")).toBe(true);
     expect(
-      can(actor({ approvalState: "applied" }), "booking.accept_terms"),
+      can(actor({ accountStatus: "suspended" }), "booking.accept_terms"),
     ).toBe(false);
     expect(
       can(

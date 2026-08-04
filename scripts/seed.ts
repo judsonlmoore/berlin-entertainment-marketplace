@@ -77,7 +77,7 @@ async function main() {
 
   async function ensureAccount(
     userId: string,
-    state: "applied" | "approved",
+    status: "active" | "suspended",
     roles: Array<"entertainer" | "venue">,
   ) {
     const existing = await db.query.marketplaceAccounts.findFirst({
@@ -86,21 +86,24 @@ async function main() {
     if (!existing) {
       await db.insert(marketplaceAccounts).values({
         userId,
-        approvalState: state,
+        accountStatus: status,
         berlinConnection: "Synthetic Berlin pilot fixture",
         termsAcceptedAt: new Date(),
-        reviewedByUserId: state === "approved" ? staff.id : null,
-        reviewedAt: state === "approved" ? new Date() : null,
-        reviewReason: state === "approved" ? "Seeded approved fixture" : null,
+        reviewedByUserId: status === "suspended" ? staff.id : null,
+        reviewedAt: status === "suspended" ? new Date() : null,
+        reviewReason:
+          status === "suspended" ? "Seeded suspended fixture" : null,
       });
     }
 
     await db.delete(userRoles).where(eq(userRoles.userId, userId));
-    await db.insert(userRoles).values(roles.map((role) => ({ userId, role })));
+    await db
+      .insert(userRoles)
+      .values(roles.slice(0, 1).map((role) => ({ userId, role })));
   }
 
-  await ensureAccount(entertainer.id, "approved", ["entertainer"]);
-  await ensureAccount(venueOperator.id, "approved", ["venue"]);
+  await ensureAccount(entertainer.id, "active", ["entertainer"]);
+  await ensureAccount(venueOperator.id, "active", ["venue"]);
 
   let entertainerProfile = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.userId, entertainer.id),

@@ -40,7 +40,10 @@ export default async function AppLayout({ children, params }: Props) {
 
   const user = session!.user!;
   const isStaff = Boolean(user.isPlatformStaff);
-  let isApproved = user.approvalState === "approved" || isStaff;
+  let isApproved =
+    user.accountStatus === "active" ||
+    (user.accountStatus === null && isStaff) ||
+    isStaff;
   let canDiscoverEntertainers = isStaff;
   let canDiscoverVenues = isStaff;
   let roleContext = null;

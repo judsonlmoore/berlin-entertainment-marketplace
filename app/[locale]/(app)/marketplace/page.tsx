@@ -4,7 +4,7 @@ import { Avatar } from "@/src/components/ui/monogram";
 import { BookingLifecycleTrack } from "@/src/components/booking-lifecycle-track";
 import { Eyebrow } from "@/src/components/ui/eyebrow";
 import { StatusLabel } from "@/src/components/ui/status-label";
-import { RoleModeToggle } from "@/src/components/role-mode-toggle";
+import { VerificationBanner } from "@/src/components/verification-banner";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import {
   getNextActiveBooking,
@@ -100,13 +100,10 @@ export default async function MarketplacePage({ params }: Props) {
 
   return (
     <section className="grid gap-8">
-      {access.actor.roles.length > 1 && (
-        <RoleModeToggle
-          currentMode={access.actor.activeRoleMode}
-          availableRoles={access.actor.roles}
-          locale={locale as "en" | "de"}
-        />
-      )}
+      {((access.actor.roles.includes("entertainer") &&
+        !access.actor.entertainerVerified) ||
+        (access.actor.roles.includes("venue") &&
+          !access.actor.venueVerified)) && <VerificationBanner />}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>

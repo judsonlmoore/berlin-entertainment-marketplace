@@ -51,6 +51,11 @@ export default async function EntertainerDetailPage({ params }: Props) {
   const operableVenues = (await listVenuesForUser(access.actor.userId)).filter(
     (venue) => can(access.actor, "direct_request.send", { venueId: venue.id }),
   );
+  const showRequestLocked =
+    !isOwnProfile &&
+    canBrowseActs &&
+    access.actor.roles.includes("venue") &&
+    !access.actor.venueVerified;
 
   return (
     <section className="mx-auto max-w-2xl">
@@ -145,6 +150,15 @@ export default async function EntertainerDetailPage({ params }: Props) {
             }))}
           />
         </div>
+      ) : null}
+
+      {showRequestLocked ? (
+        <p className="panel mt-4 p-6 text-sm text-[var(--muted)]">
+          {t("requestActLocked")}{" "}
+          <Link href="/profile" className="font-medium underline">
+            {t("viewProfile")}
+          </Link>
+        </p>
       ) : null}
     </section>
   );

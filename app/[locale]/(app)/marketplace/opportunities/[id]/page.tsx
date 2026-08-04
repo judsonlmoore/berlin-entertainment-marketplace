@@ -117,8 +117,14 @@ export default async function OpportunityDetailPage({ params }: Props) {
   const canApply =
     can(access.actor, "opportunity.apply") &&
     accepting &&
-    (!ownApplication || ownApplication.state === "draft") &&
-    ownProfile?.publicationState === "approved";
+    (!ownApplication || ownApplication.state === "draft");
+
+  const applyBlockedByVerification =
+    !canApply &&
+    !ownApplication &&
+    accepting &&
+    access.actor.roles.includes("entertainer") &&
+    !access.actor.entertainerVerified;
 
   return (
     <section className="mx-auto grid max-w-3xl gap-6">
@@ -270,10 +276,7 @@ export default async function OpportunityDetailPage({ params }: Props) {
         </div>
       ) : null}
 
-      {!canApply &&
-      !ownApplication &&
-      can(access.actor, "opportunity.apply") &&
-      ownProfile?.publicationState !== "approved" ? (
+      {applyBlockedByVerification ? (
         <p className="panel p-6 text-sm">
           {t("needApprovedProfile")}{" "}
           <Link href="/profile">{t("goToProfile")}</Link>
