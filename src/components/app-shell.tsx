@@ -40,7 +40,6 @@ type Props = {
   locale: "en" | "de";
   userName: string;
   userImage?: string | null | undefined;
-  approvalLabel: string;
   isStaff: boolean;
   isApproved: boolean;
   canDiscoverEntertainers: boolean;
@@ -81,7 +80,7 @@ function RailNav({
   pathname,
   userName,
   userImage,
-  approvalLabel,
+  accountTypeLabel,
   roleContext,
   locale,
   navId,
@@ -92,7 +91,7 @@ function RailNav({
   pathname: string;
   userName: string;
   userImage?: string | null | undefined;
-  approvalLabel: string;
+  accountTypeLabel: string;
   roleContext?: RailRoleContextData | null;
   locale: "en" | "de";
   navId?: string;
@@ -146,7 +145,7 @@ function RailNav({
         <AccountMenu
           userName={userName}
           userImage={userImage}
-          approvalLabel={approvalLabel}
+          accountTypeLabel={accountTypeLabel}
           items={accountItems}
           onNavigate={onNavigate}
         />
@@ -160,7 +159,6 @@ export function AppShell({
   locale,
   userName,
   userImage,
-  approvalLabel,
   isStaff,
   isApproved,
   canDiscoverEntertainers,
@@ -177,6 +175,14 @@ export function AppShell({
 
   const closeMenu = useCallback(() => setMenuOpen(false), []);
   const toggleMenu = useCallback(() => setMenuOpen((open) => !open), []);
+
+  const accountTypeLabel = roleContext
+    ? tRole(
+        roleContext.mode === "entertainer" ? "entertainerMode" : "venueMode",
+      )
+    : isStaff
+      ? t("admin")
+      : "";
 
   const discoverItems: NavItem[] = [];
   if (canDiscoverEntertainers && canDiscoverVenues) {
@@ -289,7 +295,7 @@ export function AppShell({
           pathname={pathname}
           userName={userName}
           userImage={userImage}
-          approvalLabel={approvalLabel}
+          accountTypeLabel={accountTypeLabel}
           roleContext={roleContext}
           locale={locale}
         />
@@ -347,7 +353,7 @@ export function AppShell({
             pathname={pathname}
             userName={userName}
             userImage={userImage}
-            approvalLabel={approvalLabel}
+            accountTypeLabel={accountTypeLabel}
             roleContext={roleContext}
             locale={locale}
             onNavigate={closeMenu}
@@ -386,7 +392,7 @@ export function AppShell({
           <AccountMenu
             userName={userName}
             userImage={userImage}
-            approvalLabel={approvalLabel}
+            accountTypeLabel={accountTypeLabel}
             items={accountItems}
             variant="header"
           />

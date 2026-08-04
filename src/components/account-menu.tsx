@@ -34,7 +34,8 @@ function ChevronIcon({ open }: { open: boolean }) {
 type Props = {
   userName: string;
   userImage?: string | null | undefined;
-  approvalLabel: string;
+  /** Subtitle under the name — account type (entertainer / venue). */
+  accountTypeLabel: string;
   items: AccountNavItem[];
   /** Rail/drawer: open upward on dark chrome. Header: compact trigger, open downward. */
   variant?: "rail" | "header";
@@ -44,7 +45,7 @@ type Props = {
 export function AccountMenu({
   userName,
   userImage,
-  approvalLabel,
+  accountTypeLabel,
   items,
   variant = "rail",
   onNavigate,
@@ -128,7 +129,7 @@ export function AccountMenu({
                 {userName}
               </span>
               <span className="block truncate text-xs text-[var(--rail-muted)]">
-                {approvalLabel}
+                {accountTypeLabel}
               </span>
             </span>
             <ChevronIcon open={open} />
