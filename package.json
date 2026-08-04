@@ -28,6 +28,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@fullcalendar/react": "7.0.2",
     "@neondatabase/serverless": "^1.1.0",
+    "@swc/helpers": "^0.5.23",
     "@tiptap/extension-placeholder": "^3.29.2",
     "@tiptap/extension-underline": "^3.29.2",
     "@tiptap/pm": "^3.29.2",

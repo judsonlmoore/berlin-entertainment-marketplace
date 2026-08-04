@@ -47,9 +47,9 @@ describe("social urls", () => {
     expect(
       validatePlatformUrl("instagram", "https://twitter.com/salon").ok,
     ).toBe(false);
-    expect(
-      validatePlatformUrl("website", "https://drumson.live").ok,
-    ).toBe(true);
+    expect(validatePlatformUrl("website", "https://drumson.live").ok).toBe(
+      true,
+    );
   });
 
   it("still joins legacy fragments", () => {

@@ -124,9 +124,7 @@ export function LocationAutocomplete({
   return (
     <div className="grid gap-1 text-sm">
       <span className="font-medium text-[var(--ink)]">{label}</span>
-      {hint ? (
-        <p className="text-xs text-[var(--text-muted)]">{hint}</p>
-      ) : null}
+      {hint ? <p className="text-xs text-[var(--text-muted)]">{hint}</p> : null}
       <div className="relative">
         <input
           value={query}
@@ -204,7 +202,9 @@ export function LocationAutocomplete({
         </p>
       ) : null}
       {confirmed ? (
-        <p className="text-xs text-[var(--primary)]">{t("locationConfirmed")}</p>
+        <p className="text-xs text-[var(--primary)]">
+          {t("locationConfirmed")}
+        </p>
       ) : null}
     </div>
   );

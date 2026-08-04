@@ -280,7 +280,11 @@ export function OnboardingSetupWizard({
               categoryLabel={tProfile("category")}
               subcategoryLabel={tProfile("subcategory")}
               otherLabel={tProfile("subcategoryOther")}
-              onSelectionChange={({ categoryId, subcategoryId, otherLabel }) => {
+              onSelectionChange={({
+                categoryId,
+                subcategoryId,
+                otherLabel,
+              }) => {
                 updateEntertainer({
                   category: categoryId,
                   genres: encodeSubcategory(subcategoryId, otherLabel),
@@ -320,7 +324,11 @@ export function OnboardingSetupWizard({
               categoryLabel={tProfile("venueType")}
               subcategoryLabel={tProfile("subcategory")}
               otherLabel={tProfile("subcategoryOther")}
-              onSelectionChange={({ categoryId, subcategoryId, otherLabel }) => {
+              onSelectionChange={({
+                categoryId,
+                subcategoryId,
+                otherLabel,
+              }) => {
                 patchVenue({
                   venueType: encodeVenueType(
                     categoryId,

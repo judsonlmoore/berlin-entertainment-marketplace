@@ -70,9 +70,7 @@ export function LanguageMultiSelect({
   return (
     <div className="grid gap-1">
       <span className="text-sm font-medium text-[var(--ink)]">{label}</span>
-      {hint ? (
-        <p className="text-xs text-[var(--text-muted)]">{hint}</p>
-      ) : null}
+      {hint ? <p className="text-xs text-[var(--text-muted)]">{hint}</p> : null}
       <input
         ref={hiddenRef}
         type="hidden"

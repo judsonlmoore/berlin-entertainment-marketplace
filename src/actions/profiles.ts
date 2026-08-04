@@ -196,7 +196,10 @@ function assertEntertainerReadyForSubmit(profile: {
     max: 300,
   });
   if (!locationCheck.ok) {
-    throw new AppError("validation", "Select a base location before submitting");
+    throw new AppError(
+      "validation",
+      "Select a base location before submitting",
+    );
   }
   const technicalCheck = sanitizePlainText(profile.technicalRequirements, {
     min: TECHNICAL_MIN,
@@ -322,8 +325,7 @@ export async function upsertEntertainerProfile(
         existing?.publicationState === "submitted"
           ? ("draft" as const)
           : ((existing?.publicationState as
-              | ProfilePublicationState
-              | undefined) ?? "draft"),
+              ProfilePublicationState | undefined) ?? "draft"),
       updatedAt: now,
     };
 

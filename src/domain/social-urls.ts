@@ -102,7 +102,15 @@ export const VENUE_SOCIAL_ORDER: SocialPlatform[] = [
 
 export type PlatformUrlValidation =
   | { ok: true; value: string }
-  | { ok: false; code: "invalid_url" | "invalid_protocol" | "invalid_website" | "wrong_platform" | "spotify_path" };
+  | {
+      ok: false;
+      code:
+        | "invalid_url"
+        | "invalid_protocol"
+        | "invalid_website"
+        | "wrong_platform"
+        | "spotify_path";
+    };
 
 function hostsMatch(hostname: string, allowed: string[]): boolean {
   const bare = hostname.replace(/^www\./, "");

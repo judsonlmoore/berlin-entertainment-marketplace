@@ -24,10 +24,10 @@ describe("rich text sanitize", () => {
     expect(html).not.toContain("script");
     expect(html).not.toContain("<a");
 
-    const ok = validateRichTextField(
-      `<p>${"a".repeat(DESCRIPTION_MAX)}</p>`,
-      { min: 40, max: DESCRIPTION_MAX },
-    );
+    const ok = validateRichTextField(`<p>${"a".repeat(DESCRIPTION_MAX)}</p>`, {
+      min: 40,
+      max: DESCRIPTION_MAX,
+    });
     expect(ok.ok).toBe(true);
 
     const tooShort = validateRichTextField("<p>short</p>", {

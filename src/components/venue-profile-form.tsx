@@ -446,7 +446,9 @@ export function VenueProfileForm({
         ) : null}
 
         <div className="flex flex-wrap items-center gap-3 border-t border-[var(--rule)] pt-4">
-          <p className="text-sm text-[var(--text-muted)]">{t("autosaveHint")}</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            {t("autosaveHint")}
+          </p>
           {venueId ? (
             <Button
               type="button"

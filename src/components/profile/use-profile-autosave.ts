@@ -10,12 +10,7 @@ import {
 import type { ActionResult } from "@/src/actions/_shared";
 
 export type AutosavePhase =
-  | "idle"
-  | "dirty"
-  | "saving"
-  | "saved"
-  | "error"
-  | "blocked";
+  "idle" | "dirty" | "saving" | "saved" | "error" | "blocked";
 
 type Options<T> = {
   formRef: RefObject<HTMLFormElement | null>;

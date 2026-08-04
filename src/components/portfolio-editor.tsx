@@ -125,12 +125,38 @@ function EmptyHeroDropzone({
       }`}
     >
       <span>
-        <span className="mx-auto mb-2 flex size-9 items-center justify-center text-[var(--ink)]" aria-hidden>
+        <span
+          className="mx-auto mb-2 flex size-9 items-center justify-center text-[var(--ink)]"
+          aria-hidden
+        >
           <svg width="28" height="22" viewBox="0 0 28 22" fill="none">
-            <rect x="1" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" opacity="0.35" transform="rotate(-8 10 12)" />
-            <rect x="7" y="3" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.5" />
+            <rect
+              x="1"
+              y="5"
+              width="18"
+              height="14"
+              rx="2"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              opacity="0.35"
+              transform="rotate(-8 10 12)"
+            />
+            <rect
+              x="7"
+              y="3"
+              width="18"
+              height="14"
+              rx="2"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
             <circle cx="12" cy="8" r="1.5" fill="currentColor" />
-            <path d="M8 15l3.5-3.5L15 14l3-4 5 5" stroke="currentColor" strokeWidth="1.5" fill="none" />
+            <path
+              d="M8 15l3.5-3.5L15 14l3-4 5 5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              fill="none"
+            />
           </svg>
         </span>
         <span className="block text-sm font-semibold text-[var(--ink)]">
@@ -157,7 +183,9 @@ export function PortfolioEditor({
   const [uploading, setUploading] = useState(false);
   const [videoOpen, setVideoOpen] = useState(false);
   const [youtubeDraft, setYoutubeDraft] = useState("");
-  const [youtubeStatus, setYoutubeStatus] = useState<"idle" | "valid" | "invalid">("idle");
+  const [youtubeStatus, setYoutubeStatus] = useState<
+    "idle" | "valid" | "invalid"
+  >("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const images = [...items]
@@ -401,7 +429,7 @@ export function PortfolioEditor({
                       aria-label={t("portfolioAddImage")}
                     >
                       <span className="text-center">
-                        <span className="block text-2xl font-light leading-none">
+                        <span className="block text-2xl leading-none font-light">
                           +
                         </span>
                         {index === 0 ? (
@@ -442,7 +470,7 @@ export function PortfolioEditor({
                 className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[#1e2a25]"
                 aria-label={t("portfolioPlayVideo")}
               >
-                <span className="absolute inset-0 m-auto h-0 w-0 border-y-[10px] border-l-[16px] border-y-transparent border-l-white border-r-0" />
+                <span className="absolute inset-0 m-auto h-0 w-0 border-y-[10px] border-r-0 border-l-[16px] border-y-transparent border-l-white" />
               </button>
               <div>
                 <p className="text-sm font-semibold text-[var(--ink)]">
@@ -494,7 +522,10 @@ export function PortfolioEditor({
                 setYoutubeStatus(parsed.ok ? "valid" : "invalid");
               }}
               onBlur={() => {
-                if (youtubeDraft.trim() && validateYouTubeUrl(youtubeDraft).ok) {
+                if (
+                  youtubeDraft.trim() &&
+                  validateYouTubeUrl(youtubeDraft).ok
+                ) {
                   saveYouTube(youtubeDraft);
                 }
               }}
