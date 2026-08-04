@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { AppShell } from "@/src/components/app-shell";
+import type { RailRoleContextData } from "@/src/lib/rail-role-context";
 
 type Props = {
   children: React.ReactNode;
@@ -11,10 +12,12 @@ type Props = {
   isApproved: boolean;
   canDiscoverEntertainers: boolean;
   canDiscoverVenues: boolean;
+  roleContext?: RailRoleContextData | null;
 };
 
 export async function AuthenticatedChrome({
   children,
+  locale,
   userName,
   userImage,
   approvalState,
@@ -22,6 +25,7 @@ export async function AuthenticatedChrome({
   isApproved,
   canDiscoverEntertainers,
   canDiscoverVenues,
+  roleContext = null,
 }: Props) {
   const approval = await getTranslations("approval");
 
@@ -35,6 +39,7 @@ export async function AuthenticatedChrome({
 
   return (
     <AppShell
+      locale={locale as "en" | "de"}
       userName={userName || "Member"}
       userImage={userImage}
       approvalLabel={approvalLabel}
@@ -42,6 +47,7 @@ export async function AuthenticatedChrome({
       isApproved={isApproved}
       canDiscoverEntertainers={canDiscoverEntertainers}
       canDiscoverVenues={canDiscoverVenues}
+      roleContext={roleContext}
     >
       {children}
     </AppShell>

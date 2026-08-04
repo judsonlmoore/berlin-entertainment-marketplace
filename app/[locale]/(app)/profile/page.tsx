@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
 import { AccountDeletionSection } from "@/src/components/account-deletion-section";
 import { EntertainerProfileForm } from "@/src/components/entertainer-profile-form";
+import { LocaleSwitcher } from "@/src/components/locale-switcher";
 import { PortfolioEditor } from "@/src/components/portfolio-editor";
 import { ProfileRoleTabs } from "@/src/components/profile-role-tabs";
 import { RiderUploadForm } from "@/src/components/rider-upload-form";
@@ -246,7 +247,7 @@ export default async function ProfilePage({ params }: Props) {
         <AccountDeletionSection userEmail={session.user.email ?? ""} />
       </div>
 
-      <aside className="panel h-fit space-y-4 p-5">
+      <aside className="panel h-fit space-y-6 p-5">
         <div>
           <p className="eyebrow">{t("approvalPanel")}</p>
           <p className="mt-3 text-sm text-[var(--text-muted)]">
@@ -269,6 +270,16 @@ export default async function ProfilePage({ params }: Props) {
         >
           {t("calendarLink")} →
         </Link>
+
+        <div className="border-t border-[var(--rule)] pt-5">
+          <p className="eyebrow">{t("languagePanel")}</p>
+          <p className="mt-3 text-sm text-[var(--text-muted)]">
+            {t("languagePanelBody")}
+          </p>
+          <div className="mt-4">
+            <LocaleSwitcher />
+          </div>
+        </div>
       </aside>
     </section>
   );

@@ -22,7 +22,8 @@ export function formatPageTitle(pageName: string): string {
   return `${pageName} | ${BRAND_NAME}`;
 }
 
-function getSiteUrl(): string {
+/** Public origin for absolute links (ICS subscribe URLs, metadata). */
+export function getAppOrigin(): string {
   const configured = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
   if (configured) {
     return configured;
@@ -31,6 +32,10 @@ function getSiteUrl(): string {
     return `https://${process.env.VERCEL_URL}`;
   }
   return "http://localhost:3000";
+}
+
+function getSiteUrl(): string {
+  return getAppOrigin();
 }
 
 function normalizePath(path: string): string {

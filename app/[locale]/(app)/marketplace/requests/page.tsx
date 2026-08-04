@@ -4,6 +4,7 @@ import {
   VenueRespondToChangesButtons,
   WithdrawDirectRequestButton,
 } from "@/src/components/direct-request-actions";
+import { PageHeader } from "@/src/components/ui/page-header";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { formatEur } from "@/src/lib/format";
 import {
@@ -11,7 +12,6 @@ import {
   listDirectRequestsForVenues,
 } from "@/src/db/queries/direct-requests";
 import { can } from "@/src/domain/permissions";
-import { Link } from "@/src/i18n/navigation";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -24,9 +24,8 @@ export default async function DirectRequestsPage({ params }: Props) {
 
   if (!access.ok) {
     return (
-      <section className="mx-auto max-w-xl">
-        <h1 className="page-title text-3xl">{t("title")}</h1>
-        <p className="mt-4">{market("denied")}</p>
+      <section className="grid gap-8">
+        <PageHeader title={t("title")} body={market("denied")} />
       </section>
     );
   }
@@ -51,33 +50,31 @@ export default async function DirectRequestsPage({ params }: Props) {
   });
 
   return (
-    <section className="mx-auto grid max-w-3xl gap-8">
-      <div>
-        <p className="text-sm">
-          <Link href="/marketplace">{market("back")}</Link>
-        </p>
-        <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">
-          {t("title")}
-        </h1>
-        <p className="mt-3 text-[var(--muted)]">{t("body")}</p>
-      </div>
+    <section className="grid gap-8">
+      <PageHeader
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        body={t("body")}
+      />
 
       {can(access.actor, "direct_request.respond") ? (
         <div className="panel grid gap-3 p-6">
           <h2 className="page-title text-xl">{t("incomingTitle")}</h2>
           {incoming.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">{t("emptyIncoming")}</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t("emptyIncoming")}
+            </p>
           ) : null}
           <ul className="grid gap-3">
             {incoming.map((request) => (
               <li
                 key={request.id}
-                className="border border-[var(--line)] p-4 text-sm"
+                className="border border-[var(--rule)] p-4 text-sm"
               >
                 <p className="font-medium">
                   {request.venueName} · {request.district}
                 </p>
-                <p className="text-[var(--muted)]">
+                <p className="text-[var(--text-muted)]">
                   {request.formatCategory} · {request.state}
                 </p>
                 <p className="mt-2">
@@ -97,7 +94,7 @@ export default async function DirectRequestsPage({ params }: Props) {
                   />
                 </div>
                 {request.state === "accepted" ? (
-                  <p className="mt-2 text-[var(--muted)]">
+                  <p className="mt-2 text-[var(--text-muted)]">
                     {t("acceptedHint")}
                   </p>
                 ) : null}
@@ -111,18 +108,20 @@ export default async function DirectRequestsPage({ params }: Props) {
         <div className="panel grid gap-3 p-6">
           <h2 className="page-title text-xl">{t("outgoingTitle")}</h2>
           {outgoing.length === 0 ? (
-            <p className="text-sm text-[var(--muted)]">{t("emptyOutgoing")}</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t("emptyOutgoing")}
+            </p>
           ) : null}
           <ul className="grid gap-3">
             {outgoing.map((request) => (
               <li
                 key={request.id}
-                className="border border-[var(--line)] p-4 text-sm"
+                className="border border-[var(--rule)] p-4 text-sm"
               >
                 <p className="font-medium">
                   {request.actName} ← {request.venueName}
                 </p>
-                <p className="text-[var(--muted)]">
+                <p className="text-[var(--text-muted)]">
                   {request.formatCategory} · {request.state}
                 </p>
                 <p className="mt-2">

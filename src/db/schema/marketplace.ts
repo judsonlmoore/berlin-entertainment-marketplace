@@ -525,6 +525,9 @@ export const calendarEntries = pgTable(
       withTimezone: true,
       mode: "date",
     }).notNull(),
+    allDay: boolean("all_day").notNull().default(false),
+    title: text("title"),
+    privateNote: text("private_note"),
     displayTimezone: text("display_timezone")
       .notNull()
       .default("Europe/Berlin"),
@@ -534,6 +537,10 @@ export const calendarEntries = pgTable(
       mode: "date",
     }),
     bookingId: uuid("booking_id").references(() => bookings.id),
+    /** RRULE text for manual recurring parents only. */
+    recurrenceRule: text("recurrence_rule"),
+    /** When set, this row is a concrete exception/override of the parent series. */
+    recurrenceParentId: uuid("recurrence_parent_id"),
     sourceType: text("source_type"),
     sourceId: text("source_id"),
     version: integer("version").notNull().default(1),
@@ -551,6 +558,9 @@ export const calendarEntries = pgTable(
       table.startsAt,
       table.endsAt,
     ),
+    index("calendar_entries_recurrence_parent_idx").on(
+      table.recurrenceParentId,
+    ),
     check(
       "calendar_entries_window_chk",
       sql`${table.endsAt} > ${table.startsAt}`,
@@ -558,6 +568,165 @@ export const calendarEntries = pgTable(
     check(
       "calendar_entries_hold_expiry_chk",
       sql`(${table.state} <> 'tentative_hold') OR (${table.holdExpiresAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
+/** Skipped or overridden occurrences of a recurring manual calendar entry. */
+export const calendarRecurrenceExceptions = pgTable(
+  "calendar_recurrence_exceptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    parentEntryId: uuid("parent_entry_id")
+      .notNull()
+      .references(() => calendarEntries.id, { onDelete: "cascade" }),
+    /** Original occurrence start that is skipped or replaced. */
+    exceptionStartsAt: timestamp("exception_starts_at", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    /** `skip` removes the occurrence; `override` points at a replacement entry. */
+    kind: text("kind").notNull().default("skip"),
+    overrideEntryId: uuid("override_entry_id").references(
+      () => calendarEntries.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("calendar_recurrence_exceptions_parent_start_uidx").on(
+      table.parentEntryId,
+      table.exceptionStartsAt,
+    ),
+  ],
+);
+
+/** OAuth / sync connection stub rows (Phase 10b). Default disconnected. */
+export const calendarConnections = pgTable(
+  "calendar_connections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerType: calendarOwnerTypeEnum("owner_type").notNull(),
+    ownerId: uuid("owner_id").notNull(),
+    provider: text("provider").notNull(),
+    status: text("status").notNull().default("disconnected"),
+    externalAccountLabel: text("external_account_label"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("calendar_connections_owner_provider_uidx").on(
+      table.ownerType,
+      table.ownerId,
+      table.provider,
+    ),
+  ],
+);
+
+/** Server-side iCalendar feed subscriptions (Phase 6a import). */
+export const externalCalendarSubscriptions = pgTable(
+  "external_calendar_subscriptions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerType: calendarOwnerTypeEnum("owner_type").notNull(),
+    ownerId: uuid("owner_id").notNull(),
+    label: text("label").notNull(),
+    /** AES-GCM ciphertext of the feed URL (base64). */
+    feedUrlCiphertext: text("feed_url_ciphertext").notNull(),
+    feedUrlNonce: text("feed_url_nonce").notNull(),
+    status: text("status").notNull().default("active"),
+    lastRefreshedAt: timestamp("last_refreshed_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    lastError: text("last_error"),
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("external_calendar_subscriptions_owner_idx").on(
+      table.ownerType,
+      table.ownerId,
+    ),
+  ],
+);
+
+/** Cached busy overlays from an external ICS feed (no titles/attendees). */
+export const cachedExternalEvents = pgTable(
+  "cached_external_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => externalCalendarSubscriptions.id, {
+        onDelete: "cascade",
+      }),
+    externalUid: text("external_uid").notNull(),
+    startsAt: timestamp("starts_at", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    endsAt: timestamp("ends_at", {
+      withTimezone: true,
+      mode: "date",
+    }).notNull(),
+    allDay: boolean("all_day").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("cached_external_events_sub_uid_uidx").on(
+      table.subscriptionId,
+      table.externalUid,
+    ),
+    index("cached_external_events_range_idx").on(
+      table.subscriptionId,
+      table.startsAt,
+      table.endsAt,
+    ),
+  ],
+);
+
+/** Revocable secret tokens for ICS subscription export. */
+export const calendarExportTokens = pgTable(
+  "calendar_export_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerType: calendarOwnerTypeEnum("owner_type").notNull(),
+    ownerId: uuid("owner_id").notNull(),
+    /** High-entropy secret used in the HTTPS feed URL path. */
+    tokenHash: text("token_hash").notNull(),
+    label: text("label"),
+    createdByUserId: text("created_by_user_id").references(() => users.id),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    lastAccessedAt: timestamp("last_accessed_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("calendar_export_tokens_hash_uidx").on(table.tokenHash),
+    index("calendar_export_tokens_owner_idx").on(
+      table.ownerType,
+      table.ownerId,
     ),
   ],
 );

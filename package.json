@@ -23,9 +23,11 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
+    "@fullcalendar/react": "7.0.2",
     "@neondatabase/serverless": "^1.1.0",
     "drizzle-orm": "^0.45.2",
     "gray-matter": "^4.0.3",
+    "ical.js": "^2.2.1",
     "next": "^16.2.12",
     "next-auth": "^5.0.0-beta.32",
     "next-intl": "^4.13.4",
@@ -34,6 +36,8 @@
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "rrule": "^2.8.1",
+    "temporal-polyfill": "^1.0.3",
     "vanilla-cookieconsent": "^3.1.0",
     "zod": "^4.4.3"
   },

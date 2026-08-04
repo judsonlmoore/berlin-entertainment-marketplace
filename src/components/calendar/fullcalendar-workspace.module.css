@@ -1,0 +1,148 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 32rem;
+  /* Shared content inset: all-day text and timed dots share this left edge. */
+  --cal-month-event-pad-x: 10px;
+  --cal-month-event-pad-y: 2px;
+}
+
+.successFlash {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid color-mix(in srgb, var(--success, #166534) 35%, var(--rule));
+  background: var(--success-soft, #dcfce7);
+  color: var(--ink);
+  padding: 0.5rem 0.85rem;
+  font-size: 0.875rem;
+  animation: flashInOut 1.6s ease-in-out both;
+}
+
+@keyframes flashInOut {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+  12% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.wrapper :global(.fc) {
+  font-family: inherit;
+  --fc-border-color: var(--rule);
+  --fc-page-bg-color: var(--surface);
+  --fc-neutral-bg-color: var(--canvas);
+  --fc-today-bg-color: color-mix(in srgb, var(--primary) 8%, white);
+  --fc-event-border-color: var(--rule);
+  --fc-event-bg-color: var(--surface);
+  --fc-event-text-color: var(--ink);
+}
+
+.wrapper :global(.fc .fc-toolbar) {
+  margin-bottom: 0.5rem;
+}
+
+.wrapper :global(.fc .fc-col-header-cell),
+.wrapper :global(.fc .fc-daygrid-day-number),
+.wrapper :global(.fc .fc-timegrid-slot-label),
+.wrapper :global(.fc a) {
+  color: var(--text-muted);
+}
+
+.wrapper :global(.fc .fc-daygrid-event),
+.wrapper :global(.fc .fc-timegrid-event) {
+  border-radius: 6px;
+  margin: 1px 2px;
+}
+
+/* Kill FC harness padding so our month insets are the only left offset. */
+.wrapper :global(.fc-daygrid-event) :global(.fc-event-main),
+.wrapper :global(.fc-daygrid-event) :global(.fc-event-main-frame) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Solid all-day / week blocks — color from event `color` token */
+.solidEvent {
+  border: 1px solid var(--rule) !important;
+  padding: var(--cal-month-event-pad-y) var(--cal-month-event-pad-x) !important;
+}
+
+.eventBox {
+  font-size: 0.75rem;
+  line-height: 1.15;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Month timed events — iCal-style row (dot + title + time).
+   Same border-box + padding as solid events so the dot aligns with title text. */
+.timedMonth {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  --fc-event-color: transparent !important;
+  --fc-event-contrast-color: var(--ink) !important;
+  margin: 1px 2px !important;
+  padding: var(--cal-month-event-pad-y) var(--cal-month-event-pad-x) !important;
+  padding-inline-start: var(--cal-month-event-pad-x) !important;
+}
+
+.timedMonthRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  color: var(--ink);
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.timedDot {
+  flex: 0 0 auto;
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: 0;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--rule) 70%, transparent);
+}
+
+.timedTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.timedTime {
+  flex: 0 0 auto;
+  margin-left: 0.25rem;
+  padding-right: 1px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+}

@@ -148,7 +148,9 @@ Native states are `available`, `unavailable`, `tentative_hold`, `requested`, and
 - Confirmed bookings create blocking confirmed entries for the venue space and entertainer act in the same transaction as confirmation.
 - The system prevents overlapping confirmed bookings and detects conflicts before accepting/shortlisting, agreeing terms, and confirming.
 - Staff can inspect and repair inconsistencies with an audit reason.
-- **External calendar synchronization** (Google / Microsoft / Apple via a maintained provider) is a separate delivery phase. Native calendar must work without it. Sync must not block validating core booking flows.
+- Manual availability/unavailable/hold entries may be created as recurring schedules using `RRule` (daily/weekly/monthly), with explicit exceptions for single-occurrence overrides. Recurring confirmed bookings are out of scope for this calendar feature.
+- The native calendar UX is implemented with FullCalendar React v7 (dayGrid/timeGrid/list + selection/drag/resize for manual entries).
+- External calendar synchronization is delivered in phases. A first phase can add secure server-side iCalendar/ICS import (busy overlays only) and revocable ICS export for confirmed bookings. Google/Microsoft OAuth provider sync is a later phase. Native calendar must work without it, and sync must not block validating core booking flows.
 
 ## 10. Internationalization
 

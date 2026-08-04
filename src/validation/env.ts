@@ -32,6 +32,7 @@ const serverEnvSchema = z.object({
   ESIGN_API_KEY: optionalNonEmpty,
   ESIGN_WEBHOOK_SECRET: optionalNonEmpty,
   CRON_SECRET: optionalNonEmpty,
+  CALENDAR_SECRETS_KEY: optionalNonEmpty,
   SENTRY_DSN: optionalNonEmpty,
   NEXT_PUBLIC_APP_URL: optionalNonEmpty,
 });
