@@ -1,52 +1,49 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
   upsertEntertainerProfile,
-  submitEntertainerProfile,
   createVenue,
   updateVenue as updateVenueProfile,
-  submitVenueProfile,
 } from "@/src/actions/profiles";
 import { ConfettiBurst } from "@/src/components/confetti-burst";
+import { CategorySubcategorySelect } from "@/src/components/profile/category-subcategory-select";
+import { RichTextField } from "@/src/components/profile/rich-text-field";
 import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
+import {
+  encodeSubcategory,
+  encodeVenueType,
+  parseSubcategory,
+  parseVenueType,
+} from "@/src/domain/profile-taxonomy";
+import {
+  DESCRIPTION_MAX,
+  DESCRIPTION_MIN,
+  validateRichTextField,
+} from "@/src/domain/sanitize-input";
 
 type Role = "entertainer" | "venue";
 
 export type EntertainerDraft = {
   actName: string;
   category: string;
+  genres: string;
   description: string;
-  groupSize: string;
-  berlinBase: string;
-  travelRadiusKm: string;
-  priceMinEur: string;
-  priceMaxEur: string;
-  durationMinutes: string;
-  technicalRequirements: string;
-  contactEmail: string;
 };
 
 export type VenueDraft = {
   venueId: string | null;
   name: string;
-  shortDescription: string;
   venueType: string;
-  addressLine1: string;
-  district: string;
-  postalCode: string;
-  audienceDescription: string;
-  capacity: string;
-  capacityContext: string;
-  productionNotes: string;
-  contactEmail: string;
+  shortDescription: string;
 };
 
 type Props = {
   locale: "en" | "de";
   role: Role;
+  accountEmail: string;
   entertainerDraft: EntertainerDraft;
   venueDraft: VenueDraft;
 };
@@ -86,34 +83,44 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function toEditorHtml(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return "<p></p>";
+  if (/<[a-z][\s\S]*>/i.test(trimmed)) return trimmed;
+  const escaped = trimmed
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<p>${escaped}</p>`;
+}
+
+/** Overall onboarding: 1 role (prior page) → 2 basics → 3 confirm. */
+const TOTAL_FLOW_STEPS = 3;
+const BASICS_STEP_INDEX = 1; // 0-based: step 2 of 3
+const DONE_STEP_INDEX = 2;
+
 export function OnboardingSetupWizard({
   locale,
   role,
+  accountEmail,
   entertainerDraft,
   venueDraft,
 }: Props) {
   const t = useTranslations("onboardingFlow");
+  const tProfile = useTranslations("profile");
   const errors = useTranslations("errors");
   const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState(0);
   const [celebrate, setCelebrate] = useState(false);
+  const [phase, setPhase] = useState<"basics" | "done">("basics");
   const [entertainer, setEntertainer] =
     useState<EntertainerDraft>(entertainerDraft);
   const [venue, setVenue] = useState<VenueDraft>(venueDraft);
 
-  const steps = useMemo(() => {
-    if (role === "entertainer") {
-      return ["basics", "details", "contact", "done"] as const;
-    }
-    return ["basics", "location", "details", "contact", "done"] as const;
-  }, [role]);
-
-  const profileSteps = steps.length - 1;
-  const currentKey = steps[step]!;
-  const isDoneStep = currentKey === "done";
+  const isDoneStep = phase === "done";
+  const stepIndex = isDoneStep ? DONE_STEP_INDEX : BASICS_STEP_INDEX;
 
   const updateEntertainer = (patch: Partial<EntertainerDraft>) => {
     setEntertainer((prev) => ({ ...prev, ...patch }));
@@ -122,78 +129,54 @@ export function OnboardingSetupWizard({
     setVenue((prev) => ({ ...prev, ...patch }));
   };
 
-  const filled = (...values: string[]) =>
-    values.every((value) => value.trim().length > 0);
-
   const currentStepValid = (): boolean => {
     if (role === "entertainer") {
-      if (currentKey === "basics") {
-        return filled(
-          entertainer.actName,
-          entertainer.category,
-          entertainer.description,
-        );
-      }
-      if (currentKey === "details") {
-        return (
-          filled(
-            entertainer.groupSize,
-            entertainer.berlinBase,
-            entertainer.travelRadiusKm,
-            entertainer.durationMinutes,
-            entertainer.priceMinEur,
-            entertainer.priceMaxEur,
-            entertainer.technicalRequirements,
-          ) &&
-          Number(entertainer.groupSize) >= 1 &&
-          Number(entertainer.durationMinutes) >= 1 &&
-          Number(entertainer.priceMaxEur) >= Number(entertainer.priceMinEur)
-        );
-      }
-      if (currentKey === "contact") {
-        return filled(entertainer.contactEmail);
-      }
-    } else {
-      if (currentKey === "basics") {
-        return filled(venue.name, venue.venueType, venue.shortDescription);
-      }
-      if (currentKey === "location") {
-        return (
-          filled(venue.addressLine1, venue.district, venue.postalCode) &&
-          venue.postalCode.trim().length >= 4
-        );
-      }
-      if (currentKey === "details") {
-        return (
-          filled(venue.audienceDescription, venue.capacity) &&
-          Number(venue.capacity) >= 1
-        );
-      }
-      if (currentKey === "contact") {
-        return filled(venue.contactEmail);
-      }
+      const descriptionCheck = validateRichTextField(entertainer.description, {
+        min: DESCRIPTION_MIN,
+        max: DESCRIPTION_MAX,
+      });
+      const sub = parseSubcategory(entertainer.genres);
+      return (
+        entertainer.actName.trim().length > 0 &&
+        entertainer.category.trim().length > 0 &&
+        sub.subcategoryId.trim().length > 0 &&
+        descriptionCheck.ok
+      );
     }
-    return true;
+
+    const plain = venue.shortDescription.trim();
+    const parsed = parseVenueType(venue.venueType);
+    return (
+      venue.name.trim().length > 0 &&
+      parsed.categoryId.trim().length > 0 &&
+      parsed.subcategoryRaw.trim().length > 0 &&
+      plain.length >= DESCRIPTION_MIN &&
+      plain.length <= 500
+    );
   };
 
   const finishProfile = () => {
     setError(null);
+    if (!currentStepValid()) {
+      setError(t("fieldsIncomplete"));
+      return;
+    }
+
     startTransition(async () => {
       if (role === "entertainer") {
-        const priceMinCents = Math.round(Number(entertainer.priceMinEur) * 100);
-        const priceMaxCents = Math.round(Number(entertainer.priceMaxEur) * 100);
         const saved = await upsertEntertainerProfile({
           actName: entertainer.actName,
           category: entertainer.category,
+          genres: entertainer.genres,
           description: entertainer.description,
-          groupSize: Number(entertainer.groupSize),
-          berlinBase: entertainer.berlinBase,
-          travelRadiusKm: Number(entertainer.travelRadiusKm),
-          priceMinCents,
-          priceMaxCents,
-          durationMinutes: Number(entertainer.durationMinutes),
-          technicalRequirements: entertainer.technicalRequirements,
-          contactEmail: entertainer.contactEmail,
+          groupSize: 1,
+          berlinBase: "",
+          travelRadiusKm: 25,
+          priceMinCents: 0,
+          priceMaxCents: 0,
+          durationMinutes: 60,
+          technicalRequirements: "",
+          contactEmail: accountEmail,
           locale,
         });
         if (!saved.ok) {
@@ -206,31 +189,19 @@ export function OnboardingSetupWizard({
           );
           return;
         }
-        const submitted = await submitEntertainerProfile(locale);
-        if (!submitted.ok) {
-          setError(
-            submitted.code === "validation" ||
-              submitted.code === "unauthorized" ||
-              submitted.code === "forbidden" ||
-              submitted.code === "invalid_transition"
-              ? errors(submitted.code)
-              : submitted.message,
-          );
-          return;
-        }
       } else {
         const payload = {
           name: venue.name,
           shortDescription: venue.shortDescription,
-          addressLine1: venue.addressLine1,
-          district: venue.district,
-          postalCode: venue.postalCode,
           venueType: venue.venueType,
-          audienceDescription: venue.audienceDescription,
-          capacity: Number(venue.capacity),
-          capacityContext: venue.capacityContext,
-          productionNotes: venue.productionNotes,
-          contactEmail: venue.contactEmail,
+          addressLine1: "",
+          district: "",
+          postalCode: "",
+          audienceDescription: "",
+          capacity: 50,
+          capacityContext: "",
+          productionNotes: "",
+          contactEmail: accountEmail,
           locale,
         };
         const saved = venue.venueId
@@ -247,54 +218,19 @@ export function OnboardingSetupWizard({
           return;
         }
         const venueId = saved.id ?? venue.venueId;
-        if (!venueId) {
-          setError(errors("validation"));
-          return;
-        }
-        if (!venue.venueId) {
+        if (venueId && !venue.venueId) {
           setVenue((prev) => ({ ...prev, venueId }));
-        }
-        const submitted = await submitVenueProfile(venueId, locale);
-        if (!submitted.ok) {
-          setError(
-            submitted.code === "validation" ||
-              submitted.code === "unauthorized" ||
-              submitted.code === "forbidden" ||
-              submitted.code === "invalid_transition"
-              ? errors(submitted.code)
-              : submitted.message,
-          );
-          return;
         }
       }
 
-      setStep(profileSteps);
+      setPhase("done");
     });
   };
 
-  const goNext = () => {
-    setError(null);
-    if (!currentStepValid()) {
-      setError(t("fieldsIncomplete"));
-      return;
-    }
-    if (step === profileSteps - 1) {
-      finishProfile();
-      return;
-    }
-    setStep((value) => Math.min(value + 1, profileSteps));
-  };
-
-  const goBack = () => {
-    setError(null);
-    setStep((value) => Math.max(value - 1, 0));
-  };
-
-  const continueToOverview = () => {
+  const continueToProfile = () => {
     setCelebrate(true);
     window.setTimeout(() => {
-      router.push("/marketplace");
-      router.refresh();
+      router.push("/profile");
     }, 1100);
   };
 
@@ -302,28 +238,29 @@ export function OnboardingSetupWizard({
     <div className="mx-auto grid max-w-lg gap-6">
       <ConfettiBurst active={celebrate} />
 
-      {!isDoneStep ? (
-        <StepDots
-          total={profileSteps}
-          current={step}
-          label={t("stepOf", { current: step + 1, total: profileSteps })}
-        />
-      ) : null}
+      <StepDots
+        total={TOTAL_FLOW_STEPS}
+        current={stepIndex}
+        label={t("stepOf", {
+          current: stepIndex + 1,
+          total: TOTAL_FLOW_STEPS,
+        })}
+      />
 
       <div>
         <p className="eyebrow text-[var(--accent)]">
           {role === "entertainer" ? t("entertainerPath") : t("venuePath")}
         </p>
         <h1 className="page-title mt-2 text-[clamp(1.75rem,2.5vw,2.25rem)]">
-          {isDoneStep ? t("doneTitle") : t(`steps.${currentKey}.title`)}
+          {isDoneStep ? t("doneTitle") : t("steps.basics.title")}
         </h1>
         <p className="mt-2 text-[var(--text-muted)]">
-          {isDoneStep ? t("doneBody") : t(`steps.${currentKey}.body`)}
+          {isDoneStep ? t("doneBody") : t("steps.basics.body")}
         </p>
       </div>
 
       <div className="panel grid gap-4 p-6">
-        {role === "entertainer" && currentKey === "basics" ? (
+        {!isDoneStep && role === "entertainer" ? (
           <>
             <Field label={t("fields.actName")}>
               <input
@@ -333,137 +270,35 @@ export function OnboardingSetupWizard({
                 required
               />
             </Field>
-            <Field label={t("fields.category")}>
-              <input
-                className="field"
-                value={entertainer.category}
-                onChange={(e) =>
-                  updateEntertainer({ category: e.target.value })
-                }
-                required
-              />
-            </Field>
-            <Field label={t("fields.description")}>
-              <textarea
-                className="field"
-                rows={4}
-                value={entertainer.description}
-                onChange={(e) =>
-                  updateEntertainer({ description: e.target.value })
-                }
-                required
-              />
-            </Field>
-          </>
-        ) : null}
-
-        {role === "entertainer" && currentKey === "details" ? (
-          <>
-            <Field label={t("fields.groupSize")}>
-              <input
-                className="field"
-                type="number"
-                min={1}
-                value={entertainer.groupSize}
-                onChange={(e) =>
-                  updateEntertainer({ groupSize: e.target.value })
-                }
-                required
-              />
-            </Field>
-            <Field label={t("fields.berlinBase")}>
-              <input
-                className="field"
-                value={entertainer.berlinBase}
-                onChange={(e) =>
-                  updateEntertainer({ berlinBase: e.target.value })
-                }
-                required
-              />
-            </Field>
-            <Field label={t("fields.travelRadiusKm")}>
-              <input
-                className="field"
-                type="number"
-                min={0}
-                value={entertainer.travelRadiusKm}
-                onChange={(e) =>
-                  updateEntertainer({ travelRadiusKm: e.target.value })
-                }
-                required
-              />
-            </Field>
-            <Field label={t("fields.durationMinutes")}>
-              <input
-                className="field"
-                type="number"
-                min={1}
-                value={entertainer.durationMinutes}
-                onChange={(e) =>
-                  updateEntertainer({ durationMinutes: e.target.value })
-                }
-                required
-              />
-            </Field>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={t("fields.priceMinEur")}>
-                <input
-                  className="field"
-                  type="number"
-                  min={0}
-                  step="1"
-                  value={entertainer.priceMinEur}
-                  onChange={(e) =>
-                    updateEntertainer({ priceMinEur: e.target.value })
-                  }
-                  required
-                />
-              </Field>
-              <Field label={t("fields.priceMaxEur")}>
-                <input
-                  className="field"
-                  type="number"
-                  min={0}
-                  step="1"
-                  value={entertainer.priceMaxEur}
-                  onChange={(e) =>
-                    updateEntertainer({ priceMaxEur: e.target.value })
-                  }
-                  required
-                />
-              </Field>
-            </div>
-            <Field label={t("fields.technicalRequirements")}>
-              <textarea
-                className="field"
-                rows={3}
-                value={entertainer.technicalRequirements}
-                onChange={(e) =>
-                  updateEntertainer({
-                    technicalRequirements: e.target.value,
-                  })
-                }
-                required
-              />
-            </Field>
-          </>
-        ) : null}
-
-        {role === "entertainer" && currentKey === "contact" ? (
-          <Field label={t("fields.contactEmail")}>
-            <input
-              className="field"
-              type="email"
-              value={entertainer.contactEmail}
-              onChange={(e) =>
-                updateEntertainer({ contactEmail: e.target.value })
-              }
-              required
+            <CategorySubcategorySelect
+              kind="entertainer"
+              categoryName="category"
+              subcategoryName="genres"
+              otherName="subcategoryOther"
+              defaultCategory={entertainerDraft.category}
+              defaultSubcategoryRaw={entertainerDraft.genres}
+              categoryLabel={tProfile("category")}
+              subcategoryLabel={tProfile("subcategory")}
+              otherLabel={tProfile("subcategoryOther")}
+              onSelectionChange={({ categoryId, subcategoryId, otherLabel }) => {
+                updateEntertainer({
+                  category: categoryId,
+                  genres: encodeSubcategory(subcategoryId, otherLabel),
+                });
+              }}
             />
-          </Field>
+            <RichTextField
+              label={t("fields.description")}
+              defaultValue={toEditorHtml(entertainerDraft.description)}
+              min={DESCRIPTION_MIN}
+              max={DESCRIPTION_MAX}
+              placeholder={tProfile("descriptionPlaceholder")}
+              onChange={(html) => updateEntertainer({ description: html })}
+            />
+          </>
         ) : null}
 
-        {role === "venue" && currentKey === "basics" ? (
+        {!isDoneStep && role === "venue" ? (
           <>
             <Field label={t("fields.venueName")}>
               <input
@@ -473,112 +308,40 @@ export function OnboardingSetupWizard({
                 required
               />
             </Field>
-            <Field label={t("fields.venueType")}>
-              <input
-                className="field"
-                value={venue.venueType}
-                onChange={(e) => patchVenue({ venueType: e.target.value })}
-                required
-              />
-            </Field>
+            <CategorySubcategorySelect
+              kind="venue"
+              categoryName="venueCategory"
+              subcategoryName="venueSubcategory"
+              otherName="venueSubcategoryOther"
+              defaultCategory={parseVenueType(venueDraft.venueType).categoryId}
+              defaultSubcategoryRaw={
+                parseVenueType(venueDraft.venueType).subcategoryRaw
+              }
+              categoryLabel={tProfile("venueType")}
+              subcategoryLabel={tProfile("subcategory")}
+              otherLabel={tProfile("subcategoryOther")}
+              onSelectionChange={({ categoryId, subcategoryId, otherLabel }) => {
+                patchVenue({
+                  venueType: encodeVenueType(
+                    categoryId,
+                    encodeSubcategory(subcategoryId, otherLabel),
+                  ),
+                });
+              }}
+            />
             <Field label={t("fields.shortDescription")}>
               <textarea
                 className="field"
-                rows={3}
+                rows={5}
                 value={venue.shortDescription}
                 onChange={(e) =>
                   patchVenue({ shortDescription: e.target.value })
                 }
+                placeholder={tProfile("descriptionPlaceholder")}
                 required
               />
             </Field>
           </>
-        ) : null}
-
-        {role === "venue" && currentKey === "location" ? (
-          <>
-            <Field label={t("fields.addressLine1")}>
-              <input
-                className="field"
-                value={venue.addressLine1}
-                onChange={(e) => patchVenue({ addressLine1: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label={t("fields.district")}>
-              <input
-                className="field"
-                value={venue.district}
-                onChange={(e) => patchVenue({ district: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label={t("fields.postalCode")}>
-              <input
-                className="field"
-                value={venue.postalCode}
-                onChange={(e) => patchVenue({ postalCode: e.target.value })}
-                required
-              />
-            </Field>
-          </>
-        ) : null}
-
-        {role === "venue" && currentKey === "details" ? (
-          <>
-            <Field label={t("fields.audienceDescription")}>
-              <textarea
-                className="field"
-                rows={3}
-                value={venue.audienceDescription}
-                onChange={(e) =>
-                  patchVenue({ audienceDescription: e.target.value })
-                }
-                required
-              />
-            </Field>
-            <Field label={t("fields.capacity")}>
-              <input
-                className="field"
-                type="number"
-                min={1}
-                value={venue.capacity}
-                onChange={(e) => patchVenue({ capacity: e.target.value })}
-                required
-              />
-            </Field>
-            <Field label={t("fields.capacityContext")}>
-              <input
-                className="field"
-                value={venue.capacityContext}
-                onChange={(e) =>
-                  patchVenue({ capacityContext: e.target.value })
-                }
-              />
-            </Field>
-            <Field label={t("fields.productionNotes")}>
-              <textarea
-                className="field"
-                rows={3}
-                value={venue.productionNotes}
-                onChange={(e) =>
-                  patchVenue({ productionNotes: e.target.value })
-                }
-              />
-            </Field>
-          </>
-        ) : null}
-
-        {role === "venue" && currentKey === "contact" ? (
-          <Field label={t("fields.contactEmail")}>
-            <input
-              className="field"
-              type="email"
-              value={venue.contactEmail}
-              onChange={(e) => patchVenue({ contactEmail: e.target.value })}
-              required
-            />
-          </Field>
         ) : null}
 
         {isDoneStep ? (
@@ -596,28 +359,15 @@ export function OnboardingSetupWizard({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap justify-between gap-3 pt-2">
-          {!isDoneStep && step > 0 ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={goBack}
-              disabled={pending}
-            >
-              {t("back")}
-            </Button>
-          ) : (
-            <span />
-          )}
-
+        <div className="flex flex-wrap justify-end gap-3 pt-2">
           {isDoneStep ? (
             <Button
               type="button"
               variant="primary"
-              onClick={continueToOverview}
+              onClick={continueToProfile}
               disabled={celebrate}
             >
-              {t("continueToOverview")}
+              {t("continueToProfile")}
             </Button>
           ) : (
             <Button
@@ -625,9 +375,9 @@ export function OnboardingSetupWizard({
               variant="primary"
               pending={pending}
               pendingLabel={ui("working")}
-              onClick={goNext}
+              onClick={finishProfile}
             >
-              {step === profileSteps - 1 ? t("submitForReview") : t("next")}
+              {t("next")}
             </Button>
           )}
         </div>

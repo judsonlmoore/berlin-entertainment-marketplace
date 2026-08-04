@@ -29,11 +29,21 @@ export default async function RoleSelectionPage({ params }: Props) {
     redirect({ href: "/onboarding/setup", locale: locale as AppLocale });
   }
   if (destination === "none") {
-    redirect({ href: "/marketplace", locale: locale as AppLocale });
+    redirect({ href: "/profile", locale: locale as AppLocale });
   }
 
   return (
     <section className="mx-auto grid max-w-lg gap-6">
+      <div className="flex flex-col gap-2" aria-label="Step 1 of 3">
+        <ol className="flex gap-2">
+          <li className="h-1.5 flex-1 rounded-full bg-[var(--primary)]" />
+          <li className="h-1.5 flex-1 rounded-full bg-[var(--rule)]" />
+          <li className="h-1.5 flex-1 rounded-full bg-[var(--rule)]" />
+        </ol>
+        <p className="text-xs font-medium text-[var(--text-muted)]">
+          {t("stepOf")}
+        </p>
+      </div>
       <div>
         <h1 className="page-title text-[clamp(1.75rem,2.5vw,2.25rem)]">
           {t("title")}

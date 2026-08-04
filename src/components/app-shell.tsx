@@ -241,6 +241,7 @@ export function AppShell({
 
   const accountItems: AccountNavItem[] = [
     { href: "/profile", labelKey: "profile", match: "/profile" },
+    { href: "/account", labelKey: "account", match: "/account" },
     ...(isStaff
       ? [{ href: "/admin", labelKey: "admin" as const, match: "/admin" }]
       : []),

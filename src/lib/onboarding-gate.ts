@@ -9,24 +9,16 @@ import {
 
 export type OnboardingDestination = "none" | "role" | "setup";
 
-const SUBMITTED_STATES = new Set([
-  "submitted",
-  "approved",
-  "changes_requested",
-]);
-
-async function hasSubmittedEntertainerProfile(
-  userId: string,
-): Promise<boolean> {
+async function hasEntertainerProfile(userId: string): Promise<boolean> {
   const db = getDb();
   const profile = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.userId, userId),
-    columns: { publicationState: true },
+    columns: { id: true },
   });
-  return Boolean(profile && SUBMITTED_STATES.has(profile.publicationState));
+  return Boolean(profile);
 }
 
-async function hasSubmittedVenueProfile(userId: string): Promise<boolean> {
+async function hasOwnedVenueProfile(userId: string): Promise<boolean> {
   const db = getDb();
   const membership = await db.query.venueMemberships.findFirst({
     where: and(
@@ -41,14 +33,16 @@ async function hasSubmittedVenueProfile(userId: string): Promise<boolean> {
   }
   const venue = await db.query.venues.findFirst({
     where: eq(venues.id, membership.venueId),
-    columns: { publicationState: true },
+    columns: { id: true },
   });
-  return Boolean(venue && SUBMITTED_STATES.has(venue.publicationState));
+  return Boolean(venue);
 }
 
 /**
  * Decide where a signed-in member belongs in the XOR onboarding flow.
- * Staff skip onboarding. Members need a role, then a submitted profile.
+ * Staff skip onboarding. Members need a role, then a created profile/venue
+ * (draft is enough). Publication/verification is independent and lives on
+ * `/profile` — never bounce autosaves back into onboarding.
  */
 export async function resolveOnboardingDestination(input: {
   userId: string;
@@ -74,12 +68,10 @@ export async function resolveOnboardingDestination(input: {
   }
 
   if (roleRow.role === "entertainer") {
-    return (await hasSubmittedEntertainerProfile(input.userId))
-      ? "none"
-      : "setup";
+    return (await hasEntertainerProfile(input.userId)) ? "none" : "setup";
   }
 
-  return (await hasSubmittedVenueProfile(input.userId)) ? "none" : "setup";
+  return (await hasOwnedVenueProfile(input.userId)) ? "none" : "setup";
 }
 
 /** @deprecated Prefer resolveOnboardingDestination */

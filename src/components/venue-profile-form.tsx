@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import {
   createVenue,
@@ -8,21 +8,37 @@ import {
   updateVenue,
 } from "@/src/actions/profiles";
 import { Button } from "@/src/components/ui/button";
+import { AutosaveStatus } from "@/src/components/profile/autosave-status";
+import { CategorySubcategorySelect } from "@/src/components/profile/category-subcategory-select";
+import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
+import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
+import { StatusLabel } from "@/src/components/ui/status-label";
 import { useRouter } from "@/src/i18n/navigation";
+import { encodeVenueType, parseVenueType } from "@/src/domain/profile-taxonomy";
+import {
+  VENUE_SOCIAL_ORDER,
+  type SocialPlatform,
+} from "@/src/domain/social-urls";
 
-type SocialLinks = {
-  instagram?: string;
-  facebook?: string;
-  tiktok?: string;
-  spotify?: string;
-  soundcloud?: string;
-};
+type SocialLinks = Partial<
+  Record<
+    | "instagram"
+    | "facebook"
+    | "tiktok"
+    | "spotify"
+    | "soundcloud"
+    | "linkedin"
+    | "youtube",
+    string
+  >
+>;
 
 type Props = {
   locale: "en" | "de";
   venueId?: string;
   publicationState?: string;
   defaultContactEmail: string;
+  defaultContactPhone?: string;
   defaultValues?: {
     name: string;
     shortDescription: string;
@@ -57,16 +73,17 @@ function readSocialLinks(form: FormData): SocialLinks {
     instagram: String(form.get("socialInstagram") ?? ""),
     facebook: String(form.get("socialFacebook") ?? ""),
     tiktok: String(form.get("socialTiktok") ?? ""),
-    spotify: String(form.get("socialSpotify") ?? ""),
-    soundcloud: String(form.get("socialSoundcloud") ?? ""),
+    linkedin: String(form.get("socialLinkedin") ?? ""),
+    youtube: String(form.get("socialYoutube") ?? ""),
   };
 }
 
 export function VenueProfileForm({
   locale,
-  venueId,
+  venueId: initialVenueId,
   publicationState,
   defaultContactEmail,
+  defaultContactPhone = "",
   defaultValues,
 }: Props) {
   const t = useTranslations("profile");
@@ -74,10 +91,19 @@ export function VenueProfileForm({
   const status = useTranslations("publication");
   const ui = useTranslations("ui");
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [venueId, setVenueId] = useState(initialVenueId);
+  const [displayName, setDisplayName] = useState(defaultValues?.name ?? "");
+  const venueIdRef = useRef(venueId);
   const social = defaultValues?.socialLinks ?? {};
+  const parsedType = parseVenueType(defaultValues?.venueType);
+
+  useEffect(() => {
+    venueIdRef.current = venueId;
+  }, [venueId]);
 
   function readForm(form: FormData) {
     const website = String(form.get("websiteUrl") ?? "").trim();
@@ -86,6 +112,8 @@ export function VenueProfileForm({
     const productionNotes = String(form.get("productionNotes") ?? "").trim();
     const latitude = String(form.get("latitude") ?? "").trim();
     const longitude = String(form.get("longitude") ?? "").trim();
+    const categoryId = String(form.get("venueCategory") ?? "");
+    const subcategory = String(form.get("venueSubcategory") ?? "");
 
     return {
       name: String(form.get("name") ?? ""),
@@ -96,7 +124,7 @@ export function VenueProfileForm({
       postalCode: String(form.get("postalCode") ?? ""),
       ...(latitude ? { latitude } : {}),
       ...(longitude ? { longitude } : {}),
-      venueType: String(form.get("venueType") ?? ""),
+      venueType: encodeVenueType(categoryId, subcategory),
       audienceDescription: String(form.get("audienceDescription") ?? ""),
       capacity: Number(form.get("capacity") ?? 1),
       ...(capacityContext ? { capacityContext } : {}),
@@ -114,75 +142,103 @@ export function VenueProfileForm({
       socialLinks: readSocialLinks(form),
       ...(website ? { websiteUrl: website } : { websiteUrl: "" }),
       contactEmail: String(form.get("contactEmail") ?? ""),
+      contactPhone: String(form.get("contactPhone") ?? ""),
       locale,
     };
   }
 
+  const autosave = useProfileAutosave({
+    formRef,
+    readPayload: (form) => {
+      const payload = readForm(form);
+      if (!payload.name.trim() || !payload.contactEmail.trim()) return null;
+      return payload;
+    },
+    save: async (payload) => {
+      const currentId = venueIdRef.current;
+      if (currentId) {
+        return updateVenue(currentId, payload);
+      }
+      const result = await createVenue(payload);
+      if (result.ok && result.id) {
+        setVenueId(result.id);
+        venueIdRef.current = result.id;
+      }
+      return result;
+    },
+  });
+
   return (
     <div className="grid gap-4">
-      {publicationState ? (
-        <p className="text-sm text-[var(--muted)]">
-          {t("publicationLabel")}: {status(publicationState as "draft")}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {publicationState ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusLabel>{status(publicationState as "draft")}</StatusLabel>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t("publicationLabel")}
+            </p>
+          </div>
+        ) : (
+          <span />
+        )}
+        <AutosaveStatus
+          phase={autosave.phase}
+          errorMessage={autosave.errorMessage}
+        />
+      </div>
+
+      <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-5 py-4">
+        <p className="eyebrow text-[var(--accent)]">
+          {t("displayNameEyebrow")}
         </p>
-      ) : null}
-      <form
-        className="grid gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setError(null);
-          setMessage(null);
-          const form = new FormData(event.currentTarget);
-          startTransition(async () => {
-            const payload = readForm(form);
-            const result = venueId
-              ? await updateVenue(venueId, payload)
-              : await createVenue(payload);
-            if (!result.ok) {
-              setError(
-                result.code === "validation" || result.code === "forbidden"
-                  ? errors(result.code)
-                  : result.message,
-              );
-              return;
-            }
-            setMessage(t("saved"));
-            if (!venueId && result.id) {
-              router.push(`/profile/venues/${result.id}`);
-            }
-            router.refresh();
-          });
-        }}
-      >
+        <h2 className="mt-1 text-[clamp(1.5rem,2vw,2rem)] font-semibold text-[var(--ink)]">
+          {displayName.trim() || t("previewVenueFallback")}
+        </h2>
+      </div>
+
+      <form ref={formRef} className="panel grid gap-6 p-6">
         <label className="grid gap-1 text-sm">
-          <span>{t("venueName")}</span>
+          <span className="font-medium">{t("venueName")}</span>
           <input
             name="name"
             required
-            defaultValue={defaultValues?.name}
+            value={displayName}
+            onChange={(event) => setDisplayName(event.target.value)}
             className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span>{t("shortDescription")}</span>
+          <span className="font-medium">{t("shortDescription")}</span>
           <textarea
             name="shortDescription"
-            required
             rows={3}
             defaultValue={defaultValues?.shortDescription}
             className="field"
           />
         </label>
+
+        <CategorySubcategorySelect
+          kind="venue"
+          categoryName="venueCategory"
+          subcategoryName="venueSubcategory"
+          otherName="venueSubcategoryOther"
+          defaultCategory={parsedType.categoryId}
+          defaultSubcategoryRaw={parsedType.subcategoryRaw}
+          categoryLabel={t("venueType")}
+          subcategoryLabel={t("subcategory")}
+          otherLabel={t("subcategoryOther")}
+        />
+
         <label className="grid gap-1 text-sm">
-          <span>{t("addressLine1")}</span>
+          <span className="font-medium">{t("addressLine1")}</span>
           <input
             name="addressLine1"
-            required
             defaultValue={defaultValues?.addressLine1}
             className="field"
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span>{t("addressLine2")}</span>
+          <span className="font-medium">{t("addressLine2")}</span>
           <input
             name="addressLine2"
             defaultValue={defaultValues?.addressLine2 ?? ""}
@@ -191,19 +247,17 @@ export function VenueProfileForm({
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span>{t("district")}</span>
+            <span className="font-medium">{t("district")}</span>
             <input
               name="district"
-              required
               defaultValue={defaultValues?.district}
               className="field"
             />
           </label>
           <label className="grid gap-1 text-sm">
-            <span>{t("postalCode")}</span>
+            <span className="font-medium">{t("postalCode")}</span>
             <input
               name="postalCode"
-              required
               defaultValue={defaultValues?.postalCode}
               className="field"
             />
@@ -211,7 +265,7 @@ export function VenueProfileForm({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span>{t("latitude")}</span>
+            <span className="font-medium">{t("latitude")}</span>
             <input
               name="latitude"
               defaultValue={defaultValues?.latitude ?? ""}
@@ -219,7 +273,7 @@ export function VenueProfileForm({
             />
           </label>
           <label className="grid gap-1 text-sm">
-            <span>{t("longitude")}</span>
+            <span className="font-medium">{t("longitude")}</span>
             <input
               name="longitude"
               defaultValue={defaultValues?.longitude ?? ""}
@@ -228,19 +282,9 @@ export function VenueProfileForm({
           </label>
         </div>
         <label className="grid gap-1 text-sm">
-          <span>{t("venueType")}</span>
-          <input
-            name="venueType"
-            required
-            defaultValue={defaultValues?.venueType}
-            className="field"
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span>{t("audienceDescription")}</span>
+          <span className="font-medium">{t("audienceDescription")}</span>
           <textarea
             name="audienceDescription"
-            required
             rows={3}
             defaultValue={defaultValues?.audienceDescription}
             className="field"
@@ -248,7 +292,7 @@ export function VenueProfileForm({
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
-            <span>{t("capacity")}</span>
+            <span className="font-medium">{t("capacity")}</span>
             <input
               name="capacity"
               type="number"
@@ -259,7 +303,7 @@ export function VenueProfileForm({
             />
           </label>
           <label className="grid gap-1 text-sm">
-            <span>{t("capacityContext")}</span>
+            <span className="font-medium">{t("capacityContext")}</span>
             <input
               name="capacityContext"
               defaultValue={defaultValues?.capacityContext ?? ""}
@@ -267,10 +311,12 @@ export function VenueProfileForm({
             />
           </label>
         </div>
-        <fieldset className="grid gap-2 border border-[var(--rule)] p-3">
-          <legend className="px-1 text-sm">{t("productionResources")}</legend>
+        <fieldset className="grid gap-2 rounded-[var(--radius-md)] border border-[var(--rule)] p-4">
+          <legend className="px-1 text-sm font-medium">
+            {t("productionResources")}
+          </legend>
           <label className="grid gap-1 text-sm">
-            <span>{t("productionNotes")}</span>
+            <span className="font-medium">{t("productionNotes")}</span>
             <textarea
               name="productionNotes"
               rows={2}
@@ -279,66 +325,30 @@ export function VenueProfileForm({
             />
           </label>
           <div className="grid gap-2 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
-              <span>{t("productionPa")}</span>
-              <input
-                name="productionPa"
-                defaultValue={defaultValues?.productionPa ?? ""}
-                className="field"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span>{t("productionMixer")}</span>
-              <input
-                name="productionMixer"
-                defaultValue={defaultValues?.productionMixer ?? ""}
-                className="field"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span>{t("productionMics")}</span>
-              <input
-                name="productionMics"
-                defaultValue={defaultValues?.productionMics ?? ""}
-                className="field"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span>{t("productionLighting")}</span>
-              <input
-                name="productionLighting"
-                defaultValue={defaultValues?.productionLighting ?? ""}
-                className="field"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span>{t("productionBackline")}</span>
-              <input
-                name="productionBackline"
-                defaultValue={defaultValues?.productionBackline ?? ""}
-                className="field"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span>{t("productionPower")}</span>
-              <input
-                name="productionPower"
-                defaultValue={defaultValues?.productionPower ?? ""}
-                className="field"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span>{t("productionStage")}</span>
-              <input
-                name="productionStage"
-                defaultValue={defaultValues?.productionStage ?? ""}
-                className="field"
-              />
-            </label>
+            {(
+              [
+                ["productionPa", "productionPa"],
+                ["productionMixer", "productionMixer"],
+                ["productionMics", "productionMics"],
+                ["productionLighting", "productionLighting"],
+                ["productionBackline", "productionBackline"],
+                ["productionPower", "productionPower"],
+                ["productionStage", "productionStage"],
+              ] as const
+            ).map(([name, labelKey]) => (
+              <label key={name} className="grid gap-1 text-sm">
+                <span className="font-medium">{t(labelKey)}</span>
+                <input
+                  name={name}
+                  defaultValue={defaultValues?.[name] ?? ""}
+                  className="field"
+                />
+              </label>
+            ))}
           </div>
         </fieldset>
         <label className="grid gap-1 text-sm">
-          <span>{t("houseRules")}</span>
+          <span className="font-medium">{t("houseRules")}</span>
           <textarea
             name="houseRules"
             rows={2}
@@ -347,7 +357,7 @@ export function VenueProfileForm({
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span>{t("loadInNotes")}</span>
+          <span className="font-medium">{t("loadInNotes")}</span>
           <textarea
             name="loadInNotes"
             rows={2}
@@ -356,7 +366,7 @@ export function VenueProfileForm({
           />
         </label>
         <label className="grid gap-1 text-sm">
-          <span>{t("accessibilityNotes")}</span>
+          <span className="font-medium">{t("accessibilityNotes")}</span>
           <textarea
             name="accessibilityNotes"
             rows={2}
@@ -364,47 +374,47 @@ export function VenueProfileForm({
             className="field"
           />
         </label>
+
+        <PrefixedUrlInput
+          platform="website"
+          name="websiteUrl"
+          label={t("websiteUrl")}
+          defaultValue={defaultValues?.websiteUrl}
+        />
+        <div className="grid gap-3">
+          {VENUE_SOCIAL_ORDER.map((platform: SocialPlatform) => (
+            <PrefixedUrlInput
+              key={platform}
+              platform={platform}
+              name={
+                platform === "instagram"
+                  ? "socialInstagram"
+                  : platform === "facebook"
+                    ? "socialFacebook"
+                    : platform === "tiktok"
+                      ? "socialTiktok"
+                      : platform === "linkedin"
+                        ? "socialLinkedin"
+                        : "socialYoutube"
+              }
+              label={t(
+                platform === "instagram"
+                  ? "socialInstagram"
+                  : platform === "facebook"
+                    ? "socialFacebook"
+                    : platform === "tiktok"
+                      ? "socialTiktok"
+                      : platform === "linkedin"
+                        ? "socialLinkedin"
+                        : "socialYoutube",
+              )}
+              defaultValue={social[platform as keyof SocialLinks]}
+            />
+          ))}
+        </div>
+
         <label className="grid gap-1 text-sm">
-          <span>{t("websiteUrl")}</span>
-          <input
-            name="websiteUrl"
-            type="url"
-            defaultValue={defaultValues?.websiteUrl ?? ""}
-            className="field"
-          />
-        </label>
-        <fieldset className="grid gap-2 border border-[var(--rule)] p-3">
-          <legend className="px-1 text-sm">{t("socialLinks")}</legend>
-          <label className="grid gap-1 text-sm">
-            <span>{t("socialInstagram")}</span>
-            <input
-              name="socialInstagram"
-              type="url"
-              defaultValue={social.instagram ?? ""}
-              className="field"
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span>{t("socialFacebook")}</span>
-            <input
-              name="socialFacebook"
-              type="url"
-              defaultValue={social.facebook ?? ""}
-              className="field"
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span>{t("socialTiktok")}</span>
-            <input
-              name="socialTiktok"
-              type="url"
-              defaultValue={social.tiktok ?? ""}
-              className="field"
-            />
-          </label>
-        </fieldset>
-        <label className="grid gap-1 text-sm">
-          <span>{t("contactEmail")}</span>
+          <span className="font-medium">{t("contactEmail")}</span>
           <input
             name="contactEmail"
             type="email"
@@ -413,49 +423,63 @@ export function VenueProfileForm({
             className="field"
           />
         </label>
+        <label className="grid gap-1 text-sm">
+          <span className="font-medium">{t("contactPhone")}</span>
+          <input
+            name="contactPhone"
+            type="tel"
+            defaultValue={defaultContactPhone}
+            className="field"
+            placeholder="+49 …"
+          />
+        </label>
+
         {error ? (
-          <p role="alert" className="text-sm text-red-800">
+          <p role="alert" className="text-sm text-[var(--danger)]">
             {error}
           </p>
         ) : null}
-        {message ? <p className="text-sm">{message}</p> : null}
-        <Button
-          type="submit"
-          pending={pending}
-          pendingLabel={ui("working")}
-          variant="primary"
-        >
-          {venueId ? t("saveDraft") : t("createVenue")}
-        </Button>
-      </form>
+        {message ? (
+          <p aria-live="polite" className="text-sm">
+            {message}
+          </p>
+        ) : null}
 
-      {venueId ? (
-        <Button
-          type="button"
-          pending={pending}
-          pendingLabel={ui("working")}
-          variant="secondary"
-          onClick={() => {
-            setError(null);
-            setMessage(null);
-            startTransition(async () => {
-              const result = await submitVenueProfile(venueId, locale);
-              if (!result.ok) {
-                setError(
-                  result.code === "invalid_transition"
-                    ? errors("invalid_transition")
-                    : result.message,
-                );
-                return;
-              }
-              setMessage(t("submitted"));
-              router.refresh();
-            });
-          }}
-        >
-          {t("submitForReview")}
-        </Button>
-      ) : null}
+        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--rule)] pt-4">
+          <p className="text-sm text-[var(--text-muted)]">{t("autosaveHint")}</p>
+          {venueId ? (
+            <Button
+              type="button"
+              pending={pending}
+              pendingLabel={ui("working")}
+              variant="primary"
+              className="ml-auto"
+              onClick={() => {
+                setError(null);
+                setMessage(null);
+                startTransition(async () => {
+                  await autosave.saveNow();
+                  const result = await submitVenueProfile(venueId, locale);
+                  if (!result.ok) {
+                    setError(
+                      result.code === "invalid_transition"
+                        ? errors("invalid_transition")
+                        : result.code === "validation"
+                          ? errors("validation")
+                          : result.message,
+                    );
+                    return;
+                  }
+                  setMessage(t("submitted"));
+                  router.refresh();
+                });
+              }}
+            >
+              {t("submitForReview")}
+            </Button>
+          ) : null}
+        </div>
+      </form>
     </div>
   );
 }

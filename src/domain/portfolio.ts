@@ -7,7 +7,13 @@ export const PORTFOLIO_IMAGE_MIME_TYPES = [
 ] as const;
 
 export const PORTFOLIO_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-export const PORTFOLIO_MAX_ITEMS = 24;
+/** Max gallery images (hero = first after sort). */
+export const PORTFOLIO_MAX_IMAGES = 7;
+/** Exactly one YouTube embed slot is supported in the profile builder. */
+export const PORTFOLIO_MAX_YOUTUBE = 1;
+/** Legacy mixed-item ceiling (images + youtube + optional links). */
+export const PORTFOLIO_MAX_ITEMS =
+  PORTFOLIO_MAX_IMAGES + PORTFOLIO_MAX_YOUTUBE + 8;
 export const PORTFOLIO_LINK_MAX_LENGTH = 500;
 export const PORTFOLIO_CAPTION_MAX_LENGTH = 500;
 export const PORTFOLIO_ALT_MAX_LENGTH = 500;

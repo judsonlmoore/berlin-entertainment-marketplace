@@ -57,6 +57,13 @@
       "when": 1785847200000,
       "tag": "0007_unlink_anonymized_oauth",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785850800000,
+      "tag": "0008_entertainer_base_coords",
+      "breakpoints": true
     }
   ]
 }

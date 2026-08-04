@@ -6,13 +6,15 @@
 - **Space/industry:** Two-sided marketplace / cultural booking ops (Airbnb-shaped trust model, not consumer travel chrome).
 - **Project type:** Authenticated web app + public marketing/signup surface.
 - **Memorable thing:** The private, protected way Berlin venues and acts book each other.
+- **Profile / onboarding memorable:** After five seconds, trust that Salon brings more business and lowers booking/agreement stress — and that a strong profile presence is worth the effort.
 
 ## Aesthetic Direction
 - **Direction:** Crisp cultural-ops (evolved from editorial warm-ivory)
 - **Decoration level:** Intentional — thin rules, quiet surfaces, monograms; no gradients/glass/pills-everywhere
 - **Mood:** Calm, trustworthy, current. Berlin atelier restraint with booking-grade clarity. Users should feel they can manage availability and close a protected booking today — not browse a lifestyle brochure.
 - **Reference sites:** Airbnb host/ops clarity for density and “what needs me now?”; keep Salon cultural identity distinct (no Coral red, no pill search, no photo-mall discovery).
-- **Preview:** `~/.gstack/projects/berlin-entertainment-marketplace/designs/design-system-20260803/salon-evolved-preview.html`
+- **Preview (system):** `~/.gstack/projects/berlin-entertainment-marketplace/designs/design-system-20260803/salon-evolved-preview.html`
+- **Preview (profile + onboarding):** `~/.gstack/projects/judsonlmoore-berlin-entertainment-marketplace/designs/profile-builder-20260805/preview.html`
 
 ## Typography
 - **Display/Hero:** Fraunces — brand wordmark and public landing hero only
@@ -78,6 +80,44 @@
 - Dual-role tabs: active = primary underline **and** weight 600 (not color alone)
 - Primary button: solid primary / white label; secondary: white + rule + ink
 
+## Profile builder & onboarding setup
+Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as the rest of the app; these rules are surface-specific.
+
+### Intent
+- Feel like building a **booking asset** (act/venue presence), not filling an admin spreadsheet.
+- Outcome framing in one quiet line max (e.g. fuller profiles get shortlisted / verification unlocks contact). Do not stack salesy callouts.
+- No live preview panel beside the form.
+
+### Layout
+- **Onboarding:** Narrow focused steps (shell without app rail). Short path. Final “you’re in / pending verification” screen stays until the user clicks Continue (no auto-redirect).
+- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top. Section hairline rules. Media high; logistics later. Account language/deletion live under `/account`, not profile.
+
+### Autosave & publication status
+- Autosave while editing. Status copy is only **Saving…** and **Saved.** (no clock time).
+- No **Submit for review** CTA on profile.
+- Soft status tags at the top of profile: **Under review** (warning soft `#F3E8CF`, ink-readable) and **Verified** (success soft `#E3EEE5`, primary-tint text). Optional draft/empty state has no tag or a quiet draft label.
+- Product rule for when a draft becomes “Under review” is decided in product/spec (e.g. completeness threshold or staff intake); the UI must not depend on a manual submit button.
+
+### Media
+- Empty slots: **dashed outlined** rectangles/squares on white surface — not mystery-person silhouettes, not photo backgrounds as placeholders.
+- Hero empty: light drop affordance (small stacked-photo icon + short “Drop hero photo / or click to browse”); gallery empties are quieter (`+` only).
+- Filled: show the image; circular remove control top-right; loading = dark overlay + spinner.
+- Optional **Hero** badge on the title photo once set.
+- Featured YouTube: URL field + thumbnail; **clicking the thumbnail opens a modal with the embedded video**.
+
+### Description
+- Rich text (bold / italic / underline / lists / quote). Character counter with min/max (40–2000). No links in description. Same control on onboarding basics and profile.
+
+### Website & social links
+- Plain full-URL text inputs with platform-specific **placeholders** (e.g. `https://www.instagram.com/yourhandle`).
+- Do **not** hardcode URL prefix chrome beside the field.
+- Validate that the value matches the expected platform (host/path). An Instagram field must reject a Twitter/X URL, etc.
+- Inline **Valid** / **Invalid** status right-aligned **inside** the input; short `role="alert"` error under invalid fields.
+
+### Contact on these surfaces
+- Do not collect a separate private contact email on onboarding or profile builder. Prefer the signed-in account email for contact workflows.
+- Contact privacy copy still applies where discovery reveals contacts after shortlist/accepted request.
+
 ## Shell
 - Desktop ≥1024px: sticky ~280px rail, slim surface top bar (~64–72px), breadcrumb + locale
 - Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav
@@ -85,6 +125,10 @@
 
 ## Explicitly prohibited
 No gradients, glassmorphism, neon, purple-first templates, oversized rounded cards, pill-everything, generic stock photography, decorative blobs, drop-shadow-heavy cards, warm-cream + terracotta + giant serif everywhere as the default authenticated look.
+No mystery-person avatar placeholders for hero/gallery media.
+No fixed social URL prefix chrome on profile/onboarding link fields.
+No Submit-for-review primary on the profile builder (autosave + status tags instead).
+No live marketplace preview rail on profile edit.
 
 ## Decisions Log
 | Date | Decision | Rationale |
@@ -95,3 +139,4 @@ No gradients, glassmorphism, neon, purple-first templates, oversized rounded car
 | 2026-08-03 | Form system with 8px radius and section groups | Profile/booking trust surfaces need first-class field UI |
 | 2026-08-03 | Remove authenticated sticky bottom nav | Mobile drawer + desktop rail already cover navigation; bottom bar was redundant |
 | 2026-08-03 | Legal pages from markdown under `content/legal` | Easier bilingual updates; shared prose template + public footer |
+| 2026-08-05 | Profile + onboarding as booking-asset editors | Presence-led, autosave, dashed media empties, platform URL validation, status tags instead of submit; preview approved in design consultation |

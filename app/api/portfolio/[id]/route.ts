@@ -9,6 +9,7 @@ import {
 } from "@/src/db/schema/marketplace";
 import { can } from "@/src/domain/permissions";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
+import { getPortfolioImageBytes } from "@/src/integrations/portfolio-image-memory";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -65,6 +66,22 @@ export async function GET(_request: Request, { params }: Props) {
         { status: 404 },
       );
     }
+  }
+
+  if (item.blobKey.startsWith("memory/")) {
+    const stored = getPortfolioImageBytes(item.blobKey);
+    if (!stored) {
+      return NextResponse.json(
+        { ok: false, error: "not_found" },
+        { status: 404 },
+      );
+    }
+    return new NextResponse(Buffer.from(stored.bytes), {
+      headers: {
+        "Content-Type": stored.mimeType,
+        "Cache-Control": "private, no-store",
+      },
+    });
   }
 
   if (!isFileStoreConfigured()) {

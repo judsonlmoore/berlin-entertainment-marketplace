@@ -202,17 +202,25 @@ Reference: [calendar.png](./design-reference/calendar.png)
 
 **Responsive:** agenda/week below tablet; never an unreadable squeezed month.
 
-### 6.7 Dual-role profile
+### 6.7 Profile builder & onboarding setup
 
-Reference: [dual-role-profile.png](./design-reference/dual-role-profile.png)
+Reference preview: `~/.gstack/projects/judsonlmoore-berlin-entertainment-marketplace/designs/profile-builder-20260805/preview.html` (also see historical [dual-role-profile.png](./design-reference/dual-role-profile.png) for older dual-role chrome — XOR accounts supersede dual-role).
 
-**Purpose:** maintain venue and/or entertainer identities; show approval readiness.
+**Purpose:** Build and maintain the marketplace act/venue identity. Onboarding is the first pass; Profile is the ongoing single-page editor.
 
-**Hierarchy:** eyebrow → title → role tabs → **sectioned forms** → approval panel.
+**Hierarchy (profile):** eyebrow → display name title → soft publication status tag + autosave status → optional one-line outcome copy → display-name strip → sectioned form (Media → Basics → Details → Links). No private-contact section; no Submit for review; no live preview rail.
 
-**Required modules:** tabs with weight + underline; sectioned field groups; contact privacy copy; rider/portfolio; approval checklist; save/submit; validation and `aria-live` success.
+**Hierarchy (onboarding):** step progress → eyebrow → title → short body → panel fields → Next / Submit path → done screen with Continue (manual).
 
-**Responsive:** approval panel adjacent/above form; sticky safe save; preserve label/error association.
+**Required modules:**
+- Autosave with `Saving…` / `Saved.` (`aria-live="polite"`)
+- Soft tags: Under review (warning soft) / Verified (success soft)
+- Dashed empty media slots; filled tiles with remove + loading; YouTube thumb → embed modal
+- Rich-text description with counter (shared with onboarding)
+- Full-URL social/website fields with placeholders + platform host validation; Valid/Invalid inside the field
+- Account settings (locale, deletion) on `/account`, not profile
+
+**Responsive:** single column on mobile; media grid 2-up; keep 44px targets and label/error association.
 
 ## 7. Responsive and state requirements
 

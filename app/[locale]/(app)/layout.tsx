@@ -29,8 +29,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Authenticated marketplace shell. Incomplete onboarding is sent to the
- * sidebar-free XOR flow before this chrome is shown.
+ * Authenticated marketplace shell. Incomplete onboarding (no role, or role
+ * without a created profile/venue) is sent to the sidebar-free XOR flow.
+ * Draft profile edits must not bounce members back into onboarding.
  */
 export default async function AppLayout({ children, params }: Props) {
   const { locale } = await params;
