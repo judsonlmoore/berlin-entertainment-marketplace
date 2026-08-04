@@ -20,12 +20,13 @@ const deleteAccountSchema = z.object({
  * - Validates the user owns the account
  * - Checks for active bookings or disputes
  * - Anonymizes all PII (name, email, contact methods)
- * - Invalidates all sessions
+ * - Removes OAuth/provider links, authenticators, and sessions
  * - Creates an audit trail
  *
- * The operation is permanent and irreversible.
+ * The operation is permanent and irreversible. Signing in again with the same
+ * provider creates a fresh user account.
  *
- * @param input - Confirmation text and user email for challenge validation
+ * @param input - Confirmation text (must be exactly DELETE) and user email
  * @returns ActionResult indicating success or failure
  */
 export async function deleteUserAccount(
@@ -55,13 +56,10 @@ export async function deleteUserAccount(
       throw new AppError("unauthorized", "Sign in required");
     }
 
-    if (
-      parsed.data.confirmationText.toUpperCase() !== "DELETE" &&
-      parsed.data.confirmationText !== parsed.data.userEmail
-    ) {
+    if (parsed.data.confirmationText !== "DELETE") {
       throw new AppError(
         "validation",
-        "Confirmation text must be 'DELETE' or your email address",
+        "Confirmation text must be exactly DELETE",
       );
     }
 

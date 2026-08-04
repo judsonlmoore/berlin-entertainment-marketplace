@@ -1,10 +1,17 @@
-import { and, eq, or, sql } from "drizzle-orm";
-import { getDb } from "@/src/db/client";
-import { users, sessions } from "@/src/db/schema/auth";
+import { and, eq, inArray, or } from "drizzle-orm";
+import { getDb, type Database } from "@/src/db/client";
+import {
+  accounts,
+  authenticators,
+  users,
+  sessions,
+} from "@/src/db/schema/auth";
 import {
   contactMethods,
   auditEvents,
   bookings,
+  entertainerProfiles,
+  venueMemberships,
 } from "@/src/db/schema/marketplace";
 import {
   anonymizePii,
@@ -14,42 +21,91 @@ import {
   type AnonymizationReason,
 } from "@/src/domain/anonymization";
 
+type DbExecutor = Pick<Database, "select">;
+
+const ACTIVE_BOOKING_STATES = [
+  "requested",
+  "applied",
+  "shortlisted",
+  "accepted",
+  "terms_agreed",
+  "agreement_generated",
+  "partially_signed",
+  "confirmed",
+] as const;
+
+async function listEntertainerProfileIds(
+  db: DbExecutor,
+  userId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ id: entertainerProfiles.id })
+    .from(entertainerProfiles)
+    .where(eq(entertainerProfiles.userId, userId));
+  return rows.map((row) => row.id);
+}
+
+async function listActiveVenueIds(
+  db: DbExecutor,
+  userId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ venueId: venueMemberships.venueId })
+    .from(venueMemberships)
+    .where(
+      and(
+        eq(venueMemberships.userId, userId),
+        eq(venueMemberships.status, "active"),
+      ),
+    );
+  return rows.map((row) => row.venueId);
+}
+
+async function listOwnedVenueIds(
+  db: DbExecutor,
+  userId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ venueId: venueMemberships.venueId })
+    .from(venueMemberships)
+    .where(
+      and(
+        eq(venueMemberships.userId, userId),
+        eq(venueMemberships.status, "active"),
+        eq(venueMemberships.role, "owner"),
+      ),
+    );
+  return rows.map((row) => row.venueId);
+}
+
 /**
  * Check if a user has active bookings that would prevent anonymization.
  */
 export async function checkActiveBookings(userId: string): Promise<boolean> {
   const db = getDb();
+  const [profileIds, venueIds] = await Promise.all([
+    listEntertainerProfileIds(db, userId),
+    listActiveVenueIds(db, userId),
+  ]);
 
-  const activeBookingStates = [
-    "requested",
-    "applied",
-    "shortlisted",
-    "accepted",
-    "terms_agreed",
-    "agreement_generated",
-    "partially_signed",
-    "confirmed",
-  ] as const;
+  const partyFilters = [];
+  if (profileIds.length > 0) {
+    partyFilters.push(inArray(bookings.entertainerProfileId, profileIds));
+  }
+  if (venueIds.length > 0) {
+    partyFilters.push(inArray(bookings.venueId, venueIds));
+  }
+  if (partyFilters.length === 0) {
+    return false;
+  }
 
   const userBookings = await db
     .select({ id: bookings.id })
     .from(bookings)
     .where(
       and(
-        or(
-          sql`${bookings.venueId} IN (
-            SELECT venue_id FROM venue_memberships 
-            WHERE user_id = ${userId} AND status = 'active'
-          )`,
-          sql`${bookings.entertainerProfileId} IN (
-            SELECT id FROM entertainer_profiles 
-            WHERE user_id = ${userId}
-          )`,
-        ),
-        sql`${bookings.state} IN (${sql.join(
-          activeBookingStates.map((state) => sql`${state}`),
-          sql`, `,
-        )})`,
+        or(...partyFilters),
+        inArray(bookings.state, [...ACTIVE_BOOKING_STATES]),
       ),
     )
     .limit(1);
@@ -64,25 +120,26 @@ export async function checkUnresolvedDisputes(
   userId: string,
 ): Promise<boolean> {
   const db = getDb();
+  const [profileIds, venueIds] = await Promise.all([
+    listEntertainerProfileIds(db, userId),
+    listActiveVenueIds(db, userId),
+  ]);
+
+  const partyFilters = [];
+  if (profileIds.length > 0) {
+    partyFilters.push(inArray(bookings.entertainerProfileId, profileIds));
+  }
+  if (venueIds.length > 0) {
+    partyFilters.push(inArray(bookings.venueId, venueIds));
+  }
+  if (partyFilters.length === 0) {
+    return false;
+  }
 
   const disputedBookings = await db
     .select({ id: bookings.id })
     .from(bookings)
-    .where(
-      and(
-        or(
-          sql`${bookings.venueId} IN (
-            SELECT venue_id FROM venue_memberships 
-            WHERE user_id = ${userId} AND status = 'active'
-          )`,
-          sql`${bookings.entertainerProfileId} IN (
-            SELECT id FROM entertainer_profiles 
-            WHERE user_id = ${userId}
-          )`,
-        ),
-        eq(bookings.depositStatus, "disputed"),
-      ),
-    )
+    .where(and(or(...partyFilters), eq(bookings.depositStatus, "disputed")))
     .limit(1);
 
   return disputedBookings.length > 0;
@@ -91,10 +148,11 @@ export async function checkUnresolvedDisputes(
 /**
  * Get all contact methods owned by the user.
  * Includes user contacts, entertainer contacts, and venue contacts where user is owner.
+ *
+ * contact_methods.owner_id is text while profile/venue ids are uuid — resolve ids
+ * first and compare with inArray instead of a cross-type SQL subquery.
  */
-async function getUserContactMethods(userId: string) {
-  const db = getDb();
-
+async function getUserContactMethods(db: DbExecutor, userId: string) {
   const userContacts = await db
     .select()
     .from(contactMethods)
@@ -105,16 +163,38 @@ async function getUserContactMethods(userId: string) {
       ),
     );
 
-  const entertainerContacts = await db
-    .select()
-    .from(contactMethods)
-    .where(
-      sql`${contactMethods.ownerType} = 'entertainer' AND ${contactMethods.ownerId} IN (
-        SELECT id FROM entertainer_profiles WHERE user_id = ${userId}
-      )`,
-    );
+  const [profileIds, ownedVenueIds] = await Promise.all([
+    listEntertainerProfileIds(db, userId),
+    listOwnedVenueIds(db, userId),
+  ]);
 
-  return [...userContacts, ...entertainerContacts];
+  const entertainerContacts =
+    profileIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(contactMethods)
+          .where(
+            and(
+              eq(contactMethods.ownerType, "entertainer"),
+              inArray(contactMethods.ownerId, profileIds),
+            ),
+          );
+
+  const venueContacts =
+    ownedVenueIds.length === 0
+      ? []
+      : await db
+          .select()
+          .from(contactMethods)
+          .where(
+            and(
+              eq(contactMethods.ownerType, "venue"),
+              inArray(contactMethods.ownerId, ownedVenueIds),
+            ),
+          );
+
+  return [...userContacts, ...entertainerContacts, ...venueContacts];
 }
 
 /**
@@ -130,6 +210,9 @@ export async function anonymizeUserAccount(
 ): Promise<void> {
   const db = getDb();
 
+  const hasActiveBookings = await checkActiveBookings(userId);
+  const hasUnresolvedDisputes = await checkUnresolvedDisputes(userId);
+
   await db.transaction(async (tx) => {
     const user = await tx.query.users.findFirst({
       where: eq(users.id, userId),
@@ -142,9 +225,6 @@ export async function anonymizeUserAccount(
     if (user.anonymizedAt) {
       throw new Error("Account is already anonymized");
     }
-
-    const hasActiveBookings = await checkActiveBookings(userId);
-    const hasUnresolvedDisputes = await checkUnresolvedDisputes(userId);
 
     validateAnonymizationPreconditions({
       userId,
@@ -169,7 +249,7 @@ export async function anonymizeUserAccount(
       })
       .where(eq(users.id, userId));
 
-    const userContactsList = await getUserContactMethods(userId);
+    const userContactsList = await getUserContactMethods(tx, userId);
     for (const contact of userContactsList) {
       const anonymizedValue = anonymizeContactValue(contact.id, contact.kind);
       await tx
@@ -181,6 +261,9 @@ export async function anonymizeUserAccount(
         .where(eq(contactMethods.id, contact.id));
     }
 
+    // Sever identity links so the same OAuth/email provider can create a fresh user.
+    await tx.delete(accounts).where(eq(accounts.userId, userId));
+    await tx.delete(authenticators).where(eq(authenticators.userId, userId));
     await tx.delete(sessions).where(eq(sessions.userId, userId));
 
     const auditData = prepareAnonymizationAudit({

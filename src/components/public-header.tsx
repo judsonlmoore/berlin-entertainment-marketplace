@@ -6,7 +6,7 @@ import { signOutAction } from "@/src/actions/auth";
 
 type Props = {
   signedIn: boolean;
-  /** Only relevant when signed in — apply requires an account. */
+  /** Signed-in users who still need XOR role selection. */
   showApplyCta?: boolean;
 };
 
@@ -27,25 +27,26 @@ export async function PublicHeader({ signedIn, showApplyCta = true }: Props) {
           <LocaleSwitcher />
           {signedIn ? (
             <>
-              <Link
-                href="/marketplace"
-                className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] px-3 py-2 text-sm font-semibold no-underline"
-              >
-                {t("marketplace")}
-              </Link>
+              {showApplyCta ? (
+                <Link
+                  href="/onboarding/role-selection"
+                  className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
+                >
+                  {t("applyAccess")}
+                </Link>
+              ) : (
+                <Link
+                  href="/marketplace"
+                  className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] px-3 py-2 text-sm font-semibold no-underline"
+                >
+                  {t("marketplace")}
+                </Link>
+              )}
               <form action={signOutAction}>
                 <PendingSubmitButton variant="ghost">
                   {t("signOut")}
                 </PendingSubmitButton>
               </form>
-              {showApplyCta ? (
-                <Link
-                  href="/apply"
-                  className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
-                >
-                  {t("applyAccess")}
-                </Link>
-              ) : null}
             </>
           ) : (
             <Link

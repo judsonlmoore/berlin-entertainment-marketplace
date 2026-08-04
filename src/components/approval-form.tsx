@@ -2,70 +2,69 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { changeApprovalState } from "@/src/actions/approval";
-import { Button } from "@/src/components/ui/button";
-import { APPROVAL_STATES, type ApprovalState } from "@/src/domain/approval";
+import { changeAccountStatus } from "@/src/actions/approval";
+import { ACCOUNT_STATUSES, type AccountStatus } from "@/src/domain/approval";
 import { useRouter } from "@/src/i18n/navigation";
 
 type Props = {
   locale: "en" | "de";
   marketplaceAccountId: string;
-  currentState: ApprovalState;
+  currentStatus: AccountStatus;
 };
 
 export function ApprovalForm({
   locale,
   marketplaceAccountId,
-  currentState,
+  currentStatus,
 }: Props) {
   const t = useTranslations("admin");
-  const status = useTranslations("status");
+  const status = useTranslations("accountStatus");
   const errors = useTranslations("errors");
-  const ui = useTranslations("ui");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  const nextDefault =
+    currentStatus === "active" ? "suspended" : ("active" as const);
+
   return (
     <form
-      className="mt-3 grid gap-2 border-t border-[var(--line)] pt-3"
+      className="grid gap-3"
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);
         const form = new FormData(event.currentTarget);
-
         startTransition(async () => {
-          const result = await changeApprovalState({
+          const result = await changeAccountStatus({
             marketplaceAccountId,
-            nextState: String(form.get("nextState")) as ApprovalState,
+            nextStatus: String(form.get("nextStatus")) as AccountStatus,
             reason: String(form.get("reason") ?? ""),
             locale,
           });
-
           if (!result.ok) {
             setError(
-              errors.has(result.code)
-                ? errors(result.code as "forbidden")
+              result.code === "validation" ||
+                result.code === "unauthorized" ||
+                result.code === "forbidden" ||
+                result.code === "invalid_transition"
+                ? errors(result.code)
                 : result.message,
             );
             return;
           }
-
           router.refresh();
         });
       }}
     >
-      <p className="text-sm text-[var(--muted)]">
-        {t("currentState")}: {status(currentState)}
-      </p>
-      <label className="grid gap-1 text-sm">
-        <span>{t("update")}</span>
+      <label className="label">
+        <span>{t("nextState")}</span>
         <select
-          name="nextState"
-          defaultValue={currentState === "applied" ? "approved" : "suspended"}
+          name="nextStatus"
           className="field"
+          defaultValue={nextDefault}
+          required
         >
-          {APPROVAL_STATES.filter((state) => state !== currentState).map(
+          {ACCOUNT_STATUSES.filter((state) => state !== currentStatus).map(
             (state) => (
               <option key={state} value={state}>
                 {status(state)}
@@ -74,23 +73,22 @@ export function ApprovalForm({
           )}
         </select>
       </label>
-      <label className="grid gap-1 text-sm">
-        <span>{t("reasonLabel")}</span>
-        <input name="reason" required className="field" />
+      <label className="label">
+        <span>{t("reason")}</span>
+        <textarea name="reason" className="field" rows={3} required />
       </label>
+      <button
+        type="submit"
+        disabled={pending}
+        className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-medium text-[var(--primary-foreground)] disabled:opacity-50"
+      >
+        {pending ? "…" : t("saveState")}
+      </button>
       {error ? (
         <p role="alert" className="text-sm text-red-800">
           {error}
         </p>
       ) : null}
-      <Button
-        type="submit"
-        pending={pending}
-        pendingLabel={ui("working")}
-        variant="primary"
-      >
-        {t("update")}
-      </Button>
     </form>
   );
 }

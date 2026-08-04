@@ -16,7 +16,7 @@ export async function countApprovedMembers() {
   const [row] = await db
     .select({ value: count() })
     .from(marketplaceAccounts)
-    .where(eq(marketplaceAccounts.approvalState, "approved"));
+    .where(eq(marketplaceAccounts.accountStatus, "active"));
   return row?.value ?? 0;
 }
 

@@ -7,7 +7,9 @@ export async function signInWithProvider(
   provider: "github" | "google",
   locale: AppLocale = "en",
 ) {
-  await signIn(provider, { redirectTo: `/${locale}/marketplace` });
+  await signIn(provider, {
+    redirectTo: `/${locale}/onboarding/role-selection`,
+  });
 }
 
 export async function signOutAction() {

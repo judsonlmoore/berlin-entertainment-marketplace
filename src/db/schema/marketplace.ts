@@ -13,7 +13,7 @@ import {
 import { sql } from "drizzle-orm";
 import { users } from "./auth";
 import {
-  approvalStateEnum,
+  accountStatusEnum,
   applicationStateEnum,
   bookingOriginEnum,
   bookingStateEnum,
@@ -39,10 +39,9 @@ export const marketplaceAccounts = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" })
       .unique(),
-    approvalState: approvalStateEnum("approval_state")
+    accountStatus: accountStatusEnum("account_status")
       .notNull()
-      .default("applied"),
-    applicationNote: text("application_note"),
+      .default("active"),
     berlinConnection: text("berlin_connection"),
     termsAcceptedAt: timestamp("terms_accepted_at", {
       withTimezone: true,
@@ -58,9 +57,7 @@ export const marketplaceAccounts = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    index("marketplace_accounts_approval_idx").on(table.approvalState),
-  ],
+  (table) => [index("marketplace_accounts_status_idx").on(table.accountStatus)],
 );
 
 export const userRoles = pgTable(
@@ -75,9 +72,7 @@ export const userRoles = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    uniqueIndex("user_roles_user_role_uidx").on(table.userId, table.role),
-  ],
+  (table) => [uniqueIndex("user_roles_user_uidx").on(table.userId)],
 );
 
 export const contactMethods = pgTable(

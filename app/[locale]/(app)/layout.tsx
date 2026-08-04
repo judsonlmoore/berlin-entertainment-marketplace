@@ -6,6 +6,7 @@ import { AuthenticatedChrome } from "@/src/components/authenticated-chrome";
 import { auth } from "@/src/auth";
 import { getActorContext } from "@/src/db/queries/actor";
 import { can } from "@/src/domain/permissions";
+import { resolveOnboardingDestination } from "@/src/lib/onboarding-gate";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
 import { loadRailRoleContext } from "@/src/lib/rail-role-context";
@@ -28,19 +29,38 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Shared authenticated shell for marketplace, profile, onboarding, and admin.
- * Keeping these under one layout preserves the rail/header across soft navigations.
+ * Authenticated marketplace shell. Incomplete onboarding is sent to the
+ * sidebar-free XOR flow before this chrome is shown.
  */
 export default async function AppLayout({ children, params }: Props) {
   const { locale } = await params;
   const session = await auth();
   if (!session?.user?.id) {
-    redirect({ href: "/sign-in", locale: locale as "en" | "de" });
+    redirect({ href: "/sign-in", locale: locale as AppLocale });
   }
 
   const user = session!.user!;
   const isStaff = Boolean(user.isPlatformStaff);
-  let isApproved = user.approvalState === "approved" || isStaff;
+
+  const destination = await resolveOnboardingDestination({
+    userId: user.id!,
+    isPlatformStaff: isStaff,
+    sessionRoles: user.roles,
+  });
+  if (destination === "role") {
+    redirect({
+      href: "/onboarding/role-selection",
+      locale: locale as AppLocale,
+    });
+  }
+  if (destination === "setup") {
+    redirect({ href: "/onboarding/setup", locale: locale as AppLocale });
+  }
+
+  let isApproved =
+    user.accountStatus === "active" ||
+    (user.accountStatus === null && isStaff) ||
+    isStaff;
   let canDiscoverEntertainers = isStaff;
   let canDiscoverVenues = isStaff;
   let roleContext = null;

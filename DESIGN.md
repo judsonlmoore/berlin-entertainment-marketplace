@@ -2,9 +2,9 @@
 
 ## Product Context
 - **What this is:** A private, curated Berlin B2B marketplace connecting venues with small-format entertainers — discovery, protected contact unlock, agreements, native calendar, and (later) payments.
-- **Who it's for:** Approved venue operators and entertainers (including dual-role accounts) who need to manage availability, bookings, and trust safely.
+- **Who it's for:** Active venue operators and entertainers (one role per account) who need to manage availability, bookings, and trust safely.
 - **Space/industry:** Two-sided marketplace / cultural booking ops (Airbnb-shaped trust model, not consumer travel chrome).
-- **Project type:** Authenticated web app + public marketing/apply surface.
+- **Project type:** Authenticated web app + public marketing/signup surface.
 - **Memorable thing:** The private, protected way Berlin venues and acts book each other.
 
 ## Aesthetic Direction

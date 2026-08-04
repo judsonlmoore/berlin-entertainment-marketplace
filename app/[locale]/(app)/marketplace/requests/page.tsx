@@ -53,6 +53,13 @@ export default async function DirectRequestsPage({ params }: Props) {
     <section className="grid gap-8">
       <PageHeader eyebrow={t("eyebrow")} title={t("title")} body={t("body")} />
 
+      {access.actor.roles.includes("entertainer") &&
+      !access.actor.entertainerVerified ? (
+        <p className="panel p-6 text-sm text-[var(--text-muted)]">
+          {market("verificationContactLocked")}
+        </p>
+      ) : null}
+
       {can(access.actor, "direct_request.respond") ? (
         <div className="panel grid gap-3 p-6">
           <h2 className="page-title text-xl">{t("incomingTitle")}</h2>

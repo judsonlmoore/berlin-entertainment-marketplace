@@ -5,9 +5,6 @@ import { Link } from "@/src/i18n/navigation";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPublicMetadata } from "@/src/lib/seo-metadata";
 import { auth } from "@/src/auth";
-import { getDb } from "@/src/db/client";
-import { venues } from "@/src/db/schema/marketplace";
-import { eq } from "drizzle-orm";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -35,28 +32,14 @@ export default async function HomePage({ params }: Props) {
   const session = await auth();
   const signedIn = Boolean(session?.user);
   const canEnter =
-    session?.user?.approvalState === "approved" ||
+    session?.user?.accountStatus === "active" ||
+    Boolean(session?.user?.roles?.length) ||
     Boolean(session?.user?.isPlatformStaff);
-
-  let venueNames: string[] = [];
-  try {
-    if (process.env.DATABASE_URL) {
-      const db = getDb();
-      const rows = await db
-        .select({ name: venues.name })
-        .from(venues)
-        .where(eq(venues.publicationState, "approved"))
-        .limit(6);
-      venueNames = rows.map((row) => row.name);
-    }
-  } catch {
-    venueNames = [];
-  }
 
   const primaryHref = canEnter
     ? "/marketplace"
     : signedIn
-      ? "/apply"
+      ? "/onboarding/role-selection"
       : "/sign-in";
   const primaryLabel = canEnter ? t("ctaEnter") : t("ctaApply");
 
@@ -98,25 +81,6 @@ export default async function HomePage({ params }: Props) {
       </section>
 
       <div className="shell grid gap-16 py-12 sm:gap-20 sm:py-16">
-        <section className="rounded-[var(--radius-md)] bg-[var(--rail)] px-6 py-5 text-white sm:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <p className="text-xs font-semibold tracking-[0.16em] text-[var(--rail-muted)] uppercase">
-              {t("stripLabel")}
-            </p>
-            {venueNames.length > 0 ? (
-              <ul className="flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold tracking-[0.14em] uppercase">
-                {venueNames.map((name) => (
-                  <li key={name}>{name}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-[var(--rail-muted)]">
-                {t("proofFallback")}
-              </p>
-            )}
-          </div>
-        </section>
-
         <section className="grid gap-8 border-t border-[var(--rule)] pt-10 md:grid-cols-3 md:gap-10">
           {[
             { n: "01", title: t("principle1Title"), body: t("principle1Body") },

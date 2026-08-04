@@ -57,27 +57,24 @@ An administrator may:
 - View an audit history of approvals and important booking actions.
 - Manage agreement templates and supported integration settings.
 
-## 3. Membership and approval
+## 3. Membership and account status
 
-### Account states
+### Account status
 
 Accounts must support:
 
-- `applied`
-- `invited`
-- `approved`
+- `active`
 - `suspended`
-- `rejected`, if rejected applications need to remain recorded
 
 ### Requirements
 
-- Only approved users may access private marketplace discovery.
-- Administrators must approve entertainers and venues separately.
-- A person may hold both entertainer and venue roles.
-- Approval of one role must not automatically approve another.
+- Self-serve signup creates an active account with exactly one role (entertainer XOR venue). Staff account approval is not required to enter the marketplace.
+- Active users may access private marketplace search and explore. Contact workflows require staff-verified profile publication.
+- Unverified profiles must not appear in discovery listings.
+- A person may hold only one marketplace role type per account.
 - Suspended users must immediately lose access to private marketplace information.
-- Every approval-state change must record the administrator, timestamp, reason, and previous state.
-- Material profile changes may optionally require reapproval before publication.
+- Every account-status or profile-publication change must record the administrator, timestamp, reason, and previous state.
+- Material profile changes may optionally require re-verification before publication.
 
 ## 4. Entertainer profiles
 

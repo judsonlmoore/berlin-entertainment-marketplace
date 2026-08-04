@@ -7,7 +7,6 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
-import { marketplaceRoleEnum } from "./enums";
 
 export const users = pgTable("users", {
   id: text("id")
@@ -24,7 +23,6 @@ export const users = pgTable("users", {
     mode: "date",
   }),
   anonymizedReason: text("anonymized_reason"),
-  activeRoleMode: marketplaceRoleEnum("active_role_mode"),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
     .notNull()
     .defaultNow(),

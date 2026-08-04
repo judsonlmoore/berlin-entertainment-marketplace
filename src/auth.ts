@@ -2,7 +2,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   accounts,
@@ -11,9 +11,8 @@ import {
   users,
   verificationTokens,
 } from "@/src/db/schema";
-import { marketplaceAccounts, userRoles } from "@/src/db/schema/marketplace";
 import { configuredAuthProviders, getServerEnv } from "@/src/validation/env";
-import type { ApprovalState } from "@/src/domain/approval";
+import type { AccountStatus } from "@/src/domain/approval";
 import type { MarketplaceRole } from "@/src/domain/permissions";
 
 declare module "next-auth" {
@@ -24,15 +23,15 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       isPlatformStaff: boolean;
-      approvalState: ApprovalState | null;
+      accountStatus: AccountStatus | null;
       roles: MarketplaceRole[];
-      activeRoleMode: MarketplaceRole | null;
+      entertainerVerified: boolean;
+      venueVerified: boolean;
     };
   }
 
   interface User {
     isPlatformStaff?: boolean;
-    activeRoleMode?: MarketplaceRole | null;
   }
 }
 
@@ -40,30 +39,35 @@ async function loadMarketplaceSessionFields(userId: string) {
   if (!process.env.DATABASE_URL) {
     return {
       isPlatformStaff: false,
-      approvalState: null as ApprovalState | null,
+      accountStatus: null as AccountStatus | null,
       roles: [] as MarketplaceRole[],
-      activeRoleMode: null as MarketplaceRole | null,
+      entertainerVerified: false,
+      venueVerified: false,
     };
   }
 
-  const db = getDb();
-  const [user, account, roles] = await Promise.all([
-    db.query.users.findFirst({ where: eq(users.id, userId) }),
-    db.query.marketplaceAccounts.findFirst({
-      where: eq(marketplaceAccounts.userId, userId),
-    }),
-    db.query.userRoles.findMany({
-      where: eq(userRoles.userId, userId),
-    }),
-  ]);
+  const { getActorContext } = await import("@/src/db/queries/actor");
+  const actor = await getActorContext(userId);
+  if (!actor) {
+    const db = getDb();
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+    return {
+      isPlatformStaff: Boolean(user?.isPlatformStaff),
+      accountStatus: null as AccountStatus | null,
+      roles: [] as MarketplaceRole[],
+      entertainerVerified: false,
+      venueVerified: false,
+    };
+  }
 
   return {
-    isPlatformStaff: Boolean(user?.isPlatformStaff),
-    approvalState:
-      (account?.approvalState as ApprovalState | undefined) ?? null,
-    roles: roles.map((role) => role.role as MarketplaceRole),
-    activeRoleMode:
-      (user?.activeRoleMode as MarketplaceRole | undefined) ?? null,
+    isPlatformStaff: actor.isPlatformStaff,
+    accountStatus: actor.accountStatus,
+    roles: [...actor.roles],
+    entertainerVerified: actor.entertainerVerified,
+    venueVerified: actor.venueVerified,
   };
 }
 
@@ -92,6 +96,55 @@ function buildProviders() {
   return providers;
 }
 
+/**
+ * Auth.js adapter that refuses to resurrect anonymized user shells.
+ * If an OAuth account still points at an anonymized user, unlink it and return
+ * null so Auth.js creates a fresh user for that identity.
+ */
+function createSalonAuthAdapter() {
+  const db = getDb();
+  const base = DrizzleAdapter(db, {
+    usersTable: users,
+    accountsTable: accounts,
+    sessionsTable: sessions,
+    verificationTokensTable: verificationTokens,
+    authenticatorsTable: authenticators,
+  });
+
+  return {
+    ...base,
+    async getUserByAccount(
+      providerAccountId: Parameters<
+        NonNullable<typeof base.getUserByAccount>
+      >[0],
+    ) {
+      const user = (await base.getUserByAccount?.(providerAccountId)) ?? null;
+      if (!user?.id) {
+        return null;
+      }
+
+      const row = await db.query.users.findFirst({
+        where: eq(users.id, user.id),
+        columns: { anonymizedAt: true },
+      });
+      if (!row?.anonymizedAt) {
+        return user;
+      }
+
+      await db
+        .delete(accounts)
+        .where(
+          and(
+            eq(accounts.provider, providerAccountId.provider),
+            eq(accounts.providerAccountId, providerAccountId.providerAccountId),
+          ),
+        );
+      await db.delete(sessions).where(eq(sessions.userId, user.id));
+      return null;
+    },
+  };
+}
+
 const databaseUrl = process.env.DATABASE_URL;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -100,13 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   basePath: "/api/session",
   ...(databaseUrl
     ? {
-        adapter: DrizzleAdapter(getDb(), {
-          usersTable: users,
-          accountsTable: accounts,
-          sessionsTable: sessions,
-          verificationTokensTable: verificationTokens,
-          authenticatorsTable: authenticators,
-        }),
+        adapter: createSalonAuthAdapter(),
       }
     : {}),
   session: {
@@ -138,9 +185,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token.sub) {
         const fields = await loadMarketplaceSessionFields(token.sub);
         token.isPlatformStaff = fields.isPlatformStaff;
-        token.approvalState = fields.approvalState;
+        token.accountStatus = fields.accountStatus;
         token.roles = fields.roles;
-        token.activeRoleMode = fields.activeRoleMode;
+        token.entertainerVerified = fields.entertainerVerified;
+        token.venueVerified = fields.venueVerified;
       }
       return token;
     },
@@ -154,20 +202,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ? await loadMarketplaceSessionFields(user.id)
         : {
             isPlatformStaff: Boolean(token.isPlatformStaff),
-            approvalState:
-              (token.approvalState as ApprovalState | null) ?? null,
+            accountStatus:
+              (token.accountStatus as AccountStatus | null) ?? null,
             roles: (token.roles as MarketplaceRole[] | undefined) ?? [],
-            activeRoleMode:
-              (token.activeRoleMode as MarketplaceRole | null | undefined) ??
-              null,
+            entertainerVerified: Boolean(token.entertainerVerified),
+            venueVerified: Boolean(token.venueVerified),
           };
 
       session.user.id = userId;
       session.user.image = user?.image ?? session.user.image ?? null;
       session.user.isPlatformStaff = fields.isPlatformStaff;
-      session.user.approvalState = fields.approvalState;
+      session.user.accountStatus = fields.accountStatus;
       session.user.roles = fields.roles;
-      session.user.activeRoleMode = fields.activeRoleMode;
+      session.user.entertainerVerified = fields.entertainerVerified;
+      session.user.venueVerified = fields.venueVerified;
       return session;
     },
   },

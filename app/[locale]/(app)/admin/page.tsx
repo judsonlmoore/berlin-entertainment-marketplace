@@ -13,7 +13,7 @@ import { getAdminOperationsSnapshot } from "@/src/db/queries/admin-ops";
 import { listProfilesForStaffReview } from "@/src/db/queries/profiles";
 import { users } from "@/src/db/schema";
 import { marketplaceAccounts } from "@/src/db/schema/marketplace";
-import type { ApprovalState } from "@/src/domain/approval";
+import type { AccountStatus } from "@/src/domain/approval";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
@@ -23,7 +23,7 @@ export default async function AdminPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("admin");
-  const status = await getTranslations("status");
+  const accountStatus = await getTranslations("accountStatus");
   const publication = await getTranslations("publication");
   const session = await auth();
 
@@ -62,7 +62,7 @@ export default async function AdminPage({ params }: Props) {
     ? await db
         .select({
           id: marketplaceAccounts.id,
-          approvalState: marketplaceAccounts.approvalState,
+          accountStatus: marketplaceAccounts.accountStatus,
           berlinConnection: marketplaceAccounts.berlinConnection,
           reviewReason: marketplaceAccounts.reviewReason,
           userName: users.name,
@@ -261,7 +261,7 @@ export default async function AdminPage({ params }: Props) {
                   {account.userEmail}
                 </p>
                 <p className="mt-2 text-sm">
-                  {status(account.approvalState as ApprovalState)}
+                  {accountStatus(account.accountStatus as AccountStatus)}
                 </p>
                 {account.berlinConnection ? (
                   <p className="mt-2 text-sm">{account.berlinConnection}</p>
@@ -269,7 +269,7 @@ export default async function AdminPage({ params }: Props) {
                 <ApprovalForm
                   locale={locale as "en" | "de"}
                   marketplaceAccountId={account.id}
-                  currentState={account.approvalState as ApprovalState}
+                  currentStatus={account.accountStatus as AccountStatus}
                 />
               </article>
             ))}
