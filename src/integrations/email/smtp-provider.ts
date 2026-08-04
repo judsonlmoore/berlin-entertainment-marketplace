@@ -70,8 +70,7 @@ export class SMTPEmailProvider implements EmailProvider {
       console.error("SMTP send error:", error);
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : "Unknown SMTP error",
+        error: error instanceof Error ? error.message : "Unknown SMTP error",
       };
     }
   }

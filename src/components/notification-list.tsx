@@ -7,7 +7,10 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/src/i18n/navigation";
-import { markAsReadAction, markAllAsReadAction } from "@/src/actions/notification-center";
+import {
+  markAsReadAction,
+  markAllAsReadAction,
+} from "@/src/actions/notification-center";
 
 interface Notification {
   id: string;
@@ -24,7 +27,9 @@ interface Props {
   notifications: Notification[];
 }
 
-export function NotificationList({ notifications: initialNotifications }: Props) {
+export function NotificationList({
+  notifications: initialNotifications,
+}: Props) {
   const t = useTranslations("notifications");
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string>("");
@@ -129,9 +134,7 @@ export function NotificationList({ notifications: initialNotifications }: Props)
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold">
-                        {notification.title}
-                      </h3>
+                      <h3 className="font-semibold">{notification.title}</h3>
                       {!notification.isRead && (
                         <span className="h-2 w-2 rounded-full bg-[var(--primary)]" />
                       )}

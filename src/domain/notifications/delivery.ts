@@ -148,5 +148,7 @@ export async function sendNotification(
 export async function sendBulkNotifications(
   payloads: NotificationPayload[],
 ): Promise<NotificationDeliveryResult[]> {
-  return await Promise.all(payloads.map((payload) => sendNotification(payload)));
+  return await Promise.all(
+    payloads.map((payload) => sendNotification(payload)),
+  );
 }

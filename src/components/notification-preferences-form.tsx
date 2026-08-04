@@ -10,7 +10,10 @@ import {
   setNotificationPreferenceAction,
   setMarketingConsentAction,
 } from "@/src/actions/notifications";
-import type { notificationTypeEnum, notificationChannelEnum } from "@/src/db/schema";
+import type {
+  notificationTypeEnum,
+  notificationChannelEnum,
+} from "@/src/db/schema";
 
 interface Preference {
   id: string;
@@ -63,7 +66,10 @@ const notificationGroups = {
   opportunity: ["opportunity_published"],
 } as const;
 
-export function NotificationPreferencesForm({ preferences, marketingConsent }: Props) {
+export function NotificationPreferencesForm({
+  preferences,
+  marketingConsent,
+}: Props) {
   const t = useTranslations("notifications");
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string>("");
@@ -188,7 +194,7 @@ export function NotificationPreferencesForm({ preferences, marketingConsent }: P
             const groupLabel = `${groupKey}Notifications`;
             return (
               <div key={groupKey}>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                <h3 className="mb-3 text-sm font-semibold tracking-[0.12em] text-[var(--text-muted)] uppercase">
                   {t(groupLabel)}
                 </h3>
                 <div className="grid gap-3">

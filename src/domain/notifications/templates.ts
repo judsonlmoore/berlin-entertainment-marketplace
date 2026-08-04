@@ -119,13 +119,16 @@ const templates: Record<
 
   application_submitted: {
     getTitle: (locale) =>
-      locale === "de" ? `Neue Bewerbung eingereicht` : `New application submitted`,
+      locale === "de"
+        ? `Neue Bewerbung eingereicht`
+        : `New application submitted`,
     getBody: (locale, params) => {
       return locale === "de"
         ? `${params.entertainerName} hat sich für Ihre Gelegenheit "${params.opportunityTitle}" beworben.`
         : `${params.entertainerName} has applied for your opportunity "${params.opportunityTitle}".`;
     },
-    getActionUrl: (params) => `/opportunities/${params.opportunityId}/applications`,
+    getActionUrl: (params) =>
+      `/opportunities/${params.opportunityId}/applications`,
     getActionLabel: (locale) =>
       locale === "de" ? "Bewerbungen ansehen" : "View applications",
   },
@@ -158,7 +161,9 @@ const templates: Record<
 
   agreement_ready: {
     getTitle: (locale) =>
-      locale === "de" ? `Vereinbarung bereit zur Unterzeichnung` : `Agreement ready to sign`,
+      locale === "de"
+        ? `Vereinbarung bereit zur Unterzeichnung`
+        : `Agreement ready to sign`,
     getBody: (locale, params) => {
       return locale === "de"
         ? `Die Buchungsvereinbarung für ${params.date} ist zur Unterzeichnung bereit.`
@@ -259,7 +264,9 @@ const templates: Record<
 
   opportunity_published: {
     getTitle: (locale) =>
-      locale === "de" ? `Neue Gelegenheit veröffentlicht` : `New opportunity published`,
+      locale === "de"
+        ? `Neue Gelegenheit veröffentlicht`
+        : `New opportunity published`,
     getBody: (locale, params) => {
       return locale === "de"
         ? `Eine neue Gelegenheit wurde veröffentlicht: "${params.opportunityTitle}" am ${params.date}.`
@@ -272,7 +279,9 @@ const templates: Record<
 
   calendar_conflict_detected: {
     getTitle: (locale) =>
-      locale === "de" ? `Kalenderkonflikt erkannt` : `Calendar conflict detected`,
+      locale === "de"
+        ? `Kalenderkonflikt erkannt`
+        : `Calendar conflict detected`,
     getBody: (locale, params) => {
       return locale === "de"
         ? `Ein Konflikt wurde für ${params.date} erkannt. Bitte überprüfen Sie Ihren Kalender.`
@@ -285,7 +294,9 @@ const templates: Record<
 
   hold_expiring_soon: {
     getTitle: (locale) =>
-      locale === "de" ? `Vorläufige Buchung läuft bald ab` : `Hold expiring soon`,
+      locale === "de"
+        ? `Vorläufige Buchung läuft bald ab`
+        : `Hold expiring soon`,
     getBody: (locale, params) => {
       return locale === "de"
         ? `Ihre vorläufige Buchung für ${params.date} läuft in ${params.hoursRemaining} Stunden ab.`
