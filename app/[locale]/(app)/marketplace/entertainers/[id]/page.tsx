@@ -1,23 +1,65 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { DirectRequestForm } from "@/src/components/direct-request-form";
-import { formatEur } from "@/src/lib/format";
-import { YouTubeEmbed } from "@/src/components/youtube-embed";
+import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
+import {
+  ENTERTAINER_CATEGORIES,
+  getCategoryNode,
+  parseSubcategory,
+  taxonomyLabel,
+} from "@/src/domain/profile-taxonomy";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
+import { formatEur } from "@/src/lib/format";
+import {
+  socialLinksToList,
+  splitPortfolioMedia,
+  type PublicProfileFact,
+} from "@/src/lib/public-profile";
+
+const SOCIAL_LABELS: Record<string, string> = {
+  instagram: "Instagram",
+  facebook: "Facebook",
+  tiktok: "TikTok",
+  spotify: "Spotify",
+  soundcloud: "SoundCloud",
+  linkedin: "LinkedIn",
+  youtube: "YouTube",
+};
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
 };
+
+function categoryLabel(categoryId: string, locale: "en" | "de"): string {
+  const node = getCategoryNode(ENTERTAINER_CATEGORIES, categoryId);
+  return node ? taxonomyLabel(node, locale) : categoryId;
+}
+
+function subcategoryLabel(
+  genres: string | null,
+  categoryId: string,
+  locale: "en" | "de",
+): string | null {
+  if (!genres?.trim()) return null;
+  const parsed = parseSubcategory(genres);
+  if (parsed.subcategoryId === "other" && parsed.otherLabel) {
+    return parsed.otherLabel;
+  }
+  const node = getCategoryNode(ENTERTAINER_CATEGORIES, categoryId);
+  const child = node?.children.find((c) => c.id === parsed.subcategoryId);
+  return child ? taxonomyLabel(child, locale) : genres;
+}
 
 export default async function EntertainerDetailPage({ params }: Props) {
   const { locale, id } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
   const access = await requireDiscoveryAccess();
+  const appLocale = locale as "en" | "de";
 
   if (!access.ok) {
     return (
@@ -57,92 +99,85 @@ export default async function EntertainerDetailPage({ params }: Props) {
     access.actor.roles.includes("venue") &&
     !access.actor.venueVerified;
 
+  const media = splitPortfolioMedia(profile.portfolio);
+  const sub = subcategoryLabel(profile.genres, profile.category, appLocale);
+  const cat = categoryLabel(profile.category, appLocale);
+  const subtitle = [cat, sub, profile.berlinBase].filter(Boolean).join(" · ");
+
+  const facts: PublicProfileFact[] = [
+    { label: t("groupSize"), value: String(profile.groupSize) },
+    {
+      label: t("duration"),
+      value: `${profile.durationMinutes} ${t("minutes")}`,
+    },
+    {
+      label: t("priceRange"),
+      value: `${formatEur(profile.priceMinCents, locale)} – ${formatEur(profile.priceMaxCents, locale)}`,
+    },
+    {
+      label: t("travelRadius"),
+      value: `${profile.travelRadiusKm} km`,
+    },
+  ];
+  if (profile.performanceFormats?.trim()) {
+    facts.push({
+      label: t("performanceFormats"),
+      value: profile.performanceFormats,
+    });
+  }
+  if (profile.languages?.trim()) {
+    facts.push({ label: t("languages"), value: profile.languages });
+  }
+  if (profile.technicalRequirements?.trim()) {
+    facts.push({
+      label: t("technicalRequirements"),
+      value: profile.technicalRequirements,
+    });
+  }
+  if (profile.equipmentSupplied?.trim()) {
+    facts.push({
+      label: t("equipmentSupplied"),
+      value: profile.equipmentSupplied,
+    });
+  }
+  if (profile.accessibilityNotes?.trim()) {
+    facts.push({
+      label: t("accessibilityNotes"),
+      value: profile.accessibilityNotes,
+    });
+  }
+
   return (
-    <section className="mx-auto max-w-2xl">
-      <p className="text-sm">
-        <Link href="/marketplace/entertainers">{t("backToEntertainers")}</Link>
-      </p>
-      <h1 className="page-title mt-3 text-[clamp(1.75rem,2.5vw,2.25rem)]">
-        {profile.actName}
-      </h1>
-      <p className="mt-2 text-[var(--muted)]">
-        {profile.category} · {profile.berlinBase}
-      </p>
-
-      <div className="panel mt-6 grid gap-3 p-6 text-sm">
-        <p>{profile.description}</p>
-        <p>
-          {t("groupSize")}: {profile.groupSize}
-        </p>
-        <p>
-          {t("duration")}: {profile.durationMinutes} {t("minutes")}
-        </p>
-        <p>
-          {t("priceRange")}: {formatEur(profile.priceMinCents, locale)} –{" "}
-          {formatEur(profile.priceMaxCents, locale)}
-        </p>
-        <p>
-          {t("travelRadius")}: {profile.travelRadiusKm} km
-        </p>
-        <p>
-          {t("technicalRequirements")}: {profile.technicalRequirements}
-        </p>
-      </div>
-
-      {profile.portfolio && profile.portfolio.length > 0 ? (
-        <div className="panel mt-4 p-6">
-          <h2 className="text-lg font-semibold">{t("portfolioTitle")}</h2>
-          <ul className="mt-4 grid gap-4">
-            {profile.portfolio.map((item) => (
-              <li key={item.id} className="grid gap-2 text-sm">
-                {item.caption ? <p>{item.caption}</p> : null}
-                {item.kind === "link" && item.url ? (
-                  <a href={item.url} className="text-[var(--primary)]">
-                    {item.url}
-                  </a>
-                ) : null}
-                {item.kind === "youtube" && item.url ? (
-                  <YouTubeEmbed
-                    url={item.url}
-                    {...(item.caption ? { title: item.caption } : {})}
-                  />
-                ) : null}
-                {item.kind === "image" ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={`/api/portfolio/${item.id}`}
-                    alt={item.altText ?? item.caption ?? profile.actName}
-                    className="max-h-80 w-full object-cover"
-                  />
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      <div className="panel mt-4 p-6">
-        <h2 className="text-lg font-semibold">{t("contactTitle")}</h2>
-        {profile.contactLocked || !profile.contacts ? (
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            {t("contactLocked")}
-          </p>
-        ) : (
-          <ul className="mt-2 grid gap-1 text-sm">
-            {profile.contacts.map((contact) => (
-              <li key={contact.id}>
-                {contact.kind}: {contact.value}
-                {contact.isPreferred ? ` (${t("preferred")})` : ""}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
+    <PublicProfileView
+      backHref="/marketplace/entertainers"
+      backLabel={t("backToEntertainers")}
+      eyebrow={t("entertainerEyebrow")}
+      title={profile.actName}
+      subtitle={subtitle}
+      description={profile.description}
+      media={media}
+      facts={facts}
+      links={socialLinksToList(
+        profile.socialLinks,
+        (key) => SOCIAL_LABELS[key] ?? key,
+      )}
+      websiteUrl={profile.websiteUrl}
+      websiteLabel={t("website")}
+      contactTitle={t("contactTitle")}
+      contactLocked={profile.contactLocked}
+      contactLockedMessage={t("contactLocked")}
+      preferredLabel={t("preferred")}
+      contacts={profile.contacts}
+      aboutTitle={t("aboutTitle")}
+      detailsTitle={t("detailsTitle")}
+      galleryTitle={t("galleryTitle")}
+      videoTitle={t("videoTitle")}
+      linksTitle={t("linksTitle")}
+    >
       {!isOwnProfile && operableVenues.length > 0 ? (
-        <div id="direct-request" className="panel mt-4 scroll-mt-24 p-6">
+        <div id="direct-request" className="scroll-mt-24">
           <DirectRequestForm
-            locale={locale as "en" | "de"}
+            locale={appLocale}
             entertainerProfileId={profile.id}
             venues={operableVenues.map((venue) => ({
               id: venue.id,
@@ -153,13 +188,13 @@ export default async function EntertainerDetailPage({ params }: Props) {
       ) : null}
 
       {showRequestLocked ? (
-        <p className="panel mt-4 p-6 text-sm text-[var(--muted)]">
+        <p className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-5 text-sm text-[var(--text-muted)]">
           {t("requestActLocked")}{" "}
           <Link href="/profile" className="font-medium underline">
             {t("viewProfile")}
           </Link>
         </p>
       ) : null}
-    </section>
+    </PublicProfileView>
   );
 }

@@ -22,5 +22,6 @@ coverage/
 # Local scratch/deliverable directories.
 outputs/
 work/
+.data/
 .vercel
 .gstack/

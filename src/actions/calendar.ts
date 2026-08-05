@@ -106,7 +106,7 @@ export async function upsertAvailability(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       parsed.data.ownerType,
       parsed.data.ownerId,
     );
@@ -328,7 +328,7 @@ export async function deleteAvailability(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       entry.ownerType as CalendarOwnerType,
       entry.ownerId,
     );
@@ -395,7 +395,7 @@ export async function moveCalendarEntry(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       entry.ownerType as CalendarOwnerType,
       entry.ownerId,
     );
@@ -528,7 +528,7 @@ export async function skipRecurringOccurrence(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       parent.ownerType as CalendarOwnerType,
       parent.ownerId,
     );

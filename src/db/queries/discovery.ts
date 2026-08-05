@@ -39,6 +39,13 @@ export type PortfolioDiscoveryItem = {
 export type EntertainerDiscoveryDetail = EntertainerDiscoveryCard & {
   userId: string;
   technicalRequirements: string;
+  genres: string | null;
+  performanceFormats: string | null;
+  languages: string | null;
+  accessibilityNotes: string | null;
+  equipmentSupplied: string | null;
+  websiteUrl: string | null;
+  socialLinks: Record<string, string>;
   contacts: RevealedContact[] | null;
   contactLocked: boolean;
   portfolio: PortfolioDiscoveryItem[] | null;
@@ -63,7 +70,11 @@ export type VenueDiscoveryDetail = VenueDiscoveryCard & {
   latitude: string | null;
   longitude: string | null;
   productionResources: Record<string, unknown>;
+  houseRules: string | null;
+  loadInNotes: string | null;
+  accessibilityNotes: string | null;
   websiteUrl: string | null;
+  socialLinks: Record<string, string>;
   contacts: RevealedContact[] | null;
   contactLocked: boolean;
 };
@@ -415,6 +426,13 @@ export async function getDiscoverableEntertainerDetail(input: {
     currency: profile.currency,
     durationMinutes: profile.durationMinutes,
     technicalRequirements: profile.technicalRequirements,
+    genres: profile.genres,
+    performanceFormats: profile.performanceFormats,
+    languages: profile.languages,
+    accessibilityNotes: profile.accessibilityNotes,
+    equipmentSupplied: profile.equipmentSupplied,
+    websiteUrl: profile.websiteUrl,
+    socialLinks: profile.socialLinks ?? {},
     contacts,
     contactLocked: !unlocked,
     portfolio,
@@ -478,7 +496,11 @@ export async function getDiscoverableVenueDetail(input: {
     longitude: venue.longitude,
     productionResources:
       (venue.productionResources as Record<string, unknown>) ?? {},
+    houseRules: venue.houseRules,
+    loadInNotes: venue.loadInNotes,
+    accessibilityNotes: venue.accessibilityNotes,
     websiteUrl: venue.websiteUrl,
+    socialLinks: venue.socialLinks ?? {},
     contacts,
     contactLocked: !unlocked,
   };

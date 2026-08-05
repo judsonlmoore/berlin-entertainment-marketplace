@@ -20,6 +20,8 @@ import {
   validatePortfolioYouTubeInput,
 } from "@/src/domain/portfolio";
 import { can } from "@/src/domain/permissions";
+import { deletePortfolioImage } from "@/src/integrations/portfolio-image-store";
+import { canManageEntertainerViaSupport } from "@/src/lib/support-access";
 
 const localeSchema = z.enum(["en", "de"]).default("en");
 
@@ -29,15 +31,24 @@ async function requireEntertainerOwner(entertainerProfileId: string) {
     throw new AppError("unauthorized", "Sign in required");
   }
   const actor = await getActorContext(session.user.id);
-  if (!actor || !can(actor, "entertainer.manage_own_profile")) {
-    throw new AppError("forbidden", "Entertainer profile required");
+  if (!actor) {
+    throw new AppError("unauthorized", "Sign in required");
   }
 
   const db = getDb();
   const profile = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.id, entertainerProfileId),
   });
-  if (!profile || profile.userId !== session.user.id) {
+  if (!profile) {
+    throw new AppError("forbidden", "Not your entertainer profile");
+  }
+
+  const allowed =
+    (can(actor, "entertainer.manage_own_profile") &&
+      profile.userId === session.user.id) ||
+    (await canManageEntertainerViaSupport(actor, entertainerProfileId));
+
+  if (!allowed) {
     throw new AppError("forbidden", "Not your entertainer profile");
   }
 
@@ -283,6 +294,10 @@ export async function removePortfolioItem(
     });
     if (!item) {
       throw new AppError("not_found", "Portfolio item not found");
+    }
+
+    if (item.kind === "image" && item.blobKey) {
+      await deletePortfolioImage(item.blobKey);
     }
 
     await db.delete(portfolioItems).where(eq(portfolioItems.id, item.id));

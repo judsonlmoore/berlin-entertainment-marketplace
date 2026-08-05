@@ -20,6 +20,10 @@ import {
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
 import {
+  canManageVenueViaSupport,
+  resolveEntertainerProfileOwnerUserId,
+} from "@/src/lib/support-access";
+import {
   canOwnerTransitionProfile,
   canStaffTransitionProfile,
   type ProfilePublicationState,
@@ -247,7 +251,8 @@ export async function upsertEntertainerProfile(
 ): Promise<ActionResult> {
   try {
     const { session, actor } = await requireActor();
-    if (!can(actor, "entertainer.manage_own_profile")) {
+    const ownerUserId = await resolveEntertainerProfileOwnerUserId(actor);
+    if (!ownerUserId) {
       throw new AppError("forbidden", "Entertainer role required");
     }
 
@@ -296,7 +301,7 @@ export async function upsertEntertainerProfile(
 
     const db = getDb();
     const existing = await db.query.entertainerProfiles.findFirst({
-      where: eq(entertainerProfiles.userId, session.user.id),
+      where: eq(entertainerProfiles.userId, ownerUserId),
     });
 
     const now = new Date();
@@ -341,7 +346,7 @@ export async function upsertEntertainerProfile(
         const [created] = await tx
           .insert(entertainerProfiles)
           .values({
-            userId: session.user.id,
+            userId: ownerUserId,
             ...values,
             currency: "EUR",
           })
@@ -351,7 +356,7 @@ export async function upsertEntertainerProfile(
 
       await upsertPreferredContact(tx, {
         ownerType: "entertainer",
-        ownerId: profileId ?? session.user.id,
+        ownerId: profileId ?? ownerUserId,
         kind: "email",
         value: parsed.data.contactEmail,
       });
@@ -359,7 +364,7 @@ export async function upsertEntertainerProfile(
       if (parsed.data.contactPhone?.trim()) {
         await upsertPreferredContact(tx, {
           ownerType: "entertainer",
-          ownerId: profileId ?? session.user.id,
+          ownerId: profileId ?? ownerUserId,
           kind: "phone",
           value: parsed.data.contactPhone.trim(),
         });
@@ -369,8 +374,13 @@ export async function upsertEntertainerProfile(
         actorUserId: session.user.id,
         action: "entertainer_profile.upserted",
         subjectType: "entertainer_profile",
-        subjectId: profileId ?? session.user.id,
-        metadata: { publicationState: values.publicationState },
+        subjectId: profileId ?? ownerUserId,
+        metadata: {
+          publicationState: values.publicationState,
+          ...(ownerUserId !== session.user.id
+            ? { supportSubjectUserId: ownerUserId }
+            : {}),
+        },
       });
     });
 
@@ -540,7 +550,10 @@ export async function updateVenue(
 ): Promise<ActionResult> {
   try {
     const { session, actor } = await requireActor();
-    if (!can(actor, "venue.manage", { venueId })) {
+    const allowed =
+      can(actor, "venue.manage", { venueId }) ||
+      (await canManageVenueViaSupport(actor, venueId));
+    if (!allowed) {
       throw new AppError("forbidden", "Venue owner required");
     }
 

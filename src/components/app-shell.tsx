@@ -45,6 +45,7 @@ type Props = {
   canDiscoverEntertainers: boolean;
   canDiscoverVenues: boolean;
   roleContext?: RailRoleContextData | null;
+  supportBanner?: ReactNode;
 };
 
 function MenuIcon({ open }: { open: boolean }) {
@@ -164,6 +165,7 @@ export function AppShell({
   canDiscoverEntertainers,
   canDiscoverVenues,
   roleContext = null,
+  supportBanner = null,
 }: Props) {
   const t = useTranslations("nav");
   const tRole = useTranslations("roleMode");
@@ -243,7 +245,14 @@ export function AppShell({
     { href: "/profile", labelKey: "profile", match: "/profile" },
     { href: "/account", labelKey: "account", match: "/account" },
     ...(isStaff
-      ? [{ href: "/admin", labelKey: "admin" as const, match: "/admin" }]
+      ? [
+          {
+            href: "/admin/accounts",
+            labelKey: "superAdmin" as const,
+            match: "/admin/accounts",
+          },
+          { href: "/admin", labelKey: "admin" as const, match: "^/admin$" },
+        ]
       : []),
   ];
 
@@ -362,6 +371,7 @@ export function AppShell({
       </div>
 
       <div className="flex min-h-screen flex-col">
+        {supportBanner}
         {/* Mobile-only chrome: menu + role context + account. No desktop top bar. */}
         <div className="sticky top-0 z-20 flex min-h-14 items-center justify-between gap-3 border-b border-[var(--rule)] bg-[var(--canvas)] px-4 py-2 sm:px-6 lg:hidden">
           <button
