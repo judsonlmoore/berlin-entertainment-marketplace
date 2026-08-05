@@ -49,7 +49,7 @@ export async function requireActor(): Promise<RequiredActor> {
     throw new AppError("unauthorized", "Sign in required");
   }
   return {
-    session: session as RequiredActor["session"],
+    session: session as unknown as RequiredActor["session"],
     actor: resolved.actor,
     auditUserId: resolved.auditUserId,
     support: resolved.support,

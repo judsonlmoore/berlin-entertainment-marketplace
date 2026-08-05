@@ -46,7 +46,7 @@ export async function sendDirectRequest(
   input: z.infer<typeof sendSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     checkRateLimit({
       key: rateLimitKey("direct_request.send", session.user.id),
       limit: 10,
@@ -87,7 +87,7 @@ export async function sendDirectRequest(
     if (!profile) {
       throw new AppError("validation", "Entertainer must be approved");
     }
-    if (profile.userId === session.user.id) {
+    if (profile.userId === actor.userId) {
       throw new AppError("validation", "Cannot request yourself");
     }
 
@@ -113,7 +113,7 @@ export async function sendDirectRequest(
         .values({
           venueId: parsed.data.venueId,
           entertainerProfileId: profile.id,
-          requestedByUserId: session.user.id,
+          requestedByUserId: actor.userId,
           startsAt,
           endsAt,
           proposedFeeCents: Math.round(parsed.data.proposedFeeEur * 100),
@@ -137,7 +137,7 @@ export async function sendDirectRequest(
       });
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "direct_request.sent",
         subjectType: "direct_request",
         subjectId: created.id,
@@ -165,7 +165,7 @@ export async function respondToDirectRequest(input: {
   locale?: "en" | "de";
 }): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const locale = input.locale ?? "en";
     if (!can(actor, "direct_request.respond")) {
       throw new AppError("forbidden", "Approved entertainer required");
@@ -182,7 +182,7 @@ export async function respondToDirectRequest(input: {
     const profile = await db.query.entertainerProfiles.findFirst({
       where: eq(entertainerProfiles.id, request.entertainerProfileId),
     });
-    if (!profile || profile.userId !== session.user.id) {
+    if (!profile || profile.userId !== actor.userId) {
       throw new AppError("forbidden", "Only the requested act can respond");
     }
 
@@ -246,7 +246,7 @@ export async function respondToDirectRequest(input: {
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: `direct_request.${input.nextState}`,
         subjectType: "direct_request",
         subjectId: request.id,
@@ -270,7 +270,7 @@ export async function withdrawDirectRequest(
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const db = getDb();
     const request = await db.query.directRequests.findFirst({
       where: eq(directRequests.id, requestId),
@@ -302,7 +302,7 @@ export async function withdrawDirectRequest(
           ),
         );
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "direct_request.withdrawn",
         subjectType: "direct_request",
         subjectId: requestId,
@@ -330,7 +330,7 @@ export async function proposeDirectRequestChanges(
   input: z.infer<typeof proposeChangesSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     checkRateLimit({
       key: rateLimitKey("direct_request.respond", session.user.id),
       limit: 15,
@@ -356,7 +356,7 @@ export async function proposeDirectRequestChanges(
     const profile = await db.query.entertainerProfiles.findFirst({
       where: eq(entertainerProfiles.id, request.entertainerProfileId),
     });
-    if (!profile || profile.userId !== session.user.id) {
+    if (!profile || profile.userId !== actor.userId) {
       throw new AppError(
         "forbidden",
         "Only the requested act can propose changes",
@@ -419,7 +419,7 @@ export async function proposeDirectRequestChanges(
         await tx.insert(bookingTerms).values({
           bookingId: booking.id,
           version,
-          proposedByUserId: session.user.id,
+          proposedByUserId: actor.userId,
           startsAt,
           endsAt,
           feeCents: proposedFeeCents,
@@ -439,7 +439,7 @@ export async function proposeDirectRequestChanges(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "direct_request.changes_proposed",
         subjectType: "direct_request",
         subjectId: request.id,
@@ -463,7 +463,7 @@ export async function venueRespondToDirectRequestChanges(input: {
   locale?: "en" | "de";
 }): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const locale = input.locale ?? "en";
 
     const db = getDb();
@@ -544,7 +544,7 @@ export async function venueRespondToDirectRequestChanges(input: {
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: `direct_request.${input.nextState}`,
         subjectType: "direct_request",
         subjectId: request.id,

@@ -1,12 +1,14 @@
 "use server";
 
-import { type ActionResult, toActionError } from "@/src/actions/_shared";
+import {
+  type ActionResult,
+  requireActor,
+  toActionError,
+} from "@/src/actions/_shared";
 import { and, asc, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { getActorContext } from "@/src/db/queries/actor";
 import {
   auditEvents,
   entertainerProfiles,
@@ -15,44 +17,29 @@ import {
 import { AppError } from "@/src/domain/errors";
 import {
   PORTFOLIO_MAX_ITEMS,
-  validatePortfolioImageInput,
   validatePortfolioLinkInput,
   validatePortfolioYouTubeInput,
 } from "@/src/domain/portfolio";
 import { can } from "@/src/domain/permissions";
 import { deletePortfolioImage } from "@/src/integrations/portfolio-image-store";
-import { canManageEntertainerViaSupport } from "@/src/lib/support-access";
 
 const localeSchema = z.enum(["en", "de"]).default("en");
 
 async function requireEntertainerOwner(entertainerProfileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new AppError("unauthorized", "Sign in required");
-  }
-  const actor = await getActorContext(session.user.id);
-  if (!actor) {
-    throw new AppError("unauthorized", "Sign in required");
+  const { actor, auditUserId } = await requireActor();
+  if (!can(actor, "entertainer.manage_own_profile")) {
+    throw new AppError("forbidden", "Not your entertainer profile");
   }
 
   const db = getDb();
   const profile = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.id, entertainerProfileId),
   });
-  if (!profile) {
+  if (!profile || profile.userId !== actor.userId) {
     throw new AppError("forbidden", "Not your entertainer profile");
   }
 
-  const allowed =
-    (can(actor, "entertainer.manage_own_profile") &&
-      profile.userId === session.user.id) ||
-    (await canManageEntertainerViaSupport(actor, entertainerProfileId));
-
-  if (!allowed) {
-    throw new AppError("forbidden", "Not your entertainer profile");
-  }
-
-  return { session, profile, db };
+  return { actor, auditUserId, profile, db };
 }
 
 async function nextSortOrder(db: ReturnType<typeof getDb>, profileId: string) {
@@ -99,7 +86,7 @@ export async function addPortfolioLink(
       throw new AppError("validation", check.reason);
     }
 
-    const { session, profile, db } = await requireEntertainerOwner(
+    const { auditUserId, profile, db } = await requireEntertainerOwner(
       parsed.data.entertainerProfileId,
     );
     await assertPortfolioCapacity(db, profile.id);
@@ -117,7 +104,7 @@ export async function addPortfolioLink(
       .returning();
 
     await db.insert(auditEvents).values({
-      actorUserId: session.user.id,
+      actorUserId: auditUserId,
       action: "portfolio.link_added",
       subjectType: "portfolio_item",
       subjectId: created!.id,
@@ -154,7 +141,7 @@ export async function addPortfolioYouTube(
       throw new AppError("validation", check.reason);
     }
 
-    const { session, profile, db } = await requireEntertainerOwner(
+    const { auditUserId, profile, db } = await requireEntertainerOwner(
       parsed.data.entertainerProfileId,
     );
 
@@ -187,7 +174,7 @@ export async function addPortfolioYouTube(
       .returning();
 
     await db.insert(auditEvents).values({
-      actorUserId: session.user.id,
+      actorUserId: auditUserId,
       action: "portfolio.youtube_added",
       subjectType: "portfolio_item",
       subjectId: created!.id,
@@ -196,72 +183,6 @@ export async function addPortfolioYouTube(
 
     revalidatePath(`/${parsed.data.locale}/profile`);
     return { ok: true, id: created!.id };
-  } catch (error) {
-    return toActionError(error);
-  }
-}
-
-const imageSchema = z.object({
-  entertainerProfileId: z.string().uuid(),
-  mimeType: z.string().trim().min(1),
-  sizeBytes: z.coerce.number().int().positive(),
-  caption: z.string().trim().max(500).optional(),
-  altText: z.string().trim().max(500).optional(),
-  locale: localeSchema,
-});
-
-export async function registerPortfolioImage(
-  input: z.infer<typeof imageSchema>,
-): Promise<ActionResult & { blobKey?: string }> {
-  try {
-    const parsed = imageSchema.safeParse(input);
-    if (!parsed.success) {
-      throw new AppError("validation", "Invalid portfolio image");
-    }
-    const check = validatePortfolioImageInput({
-      mimeType: parsed.data.mimeType,
-      sizeBytes: parsed.data.sizeBytes,
-      ...(parsed.data.caption ? { caption: parsed.data.caption } : {}),
-      ...(parsed.data.altText ? { altText: parsed.data.altText } : {}),
-    });
-    if (!check.ok) {
-      throw new AppError("validation", check.reason);
-    }
-
-    const { session, profile, db } = await requireEntertainerOwner(
-      parsed.data.entertainerProfileId,
-    );
-    await assertPortfolioCapacity(db, profile.id);
-
-    const sortOrder = await nextSortOrder(db, profile.id);
-    const blobKey = `pending/${session.user.id}/portfolio/${crypto.randomUUID()}`;
-
-    const [created] = await db
-      .insert(portfolioItems)
-      .values({
-        entertainerProfileId: profile.id,
-        kind: "image",
-        blobKey,
-        caption: parsed.data.caption?.trim() || null,
-        altText: parsed.data.altText?.trim() || null,
-        sortOrder,
-      })
-      .returning();
-
-    await db.insert(auditEvents).values({
-      actorUserId: session.user.id,
-      action: "portfolio.image_registered",
-      subjectType: "portfolio_item",
-      subjectId: created!.id,
-      metadata: {
-        kind: "image",
-        mimeType: parsed.data.mimeType,
-        sizeBytes: parsed.data.sizeBytes,
-      },
-    });
-
-    revalidatePath(`/${parsed.data.locale}/profile`);
-    return { ok: true, id: created!.id, blobKey };
   } catch (error) {
     return toActionError(error);
   }
@@ -282,7 +203,7 @@ export async function removePortfolioItem(
       throw new AppError("validation", "Invalid portfolio removal");
     }
 
-    const { session, profile, db } = await requireEntertainerOwner(
+    const { auditUserId, profile, db } = await requireEntertainerOwner(
       parsed.data.entertainerProfileId,
     );
 
@@ -302,7 +223,7 @@ export async function removePortfolioItem(
 
     await db.delete(portfolioItems).where(eq(portfolioItems.id, item.id));
     await db.insert(auditEvents).values({
-      actorUserId: session.user.id,
+      actorUserId: auditUserId,
       action: "portfolio.removed",
       subjectType: "portfolio_item",
       subjectId: item.id,
@@ -331,7 +252,7 @@ export async function reorderPortfolioItems(
       throw new AppError("validation", "Invalid portfolio reorder");
     }
 
-    const { session, profile, db } = await requireEntertainerOwner(
+    const { auditUserId, profile, db } = await requireEntertainerOwner(
       parsed.data.entertainerProfileId,
     );
 
@@ -359,7 +280,7 @@ export async function reorderPortfolioItems(
           .where(eq(portfolioItems.id, id));
       }
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "portfolio.reordered",
         subjectType: "entertainer_profile",
         subjectId: profile.id,
@@ -375,26 +296,30 @@ export async function reorderPortfolioItems(
 }
 
 export async function listOwnPortfolioItems(entertainerProfileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) return [];
+  try {
+    const { actor } = await requireActor();
+    if (!can(actor, "entertainer.manage_own_profile")) return [];
 
-  const db = getDb();
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.id, entertainerProfileId),
-  });
-  if (!profile || profile.userId !== session.user.id) return [];
+    const db = getDb();
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, entertainerProfileId),
+    });
+    if (!profile || profile.userId !== actor.userId) return [];
 
-  return db
-    .select({
-      id: portfolioItems.id,
-      kind: portfolioItems.kind,
-      caption: portfolioItems.caption,
-      altText: portfolioItems.altText,
-      url: portfolioItems.url,
-      blobKey: portfolioItems.blobKey,
-      sortOrder: portfolioItems.sortOrder,
-    })
-    .from(portfolioItems)
-    .where(eq(portfolioItems.entertainerProfileId, entertainerProfileId))
-    .orderBy(asc(portfolioItems.sortOrder), asc(portfolioItems.createdAt));
+    return db
+      .select({
+        id: portfolioItems.id,
+        kind: portfolioItems.kind,
+        caption: portfolioItems.caption,
+        altText: portfolioItems.altText,
+        url: portfolioItems.url,
+        blobKey: portfolioItems.blobKey,
+        sortOrder: portfolioItems.sortOrder,
+      })
+      .from(portfolioItems)
+      .where(eq(portfolioItems.entertainerProfileId, entertainerProfileId))
+      .orderBy(asc(portfolioItems.sortOrder), asc(portfolioItems.createdAt));
+  } catch {
+    return [];
+  }
 }

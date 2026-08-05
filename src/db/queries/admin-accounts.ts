@@ -1,4 +1,4 @@
-import { and, eq, ilike, or, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import { users } from "@/src/db/schema";
 import {
@@ -31,6 +31,7 @@ export type AdminAccountSearchHit = {
 
 /**
  * Staff search across member accounts, act names, and venue names.
+ * Batched hydration (no per-user query fan-out) — eng-review P1A.
  */
 export async function searchAdminAccounts(
   query: string,
@@ -86,61 +87,90 @@ export async function searchAdminAccounts(
 
   const ids = [...matchingUserIds].slice(0, limit);
 
-  const hits: AdminAccountSearchHit[] = [];
-
-  for (const userId of ids) {
-    const [user, account, roleRow, entertainer, memberships] =
-      await Promise.all([
-        db.query.users.findFirst({
-          where: eq(users.id, userId),
-          columns: {
-            id: true,
-            name: true,
-            email: true,
-            isPlatformStaff: true,
-          },
-        }),
-        db.query.marketplaceAccounts.findFirst({
-          where: eq(marketplaceAccounts.userId, userId),
-          columns: { accountStatus: true },
-        }),
-        db.query.userRoles.findFirst({
-          where: eq(userRoles.userId, userId),
-          columns: { role: true },
-        }),
-        db.query.entertainerProfiles.findFirst({
-          where: eq(entertainerProfiles.userId, userId),
-          columns: {
-            id: true,
-            actName: true,
-            publicationState: true,
-          },
-        }),
-        db
-          .select({
-            id: venues.id,
-            name: venues.name,
-            publicationState: venues.publicationState,
-            membershipRole: venueMemberships.role,
-          })
-          .from(venueMemberships)
-          .innerJoin(venues, eq(venues.id, venueMemberships.venueId))
-          .where(
-            and(
-              eq(venueMemberships.userId, userId),
-              eq(venueMemberships.status, "active"),
-            ),
+  const [userList, accounts, roles, entertainers, membershipRows] =
+    await Promise.all([
+      db
+        .select({
+          id: users.id,
+          name: users.name,
+          email: users.email,
+          isPlatformStaff: users.isPlatformStaff,
+        })
+        .from(users)
+        .where(inArray(users.id, ids)),
+      db
+        .select({
+          userId: marketplaceAccounts.userId,
+          accountStatus: marketplaceAccounts.accountStatus,
+        })
+        .from(marketplaceAccounts)
+        .where(inArray(marketplaceAccounts.userId, ids)),
+      db
+        .select({
+          userId: userRoles.userId,
+          role: userRoles.role,
+        })
+        .from(userRoles)
+        .where(inArray(userRoles.userId, ids)),
+      db
+        .select({
+          userId: entertainerProfiles.userId,
+          id: entertainerProfiles.id,
+          actName: entertainerProfiles.actName,
+          publicationState: entertainerProfiles.publicationState,
+        })
+        .from(entertainerProfiles)
+        .where(inArray(entertainerProfiles.userId, ids)),
+      db
+        .select({
+          userId: venueMemberships.userId,
+          id: venues.id,
+          name: venues.name,
+          publicationState: venues.publicationState,
+          membershipRole: venueMemberships.role,
+        })
+        .from(venueMemberships)
+        .innerJoin(venues, eq(venues.id, venueMemberships.venueId))
+        .where(
+          and(
+            inArray(venueMemberships.userId, ids),
+            eq(venueMemberships.status, "active"),
           ),
-      ]);
+        ),
+    ]);
 
+  const accountByUser = new Map(
+    accounts.map((row) => [row.userId, row.accountStatus]),
+  );
+  const roleByUser = new Map(roles.map((row) => [row.userId, row.role]));
+  const entertainerByUser = new Map(
+    entertainers.map((row) => [row.userId, row]),
+  );
+  const venuesByUser = new Map<string, AdminAccountSearchHit["venues"]>();
+  for (const row of membershipRows) {
+    const list = venuesByUser.get(row.userId) ?? [];
+    list.push({
+      id: row.id,
+      name: row.name,
+      publicationState: row.publicationState,
+      membershipRole: row.membershipRole,
+    });
+    venuesByUser.set(row.userId, list);
+  }
+
+  const userById = new Map(userList.map((row) => [row.id, row]));
+
+  const hits: AdminAccountSearchHit[] = [];
+  for (const userId of ids) {
+    const user = userById.get(userId);
     if (!user) continue;
-
+    const entertainer = entertainerByUser.get(userId);
     hits.push({
       userId: user.id,
       name: user.name,
       email: user.email,
-      accountStatus: account?.accountStatus ?? null,
-      role: (roleRow?.role as "entertainer" | "venue" | undefined) ?? null,
+      accountStatus: accountByUser.get(userId) ?? null,
+      role: (roleByUser.get(userId) as "entertainer" | "venue" | undefined) ?? null,
       isPlatformStaff: user.isPlatformStaff,
       entertainer: entertainer
         ? {
@@ -149,12 +179,7 @@ export async function searchAdminAccounts(
             publicationState: entertainer.publicationState,
           }
         : null,
-      venues: memberships.map((row) => ({
-        id: row.id,
-        name: row.name,
-        publicationState: row.publicationState,
-        membershipRole: row.membershipRole,
-      })),
+      venues: venuesByUser.get(userId) ?? [],
     });
   }
 

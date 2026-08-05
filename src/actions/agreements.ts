@@ -106,7 +106,7 @@ export async function generateAgreement(
   input: z.infer<typeof generateSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = generateSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid agreement generation");
@@ -253,7 +253,7 @@ export async function generateAgreement(
       });
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "booking.agreement_generated",
         subjectType: "booking",
         subjectId: booking.id,
@@ -288,7 +288,7 @@ export async function signAgreementSandbox(
   input: z.infer<typeof signSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = signSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid signature");
@@ -320,7 +320,7 @@ export async function signAgreementSandbox(
     }
 
     const target = agreementBundle.signatures.find(
-      (row) => row.signerUserId === session.user.id,
+      (row) => row.signerUserId === actor.userId,
     );
     if (!target) {
       throw new AppError(
@@ -465,7 +465,7 @@ export async function signAgreementSandbox(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "booking.signature_sandbox",
         subjectType: "booking",
         subjectId: booking.id,

@@ -53,7 +53,7 @@ export async function proposeBookingTerms(
   input: z.infer<typeof proposeSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = proposeSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid terms proposal");
@@ -100,7 +100,7 @@ export async function proposeBookingTerms(
         .values({
           bookingId: booking.id,
           version,
-          proposedByUserId: session.user.id,
+          proposedByUserId: actor.userId,
           startsAt,
           endsAt,
           feeCents: Math.round(parsed.data.feeEur * 100),
@@ -113,7 +113,7 @@ export async function proposeBookingTerms(
             entertainerProfileId: booking.entertainerProfileId,
             originType: booking.originType,
             originId: booking.originId,
-            proposedByUserId: session.user.id,
+            proposedByUserId: actor.userId,
             proposedAt: new Date().toISOString(),
           },
         })
@@ -124,7 +124,7 @@ export async function proposeBookingTerms(
       termsId = created.id;
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "booking.terms_proposed",
         subjectType: "booking",
         subjectId: booking.id,
@@ -153,7 +153,7 @@ export async function acceptBookingTerms(
   input: z.infer<typeof acceptSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = acceptSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid terms acceptance");
@@ -196,7 +196,7 @@ export async function acceptBookingTerms(
       if (terms.acceptedAt) {
         throw new AppError("conflict", "Terms already accepted");
       }
-      if (terms.proposedByUserId === session.user.id) {
+      if (terms.proposedByUserId === actor.userId) {
         throw new AppError(
           "validation",
           "The other party must accept the proposed terms",
@@ -207,7 +207,7 @@ export async function acceptBookingTerms(
         .update(bookingTerms)
         .set({
           acceptedAt: new Date(),
-          acceptedByUserId: session.user.id,
+          acceptedByUserId: actor.userId,
         })
         .where(eq(bookingTerms.id, terms.id));
 
@@ -241,7 +241,7 @@ export async function acceptBookingTerms(
       });
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "booking.terms_agreed",
         subjectType: "booking",
         subjectId: booking.id,
@@ -275,7 +275,7 @@ export async function cancelBooking(
   input: z.infer<typeof cancelSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = cancelSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid cancellation");
@@ -306,7 +306,7 @@ export async function cancelBooking(
       await clearBookingCalendarEntries(tx, booking.id);
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "booking.cancelled",
         subjectType: "booking",
         subjectId: booking.id,
@@ -345,7 +345,7 @@ export async function recordDepositStatus(
   input: z.infer<typeof depositSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = depositSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid deposit status");
@@ -381,11 +381,11 @@ export async function recordDepositStatus(
         bookingId: booking.id,
         status: parsed.data.status,
         note: parsed.data.note ?? null,
-        recordedByUserId: session.user.id,
+        recordedByUserId: auditUserId,
       });
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "booking.deposit_status",
         subjectType: "booking",
         subjectId: booking.id,

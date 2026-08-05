@@ -12,7 +12,6 @@ import {
 } from "@/src/domain/portfolio";
 import { savePortfolioImage } from "@/src/integrations/portfolio-image-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
-import { canManageEntertainerViaSupport } from "@/src/lib/support-access";
 import { and, count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
@@ -40,10 +39,7 @@ export async function POST(request: Request) {
   const altText = String(form.get("altText") ?? "").trim();
   const file = form.get("file");
 
-  const ownsProfile =
-    can(actor, "entertainer.manage_own_profile") ||
-    (await canManageEntertainerViaSupport(actor, entertainerProfileId));
-  if (!ownsProfile) {
+  if (!can(actor, "entertainer.manage_own_profile")) {
     return NextResponse.json(
       { ok: false, error: "forbidden" },
       { status: 403 },
@@ -73,14 +69,7 @@ export async function POST(request: Request) {
   const profile = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.id, entertainerProfileId),
   });
-  const ownsAsMember =
-    Boolean(profile) &&
-    can(actor, "entertainer.manage_own_profile") &&
-    profile!.userId === actor.userId;
-  const ownsAsSupport =
-    Boolean(profile) &&
-    (await canManageEntertainerViaSupport(actor, entertainerProfileId));
-  if (!profile || (!ownsAsMember && !ownsAsSupport)) {
+  if (!profile || profile.userId !== actor.userId) {
     return NextResponse.json(
       { ok: false, error: "forbidden" },
       { status: 403 },
@@ -110,11 +99,21 @@ export async function POST(request: Request) {
   const sortOrder = row?.value ?? 0;
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const { blobKey } = await savePortfolioImage({
-    ownerUserId: profile.userId,
-    mimeType: file.type,
-    bytes,
-  });
+  let blobKey: string;
+  try {
+    ({ blobKey } = await savePortfolioImage({
+      ownerUserId: profile.userId,
+      mimeType: file.type,
+      bytes,
+    }));
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "storage_unavailable";
+    return NextResponse.json(
+      { ok: false, error: "storage_unavailable", message },
+      { status: 503 },
+    );
+  }
 
   const [created] = await db
     .insert(portfolioItems)
