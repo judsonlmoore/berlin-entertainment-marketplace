@@ -30,6 +30,8 @@ function buildContentSecurityPolicy(): string {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
+    // Portfolio YouTube embeds use privacy-enhanced youtube-nocookie.com.
+    "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
     connectSrc,
     "frame-ancestors 'none'",
     "base-uri 'self'",

@@ -1,4 +1,4 @@
-import { and, count, eq, gte, ilike, lte, or, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   contactMethods,
@@ -13,6 +13,18 @@ import {
   type StoredContactMethod,
 } from "@/src/domain/contact-projection";
 
+/** True when an image row can be served via /api/portfolio/[id]. */
+export function isServablePortfolioImageKey(
+  blobKey: string | null | undefined,
+): boolean {
+  if (!blobKey) return false;
+  return (
+    blobKey.startsWith("local/") ||
+    blobKey.startsWith("blob/") ||
+    blobKey.startsWith("memory/")
+  );
+}
+
 export type EntertainerDiscoveryCard = {
   id: string;
   actName: string;
@@ -25,6 +37,8 @@ export type EntertainerDiscoveryCard = {
   priceMaxCents: number;
   currency: string;
   durationMinutes: number;
+  /** First servable portfolio image id for card thumbnails, if any. */
+  heroImageId: string | null;
 };
 
 export type PortfolioDiscoveryItem = {
@@ -33,6 +47,8 @@ export type PortfolioDiscoveryItem = {
   caption: string | null;
   altText: string | null;
   url: string | null;
+  /** Present for image rows — used to skip unsavable legacy keys. */
+  blobKey?: string | null;
   sortOrder: number;
 };
 
@@ -287,14 +303,52 @@ export async function listDiscoverableEntertainers(
     .limit(pageSize)
     .offset(offset);
 
+  const heroByProfile = await loadHeroImageIds(items.map((row) => row.id));
   const total = totalRow?.value ?? 0;
   return {
-    items,
+    items: items.map((row) => ({
+      ...row,
+      heroImageId: heroByProfile.get(row.id) ?? null,
+    })),
     total,
     page,
     pageSize,
     pageCount: Math.max(1, Math.ceil(total / pageSize)),
   };
+}
+
+/**
+ * First servable portfolio image id per entertainer profile (batched).
+ */
+async function loadHeroImageIds(
+  profileIds: string[],
+): Promise<Map<string, string>> {
+  const heroes = new Map<string, string>();
+  if (profileIds.length === 0) return heroes;
+
+  const db = getDb();
+  const rows = await db
+    .select({
+      profileId: portfolioItems.entertainerProfileId,
+      id: portfolioItems.id,
+      blobKey: portfolioItems.blobKey,
+    })
+    .from(portfolioItems)
+    .where(
+      and(
+        inArray(portfolioItems.entertainerProfileId, profileIds),
+        eq(portfolioItems.kind, "image"),
+      ),
+    )
+    .orderBy(asc(portfolioItems.sortOrder), asc(portfolioItems.createdAt));
+
+  for (const row of rows) {
+    if (heroes.has(row.profileId)) continue;
+    if (isServablePortfolioImageKey(row.blobKey)) {
+      heroes.set(row.profileId, row.id);
+    }
+  }
+  return heroes;
 }
 
 export async function listDiscoverableVenues(
@@ -405,12 +459,19 @@ export async function getDiscoverableEntertainerDetail(input: {
         caption: portfolioItems.caption,
         altText: portfolioItems.altText,
         url: portfolioItems.url,
+        blobKey: portfolioItems.blobKey,
         sortOrder: portfolioItems.sortOrder,
       })
       .from(portfolioItems)
       .where(eq(portfolioItems.entertainerProfileId, profile.id))
       .orderBy(portfolioItems.sortOrder, portfolioItems.createdAt);
   }
+
+  const heroImageId =
+    portfolio?.find(
+      (item) =>
+        item.kind === "image" && isServablePortfolioImageKey(item.blobKey),
+    )?.id ?? null;
 
   return {
     id: profile.id,
@@ -425,6 +486,7 @@ export async function getDiscoverableEntertainerDetail(input: {
     priceMaxCents: profile.priceMaxCents,
     currency: profile.currency,
     durationMinutes: profile.durationMinutes,
+    heroImageId,
     technicalRequirements: profile.technicalRequirements,
     genres: profile.genres,
     performanceFormats: profile.performanceFormats,

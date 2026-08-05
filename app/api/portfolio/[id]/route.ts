@@ -9,6 +9,7 @@ import {
 import { can } from "@/src/domain/permissions";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
 import {
+  isBlobPortfolioKey,
   isLocalPortfolioKey,
   loadPortfolioImage,
 } from "@/src/integrations/portfolio-image-store";
@@ -72,11 +73,17 @@ export async function GET(_request: Request, { params }: Props) {
     }
   }
 
-  if (isLocalPortfolioKey(item.blobKey)) {
+  // Local disk + Vercel Blob keys are both served through our auth proxy.
+  if (isLocalPortfolioKey(item.blobKey) || isBlobPortfolioKey(item.blobKey)) {
     const stored = await loadPortfolioImage(item.blobKey);
     if (!stored) {
       return NextResponse.json(
-        { ok: false, error: "not_found" },
+        {
+          ok: false,
+          error: isBlobPortfolioKey(item.blobKey)
+            ? "blob_fetch_failed"
+            : "not_found",
+        },
         { status: 404 },
       );
     }

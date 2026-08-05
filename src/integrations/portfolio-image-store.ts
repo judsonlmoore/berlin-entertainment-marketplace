@@ -146,11 +146,22 @@ export async function loadPortfolioImage(
   }
 
   if (blobKey.startsWith(BLOB_PREFIX)) {
-    const url = blobKey.slice(BLOB_PREFIX.length);
+    const raw = blobKey.slice(BLOB_PREFIX.length);
     const token = process.env.BLOB_READ_WRITE_TOKEN;
     if (!token) return null;
+
+    // Prefer clean URL / pathname — ignore any expired signed query params.
+    let urlOrPath: string;
     try {
-      const result = await get(url, { access: "private", token });
+      const parsed = new URL(raw);
+      parsed.search = "";
+      urlOrPath = parsed.toString();
+    } catch {
+      urlOrPath = raw.split("?")[0] ?? raw;
+    }
+
+    try {
+      const result = await get(urlOrPath, { access: "private", token });
       if (!result) return null;
       const mimeType =
         result.blob.contentType ?? "application/octet-stream";
@@ -159,7 +170,21 @@ export async function loadPortfolioImage(
       putPortfolioImageBytes(blobKey, mimeType, bytes);
       return { mimeType, bytes };
     } catch {
-      return null;
+      // Retry with pathname only (portfolio/userId/file.ext).
+      try {
+        const pathname = new URL(urlOrPath).pathname.replace(/^\//, "");
+        if (!pathname.startsWith("portfolio/")) return null;
+        const result = await get(pathname, { access: "private", token });
+        if (!result) return null;
+        const mimeType =
+          result.blob.contentType ?? "application/octet-stream";
+        const buffer = await new Response(result.stream).arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+        putPortfolioImageBytes(blobKey, mimeType, bytes);
+        return { mimeType, bytes };
+      } catch {
+        return null;
+      }
     }
   }
 

@@ -13,6 +13,7 @@ describe("splitPortfolioMedia", () => {
         caption: "Hero",
         altText: null,
         url: null,
+        blobKey: "blob/https://example.blob.vercel-storage.com/a.jpg",
         sortOrder: 0,
       },
       {
@@ -21,6 +22,7 @@ describe("splitPortfolioMedia", () => {
         caption: "Gallery",
         altText: null,
         url: null,
+        blobKey: "local/user/b.png",
         sortOrder: 1,
       },
       {
@@ -44,6 +46,31 @@ describe("splitPortfolioMedia", () => {
     expect(media.gallery.map((i) => i.id)).toEqual(["img-2"]);
     expect(media.youtube?.id).toBe("yt-1");
     expect(media.links).toHaveLength(1);
+  });
+
+  it("skips legacy pending/ image keys that cannot be served", () => {
+    const media = splitPortfolioMedia([
+      {
+        id: "broken",
+        kind: "image",
+        caption: "Ghost",
+        altText: null,
+        url: null,
+        blobKey: "pending/user/portfolio/x",
+        sortOrder: 0,
+      },
+      {
+        id: "ok",
+        kind: "image",
+        caption: "Real",
+        altText: null,
+        url: null,
+        blobKey: "blob/https://example.blob.vercel-storage.com/a.jpg",
+        sortOrder: 1,
+      },
+    ]);
+    expect(media.hero?.id).toBe("ok");
+    expect(media.gallery).toEqual([]);
   });
 });
 

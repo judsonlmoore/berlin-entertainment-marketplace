@@ -1,4 +1,7 @@
-import type { PortfolioDiscoveryItem } from "@/src/db/queries/discovery";
+import {
+  isServablePortfolioImageKey,
+  type PortfolioDiscoveryItem,
+} from "@/src/db/queries/discovery";
 
 export type PublicProfileMedia = {
   hero: PortfolioDiscoveryItem | null;
@@ -7,12 +10,17 @@ export type PublicProfileMedia = {
   links: PortfolioDiscoveryItem[];
 };
 
+export { isServablePortfolioImageKey };
+
 /** Split portfolio into hero (first image), gallery, youtube, and external links. */
 export function splitPortfolioMedia(
   items: readonly PortfolioDiscoveryItem[] | null | undefined,
 ): PublicProfileMedia {
   const list = items ?? [];
-  const images = list.filter((item) => item.kind === "image");
+  const images = list.filter(
+    (item) =>
+      item.kind === "image" && isServablePortfolioImageKey(item.blobKey),
+  );
   const youtube = list.find((item) => item.kind === "youtube") ?? null;
   const links = list.filter((item) => item.kind === "link");
   const [hero = null, ...gallery] = images;
