@@ -92,6 +92,7 @@ function RailNav({
   onNavigate,
   showBrand = true,
   showRoleContext = true,
+  showAccountMenu = true,
 }: {
   items: NavItem[];
   accountItems: AccountNavItem[];
@@ -108,6 +109,8 @@ function RailNav({
   showBrand?: boolean;
   /** Hide on mobile — the sticky header already exposes act/venue context. */
   showRoleContext?: boolean;
+  /** Hide on mobile — account menu lives in the sticky header. */
+  showAccountMenu?: boolean;
 }) {
   const t = useTranslations("nav");
 
@@ -158,15 +161,17 @@ function RailNav({
           );
         })}
       </nav>
-      <div className="mt-auto border-t border-white/10 pt-4">
-        <AccountMenu
-          userName={userName}
-          userImage={userImage}
-          accountTypeLabel={accountTypeLabel}
-          items={accountItems}
-          onNavigate={onNavigate}
-        />
-      </div>
+      {showAccountMenu ? (
+        <div className="mt-auto border-t border-white/10 pt-4">
+          <AccountMenu
+            userName={userName}
+            userImage={userImage}
+            accountTypeLabel={accountTypeLabel}
+            items={accountItems}
+            onNavigate={onNavigate}
+          />
+        </div>
+      ) : null}
     </>
   );
 }
@@ -392,6 +397,7 @@ export function AppShell({
             onNavigate={closeMenu}
             showBrand={false}
             showRoleContext={false}
+            showAccountMenu={false}
           />
         </div>
       </div>

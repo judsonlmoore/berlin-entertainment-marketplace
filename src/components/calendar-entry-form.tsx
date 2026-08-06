@@ -51,6 +51,11 @@ type Props = {
   defaultState?: BlockerState;
   editEntry?: EditEntry;
   hideHeading?: boolean;
+  /** When true, omit the submit/delete row so a parent sheet footer can host CTAs. */
+  hideActions?: boolean;
+  /** Stick action buttons to the bottom of a scrollable sheet body. */
+  stickyActions?: boolean;
+  formId?: string;
   onSuccess?: (result: CalendarEntryFormSuccess) => void;
 };
 
@@ -83,6 +88,9 @@ export function CalendarEntryForm({
   defaultState = "unavailable",
   editEntry,
   hideHeading = false,
+  hideActions = false,
+  stickyActions = false,
+  formId,
   onSuccess,
 }: Props) {
   const t = useTranslations("calendar");
@@ -179,6 +187,7 @@ export function CalendarEntryForm({
 
   return (
     <form
+      id={formId}
       className="grid gap-4"
       onSubmit={(event) => {
         event.preventDefault();
@@ -420,45 +429,82 @@ export function CalendarEntryForm({
         </p>
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="submit"
-          pending={pending}
-          pendingLabel={ui("working")}
-          className="flex-1"
+      {!hideActions ? (
+        <div
+          className={`flex flex-wrap gap-2 ${
+            stickyActions
+              ? "sticky bottom-0 z-[1] -mx-4 mt-2 border-t border-[var(--rule)] bg-[var(--surface)] px-4 py-3 sm:-mx-5 sm:px-5"
+              : ""
+          }`}
         >
-          {isEdit ? t("saveChanges") : t("add")}
-        </Button>
-        {isEdit && editEntry ? (
           <Button
-            type="button"
-            variant="secondary"
-            pending={deleting}
+            type="submit"
+            pending={pending}
             pendingLabel={ui("working")}
-            onClick={() => {
-              setError(null);
-              startDeleteTransition(async () => {
-                const result = await deleteAvailability(editEntry.id, locale);
-                if (!result.ok) {
-                  setError(result.message);
-                  return;
-                }
-                onSuccess?.({
-                  id: editEntry.id,
-                  startsAt: "",
-                  endsAt: "",
-                  allDay,
-                  state,
-                  deleted: true,
-                });
-                router.refresh();
-              });
-            }}
+            className="flex-1"
           >
-            {t("remove")}
+            {isEdit ? t("saveChanges") : t("add")}
           </Button>
-        ) : null}
-      </div>
+          {isEdit && editEntry ? (
+            <Button
+              type="button"
+              variant="secondary"
+              pending={deleting}
+              pendingLabel={ui("working")}
+              onClick={() => {
+                setError(null);
+                startDeleteTransition(async () => {
+                  const result = await deleteAvailability(editEntry.id, locale);
+                  if (!result.ok) {
+                    setError(result.message);
+                    return;
+                  }
+                  onSuccess?.({
+                    id: editEntry.id,
+                    startsAt: "",
+                    endsAt: "",
+                    allDay,
+                    state,
+                    deleted: true,
+                  });
+                  router.refresh();
+                });
+              }}
+            >
+              {t("remove")}
+            </Button>
+          ) : null}
+        </div>
+      ) : isEdit && editEntry ? (
+        <Button
+          type="button"
+          variant="ghost"
+          pending={deleting}
+          pendingLabel={ui("working")}
+          className="justify-self-start"
+          onClick={() => {
+            setError(null);
+            startDeleteTransition(async () => {
+              const result = await deleteAvailability(editEntry.id, locale);
+              if (!result.ok) {
+                setError(result.message);
+                return;
+              }
+              onSuccess?.({
+                id: editEntry.id,
+                startsAt: "",
+                endsAt: "",
+                allDay,
+                state,
+                deleted: true,
+              });
+              router.refresh();
+            });
+          }}
+        >
+          {t("remove")}
+        </Button>
+      ) : null}
     </form>
   );
 }

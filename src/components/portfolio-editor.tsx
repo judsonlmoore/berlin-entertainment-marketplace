@@ -37,6 +37,7 @@ import {
   reorderPortfolioItems,
 } from "@/src/actions/portfolio";
 import { YouTubeEmbed } from "@/src/components/youtube-embed";
+import { AppModal } from "@/src/components/ui/app-modal";
 import { useRouter } from "@/src/i18n/navigation";
 import { PORTFOLIO_MAX_IMAGES } from "@/src/domain/portfolio";
 import { validateYouTubeUrl } from "@/src/domain/youtube";
@@ -919,35 +920,19 @@ export function PortfolioEditor({
       </div>
 
       {videoOpen && youtube?.url ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-[rgba(20,24,22,0.55)] p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("portfolioYouTubeTitle")}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setVideoOpen(false);
-          }}
+        <AppModal
+          open={videoOpen}
+          onClose={() => setVideoOpen(false)}
+          title={youtube.caption || t("portfolioYouTubeTitle")}
+          closeLabel={t("portfolioCloseVideo")}
+          size="lg"
         >
-          <div className="w-full max-w-3xl overflow-hidden rounded-[12px] border border-[var(--rule)] bg-[var(--surface)]">
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--rule)] px-4 py-3">
-              <strong className="text-sm font-semibold">
-                {youtube.caption || t("portfolioYouTubeTitle")}
-              </strong>
-              <button
-                type="button"
-                className="rounded-[var(--radius-sm)] border border-[var(--rule)] px-3 py-2 text-sm font-semibold"
-                onClick={() => setVideoOpen(false)}
-              >
-                {t("portfolioCloseVideo")}
-              </button>
-            </div>
-            <YouTubeEmbed
-              url={youtube.url}
-              className="aspect-video w-full bg-black"
-              {...(youtube.caption ? { title: youtube.caption } : {})}
-            />
-          </div>
-        </div>
+          <YouTubeEmbed
+            url={youtube.url}
+            className="aspect-video w-full bg-black"
+            {...(youtube.caption ? { title: youtube.caption } : {})}
+          />
+        </AppModal>
       ) : null}
     </div>
   );

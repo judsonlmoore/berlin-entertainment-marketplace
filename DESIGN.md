@@ -122,7 +122,8 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 
 ## Shell
 - Desktop ≥1024px: sticky ~280px rail, slim surface top bar (~64–72px), breadcrumb + locale
-- Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav. Drawer header is brand + close on one row; act/venue context lives in the sticky header only (not duplicated in the drawer).
+- Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav. Drawer header is brand + close on one row; act/venue context and account menu live in the sticky header only (not duplicated in the drawer).
+- Modals: on mobile, edge-to-edge full-height sheets (no radius) with sticky close in the header and sticky CTAs in the footer; desktop keeps a centered rounded panel.
 - Member rail may show a quiet **Getting started** checklist (publish → search → open a result → send an enquiry). When all steps are done, show a one-line congrats + dismiss; dismiss hides it permanently. Staff and support-mode overlays never see it.
 - Venue profiles (talent-facing) include **Submit my profile** and listed **open calls** with 1-click apply. Mutual opt-in opens a shared **lead**; contacts unlock then. No in-app chat.
 - Logged-out surfaces share one public footer (privacy, terms, cookies, sign-in)
@@ -149,3 +150,5 @@ No live marketplace preview rail on profile edit.
 | 2026-08-06 | Rail getting-started checklist replaces verification banner | Staff no longer review accounts; guide members through publish → discover → enquire, then dismiss forever |
 | 2026-08-06 | Profile contact via leads | Submit profile + 1-click open-call apply; Interest/Pass unlocks contacts; CRM statuses over booking engine |
 | 2026-08-06 | Mobile drawer drops role chip; brand + close share a row | Checklist needs vertical room; act/venue context already sits in the mobile header |
+| 2026-08-06 | Mobile drawer drops account avatar menu | Account/sign-out already in sticky header; reclaim rail space for checklist + nav |
+| 2026-08-06 | Mobile modals are edge-to-edge sheets | Feel like screens; sticky close (top) and CTA (bottom); calendar opens on tap via dateClick |
