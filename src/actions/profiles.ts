@@ -6,7 +6,7 @@ import {
   requireStaffActor,
   toActionError,
 } from "@/src/actions/_shared";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
@@ -14,11 +14,13 @@ import { upsertPreferredContact } from "@/src/db/queries/contacts";
 import {
   auditEvents,
   entertainerProfiles,
+  portfolioItems,
   venueMemberships,
   venueSpaces,
   venues,
 } from "@/src/db/schema/marketplace";
 import { AppError } from "@/src/domain/errors";
+import { checkEntertainerPublishReadiness } from "@/src/domain/entertainer-publish-readiness";
 import { can } from "@/src/domain/permissions";
 import {
   canOwnerTransitionProfile,
@@ -32,7 +34,6 @@ import {
   NOTES_MAX,
   SHORT_DESCRIPTION_MAX,
   TECHNICAL_MAX,
-  TECHNICAL_MIN,
   sanitizePlainText,
   validateRichTextField,
 } from "@/src/domain/sanitize-input";
@@ -220,47 +221,7 @@ function sanitizeVenueProse(data: z.infer<typeof venueSchema>) {
   };
 }
 
-function assertEntertainerReadyForSubmit(profile: {
-  actName: string;
-  category: string;
-  description: string;
-  berlinBase: string;
-  technicalRequirements: string;
-}) {
-  const nameCheck = sanitizePlainText(profile.actName, { min: 1, max: 160 });
-  if (!nameCheck.ok) {
-    throw new AppError("validation", nameCheck.reason);
-  }
-  if (!profile.category.trim() || profile.category === "uncategorized") {
-    throw new AppError("validation", "Category is required before submitting");
-  }
-  const descriptionCheck = validateRichTextField(profile.description, {
-    min: DESCRIPTION_MIN,
-    max: DESCRIPTION_MAX,
-  });
-  if (!descriptionCheck.ok) {
-    throw new AppError("validation", descriptionCheck.reason);
-  }
-  const locationCheck = sanitizePlainText(profile.berlinBase, {
-    min: 2,
-    max: 300,
-  });
-  if (!locationCheck.ok) {
-    throw new AppError(
-      "validation",
-      "Select a base location before submitting",
-    );
-  }
-  const technicalCheck = validateRichTextField(profile.technicalRequirements, {
-    min: TECHNICAL_MIN,
-    max: TECHNICAL_MAX,
-  });
-  if (!technicalCheck.ok) {
-    throw new AppError("validation", technicalCheck.reason);
-  }
-}
-
-function assertVenueReadyForSubmit(venue: {
+function assertVenueReadyForPublish(venue: {
   name: string;
   shortDescription: string;
   addressLine1: string;
@@ -389,12 +350,10 @@ export async function upsertEntertainerProfile(
       equipmentSupplied,
       websiteUrl: optionalNullableText(parsed.data.websiteUrl),
       socialLinks: compactSocialLinks(parsed.data.socialLinks),
+      // Keep current publication state — edits do not unpublish.
       publicationState:
-        existing?.publicationState === "approved" ||
-        existing?.publicationState === "submitted"
-          ? ("draft" as const)
-          : ((existing?.publicationState as
-              ProfilePublicationState | undefined) ?? "draft"),
+        (existing?.publicationState as ProfilePublicationState | undefined) ??
+        "draft",
       updatedAt: now,
     };
 
@@ -455,11 +414,11 @@ export async function upsertEntertainerProfile(
   }
 }
 
-export async function submitEntertainerProfile(
+export async function publishEntertainerProfile(
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     if (!can(actor, "entertainer.manage_own_profile")) {
       throw new AppError("forbidden", "Entertainer role required");
     }
@@ -472,28 +431,116 @@ export async function submitEntertainerProfile(
       throw new AppError("not_found", "Create a profile draft first");
     }
 
-    assertEntertainerReadyForSubmit(profile);
+    const [imageRow] = await db
+      .select({ value: count() })
+      .from(portfolioItems)
+      .where(
+        and(
+          eq(portfolioItems.entertainerProfileId, profile.id),
+          eq(portfolioItems.kind, "image"),
+        ),
+      );
+
+    const mediaLinks = await db.query.portfolioItems.findMany({
+      where: eq(portfolioItems.entertainerProfileId, profile.id),
+      columns: { kind: true },
+    });
+    const hasExternalOrVideoLink = mediaLinks.some(
+      (item) => item.kind === "youtube" || item.kind === "link",
+    );
+
+    const readiness = checkEntertainerPublishReadiness({
+      actName: profile.actName,
+      category: profile.category,
+      genres: profile.genres,
+      description: profile.description,
+      groupSize: profile.groupSize,
+      berlinBase: profile.berlinBase,
+      travelRadiusKm: profile.travelRadiusKm,
+      priceMinCents: profile.priceMinCents,
+      priceMaxCents: profile.priceMaxCents,
+      websiteUrl: profile.websiteUrl,
+      socialLinks: (profile.socialLinks as Record<string, string> | null) ?? null,
+      imageCount: imageRow?.value ?? 0,
+      hasExternalOrVideoLink,
+    });
+    if (!readiness.ok) {
+      throw new AppError("validation", readiness.reasons[0] ?? "Profile incomplete");
+    }
 
     const from = profile.publicationState as ProfilePublicationState;
-    if (!canOwnerTransitionProfile(from, "submitted")) {
-      throw new AppError("invalid_transition", `Cannot submit from ${from}`);
+    if (!canOwnerTransitionProfile(from, "approved")) {
+      throw new AppError("invalid_transition", `Cannot publish from ${from}`);
     }
 
     await db.transaction(async (tx) => {
       await tx
         .update(entertainerProfiles)
-        .set({ publicationState: "submitted", updatedAt: new Date() })
+        .set({ publicationState: "approved", updatedAt: new Date() })
         .where(eq(entertainerProfiles.id, profile.id));
       await tx.insert(auditEvents).values({
         actorUserId: auditUserId,
-        action: "entertainer_profile.submitted",
+        action: "entertainer_profile.published",
         subjectType: "entertainer_profile",
         subjectId: profile.id,
-        metadata: { from, to: "submitted" },
+        metadata: { from, to: "approved" },
       });
     });
 
     revalidatePath(`/${locale}/profile`);
+    revalidatePath(`/${locale}/marketplace`);
+    revalidatePath(`/${locale}/admin`);
+    return { ok: true, id: profile.id };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+/** @deprecated Use publishEntertainerProfile — kept for any lingering callers. */
+export async function submitEntertainerProfile(
+  locale: "en" | "de" = "en",
+): Promise<ActionResult> {
+  return publishEntertainerProfile(locale);
+}
+
+export async function unpublishEntertainerProfile(
+  locale: "en" | "de" = "en",
+): Promise<ActionResult> {
+  try {
+    const { actor, auditUserId } = await requireActor();
+    if (!can(actor, "entertainer.manage_own_profile")) {
+      throw new AppError("forbidden", "Entertainer role required");
+    }
+
+    const db = getDb();
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.userId, actor.userId),
+    });
+    if (!profile) {
+      throw new AppError("not_found", "Profile not found");
+    }
+
+    const from = profile.publicationState as ProfilePublicationState;
+    if (!canOwnerTransitionProfile(from, "draft")) {
+      throw new AppError("invalid_transition", `Cannot unpublish from ${from}`);
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(entertainerProfiles)
+        .set({ publicationState: "draft", updatedAt: new Date() })
+        .where(eq(entertainerProfiles.id, profile.id));
+      await tx.insert(auditEvents).values({
+        actorUserId: auditUserId,
+        action: "entertainer_profile.unpublished",
+        subjectType: "entertainer_profile",
+        subjectId: profile.id,
+        metadata: { from, to: "draft" },
+      });
+    });
+
+    revalidatePath(`/${locale}/profile`);
+    revalidatePath(`/${locale}/marketplace`);
     revalidatePath(`/${locale}/admin`);
     return { ok: true, id: profile.id };
   } catch (error) {
@@ -633,10 +680,7 @@ export async function updateVenue(
     }
 
     const nextState: ProfilePublicationState =
-      existing.publicationState === "approved" ||
-      existing.publicationState === "submitted"
-        ? "draft"
-        : (existing.publicationState as ProfilePublicationState);
+      (existing.publicationState as ProfilePublicationState) ?? "draft";
 
     await db.transaction(async (tx) => {
       await tx
@@ -698,12 +742,12 @@ export async function updateVenue(
   }
 }
 
-export async function submitVenueProfile(
+export async function publishVenueProfile(
   venueId: string,
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     if (!can(actor, "venue.manage", { venueId })) {
       throw new AppError("forbidden", "Venue owner required");
     }
@@ -716,11 +760,11 @@ export async function submitVenueProfile(
       throw new AppError("not_found", "Venue not found");
     }
 
-    assertVenueReadyForSubmit(venue);
+    assertVenueReadyForPublish(venue);
 
     const from = venue.publicationState as ProfilePublicationState;
-    if (!canOwnerTransitionProfile(from, "submitted")) {
-      throw new AppError("invalid_transition", `Cannot submit from ${from}`);
+    if (!canOwnerTransitionProfile(from, "approved")) {
+      throw new AppError("invalid_transition", `Cannot publish from ${from}`);
     }
 
     const ownerMembership = await db.query.venueMemberships.findFirst({
@@ -737,24 +781,80 @@ export async function submitVenueProfile(
     await db.transaction(async (tx) => {
       await tx
         .update(venues)
-        .set({ publicationState: "submitted", updatedAt: new Date() })
+        .set({ publicationState: "approved", updatedAt: new Date() })
         .where(eq(venues.id, venueId));
       await tx.insert(auditEvents).values({
         actorUserId: auditUserId,
-        action: "venue.submitted",
+        action: "venue.published",
         subjectType: "venue",
         subjectId: venueId,
-        metadata: { from, to: "submitted" },
+        metadata: { from, to: "approved" },
       });
     });
 
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/profile/venues/${venueId}`);
+    revalidatePath(`/${locale}/marketplace`);
     revalidatePath(`/${locale}/admin`);
     return { ok: true, id: venueId };
   } catch (error) {
     return toActionError(error);
   }
+}
+
+export async function unpublishVenueProfile(
+  venueId: string,
+  locale: "en" | "de" = "en",
+): Promise<ActionResult> {
+  try {
+    const { actor, auditUserId } = await requireActor();
+    if (!can(actor, "venue.manage", { venueId })) {
+      throw new AppError("forbidden", "Venue owner required");
+    }
+
+    const db = getDb();
+    const venue = await db.query.venues.findFirst({
+      where: eq(venues.id, venueId),
+    });
+    if (!venue) {
+      throw new AppError("not_found", "Venue not found");
+    }
+
+    const from = venue.publicationState as ProfilePublicationState;
+    if (!canOwnerTransitionProfile(from, "draft")) {
+      throw new AppError("invalid_transition", `Cannot unpublish from ${from}`);
+    }
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(venues)
+        .set({ publicationState: "draft", updatedAt: new Date() })
+        .where(eq(venues.id, venueId));
+      await tx.insert(auditEvents).values({
+        actorUserId: auditUserId,
+        action: "venue.unpublished",
+        subjectType: "venue",
+        subjectId: venueId,
+        metadata: { from, to: "draft" },
+      });
+    });
+
+    revalidatePath(`/${locale}/profile`);
+    revalidatePath(`/${locale}/profile/venues/${venueId}`);
+    revalidatePath(`/${locale}/marketplace`);
+    revalidatePath(`/${locale}/admin`);
+    return { ok: true, id: venueId };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+/** @deprecated Use publishVenueProfile. */
+export async function submitVenueProfile(
+  venueId: string,
+  locale: "en" | "de" = "en",
+): Promise<ActionResult> {
+  return publishVenueProfile(venueId, locale);
 }
 
 const staffProfileReviewSchema = z.object({

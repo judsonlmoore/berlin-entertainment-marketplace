@@ -16,7 +16,7 @@ export function AutosaveStatus({ phase, errorMessage }: Props) {
 
   switch (phase) {
     case "dirty":
-      label = t("autosavePending");
+      label = t("autosaveUnsaved");
       tone = "muted";
       break;
     case "saving":

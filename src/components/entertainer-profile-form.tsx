@@ -3,7 +3,8 @@
 import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import {
-  submitEntertainerProfile,
+  publishEntertainerProfile,
+  unpublishEntertainerProfile,
   upsertEntertainerProfile,
 } from "@/src/actions/profiles";
 import { AutosaveStatus } from "@/src/components/profile/autosave-status";
@@ -11,12 +12,18 @@ import { CategorySubcategorySelect } from "@/src/components/profile/category-sub
 import { LanguageMultiSelect } from "@/src/components/profile/language-multi-select";
 import { LocationAutocomplete } from "@/src/components/profile/location-autocomplete";
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
-import { PublicationStatusTag } from "@/src/components/profile/publication-status-tag";
+import { PublicationControl } from "@/src/components/profile/publication-control";
 import {
   ParagraphTextField,
   toParagraphEditorHtml,
 } from "@/src/components/profile/paragraph-text-field";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
+import {
+  canOwnerPublishProfile,
+  canOwnerUnpublishProfile,
+  isProfilePublished,
+  type ProfilePublicationState,
+} from "@/src/domain/profile-publication";
 import {
   ENTERTAINER_SOCIAL_ORDER,
   type SocialPlatform,
@@ -140,7 +147,7 @@ function socialLabelKey(platform: SocialPlatform) {
 }
 
 function canOwnerPublish(state: string | undefined): boolean {
-  return !state || state === "draft" || state === "changes_requested";
+  return canOwnerPublishProfile((state ?? "draft") as ProfilePublicationState);
 }
 
 export function EntertainerProfileForm({
@@ -157,7 +164,10 @@ export function EntertainerProfileForm({
   const [publishError, setPublishError] = useState<string | null>(null);
   const [isPublishing, startPublish] = useTransition();
   const social = defaultValues?.socialLinks ?? {};
-  const pubState = publicationState ?? "draft";
+  const pubState = (publicationState ?? "draft") as ProfilePublicationState;
+  const published = isProfilePublished(pubState);
+  const showPublish = canOwnerPublish(pubState);
+  const showUnpublish = canOwnerUnpublishProfile(pubState);
 
   function readForm(form: FormData) {
     return {
@@ -201,28 +211,18 @@ export function EntertainerProfileForm({
       if (!payload.actName.trim() || !payload.contactEmail.trim()) return null;
       return payload;
     },
-    save: async (payload) => {
-      const result = await upsertEntertainerProfile(payload);
-      if (
-        result.ok &&
-        (pubState === "approved" || pubState === "submitted")
-      ) {
-        router.refresh();
-      }
-      return result;
-    },
+    save: (payload) => upsertEntertainerProfile(payload),
   });
 
   function publishProfile() {
     setPublishError(null);
     startPublish(async () => {
-      // Flush pending edits; never submit for review if the draft cannot save.
       const saved = await autosave.saveNow();
       if (!saved?.ok) {
         setPublishError(saved?.message || t("publishProfileFailed"));
         return;
       }
-      const result = await submitEntertainerProfile(locale);
+      const result = await publishEntertainerProfile(locale);
       if (!result.ok) {
         setPublishError(result.message || t("publishProfileFailed"));
         return;
@@ -231,7 +231,17 @@ export function EntertainerProfileForm({
     });
   }
 
-  const showPublish = canOwnerPublish(pubState);
+  function unpublishProfile() {
+    setPublishError(null);
+    startPublish(async () => {
+      const result = await unpublishEntertainerProfile(locale);
+      if (!result.ok) {
+        setPublishError(result.message || t("unpublishProfileFailed"));
+        return;
+      }
+      router.refresh();
+    });
+  }
 
   return (
     <div className="grid gap-5">
@@ -252,23 +262,21 @@ export function EntertainerProfileForm({
                 phase={autosave.phase}
                 errorMessage={autosave.errorMessage}
               />
-              {showPublish ? (
-                <button
-                  type="button"
-                  disabled={isPublishing || autosave.phase === "saving"}
-                  onClick={publishProfile}
-                  className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
-                >
-                  {isPublishing ? t("publishingProfile") : t("publishProfile")}
-                </button>
-              ) : (
-                <PublicationStatusTag
-                  state={pubState}
-                  draftLabel={t("statusDraft")}
-                  underReviewLabel={t("statusUnderReview")}
-                  verifiedLabel={t("statusVerified")}
-                />
-              )}
+              <PublicationControl
+                state={pubState}
+                unpublishedLabel={t("statusUnpublished")}
+                suspendedLabel={t("statusSuspended")}
+                publishLabel={t("publishProfile")}
+                publishingLabel={t("publishingProfile")}
+                unpublishLabel={t("unpublishProfile")}
+                unpublishingLabel={t("unpublishingProfile")}
+                canPublish={showPublish}
+                canUnpublish={showUnpublish}
+                pending={isPublishing}
+                disabled={autosave.phase === "saving"}
+                onPublish={publishProfile}
+                onUnpublish={unpublishProfile}
+              />
             </div>
           </div>
           {publishError ? (
@@ -278,6 +286,10 @@ export function EntertainerProfileForm({
           ) : showPublish ? (
             <p className="mt-3 text-sm text-[var(--text-muted)]">
               {t("publishProfileHint")}
+            </p>
+          ) : published ? (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {t("publishedProfileHint")}
             </p>
           ) : null}
         </div>

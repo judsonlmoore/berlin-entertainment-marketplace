@@ -11,7 +11,7 @@ Salon is a private, curated B2B marketplace connecting Berlin talent buyers (ven
 
 The marketplace is **role-segregated**: talent discovers locations and opportunities; buyers discover talent. Peer profiles on the same side of the market are not browseable.
 
-The product succeeds when buyers and talent can discover each other, complete trusted bookings, and platform staff can verify profiles for marketplace visibility and contact eligibility. Salon is not a consumer event platform, social network, payment custodian, or law firm.
+The product succeeds when buyers and talent can discover each other, complete trusted bookings, and platform staff can moderate abusive publication and accounts. Salon is not a consumer event platform, social network, payment custodian, or law firm.
 
 ## 2. Personas and glossary
 
@@ -34,7 +34,7 @@ User-facing language uses **Talent**, **Buyer**, and (later) **Agency**. Persist
 - **Talent:** act seeking appropriate paid bookings, with clear pricing, availability, production needs, and portfolio evidence.
 - **Buyer owner:** accountable operator who creates a location organization, manages members, publishes opportunities, requests acts, and signs agreements.
 - **Buyer member:** staff member authorized by an owner to operate a location within assigned permissions.
-- **Platform staff:** verifies profiles for discovery/contact eligibility, suspends abusive accounts, handles moderation, and monitors booking operations.
+- **Platform staff:** suspends abusive accounts/publication, handles moderation, and monitors booking operations.
 
 ## 3. Roles, account status, and permissions
 
@@ -42,20 +42,20 @@ User-facing language uses **Talent**, **Buyer**, and (later) **Agency**. Persist
 
 | State | Meaning | Marketplace access |
 |---|---|---|
-| `active` | Self-serve signup complete with one role | Private discovery search, profiles, calendar, and explore (contact gated by profile verification) |
+| `active` | Self-serve signup complete with one role | Private discovery search, profiles, calendar, and explore (contact gated by own profile publication) |
 | `suspended` | Staff removed access | No private marketplace access; existing records retained |
 
 Signup does not require staff account approval. Staff may suspend or reactivate accounts with an audit trail.
 
-### 3.2 Profile verification (publication)
+### 3.2 Profile publication
 
-Staff approve talent or location **profile publication** independently of account status. Until a member’s relevant profile is verified (`publication_state = approved`):
+Owners **self-publish** talent or location profiles when a built-in QA checklist passes (`publication_state = approved`). Until published:
 
 - The profile is not visible in marketplace discovery.
 - The member may still search the opposite side, edit their profile, manage availability, and explore the site.
 - The member may not contact marketplace results (submit applications, or send/respond to direct requests).
 
-Surface copy should set expectation that verification is usually complete within **3 business days**, and encourage completing the profile, updating availability, and exploring meanwhile.
+Published profiles stay published across edits. Owners may **unpublish** (back to `draft`) at any time. Staff may still suspend publication for moderation with an audit trail; staff approval is not required to go live.
 
 ### 3.3 Role model
 
@@ -72,11 +72,11 @@ Surface copy should set expectation that verification is usually complete within
 
 ### 4.1 Shared onboarding
 
-After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider; profile claims are staff-verified for publication, not automatic identity verification. Agency may appear on the role picker as a non-selectable coming-soon option.
+After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider. Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Agency may appear on the role picker as a non-selectable coming-soon option.
 
 ### 4.2 Venue organization profile
 
-Required before staff publication verification:
+Required before self-serve publication:
 
 - Public-to-members venue name and short description
 - Structured Berlin address, district, and map coordinates
@@ -87,35 +87,36 @@ Required before staff publication verification:
 - Native availability calendar
 - Owner membership
 
-Optional: website/social links, house rules, venue images, multiple spaces with distinct capacity/resources. A venue profile is discoverable only to **entertainers** (and staff) after staff publication approval.
+Optional: website/social links, house rules, venue images, multiple spaces with distinct capacity/resources. A venue profile is discoverable only to **entertainers** (and staff) after publication.
 
 ### 4.3 Entertainer profile
 
-Required before staff publication verification:
+Required before self-serve publication (built-in QA):
 
-- Act name, category/genre, and description
-- Group size and Berlin base/travel radius
-- Indicative price minimum/maximum and currency (EUR for MVP)
-- Performance duration/set structure
-- Technical requirements summary
+- Act name and description (character minimums)
+- Category and subcategory
+- At least one portfolio photo
+- At least one public URL (website, social, or featured video)
+- Group size and Berlin base / travel radius
+- Indicative price minimum and maximum (EUR for MVP)
 - At least one private contact method
 - Native availability calendar
 
-Optional: accessibility notes, languages, equipment supplied, website/social/YouTube links, portfolio media, technical rider uploads. Prices are indicative; agreed booking terms are authoritative. An entertainer profile is discoverable only to **venue operators** (and staff) after staff publication approval.
+Optional: performance formats, technical requirements, accessibility notes, languages, equipment supplied, additional links, technical rider uploads. Prices are indicative; agreed booking terms are authoritative. An entertainer profile is discoverable only to **venue operators** (and staff) after publication.
 
 ### 4.4 Review behavior
 
-Members save drafts and submit profiles for verification. Staff can approve, request changes, or suspend publication. The system records actor, timestamp, previous/new state, and reason. Verification does not represent legal, safety, tax, insurance, or artistic-quality certification.
+Members save drafts and publish when the checklist passes. Publishing sets `approved` (discoverable). Unpublishing returns to `draft`. Edits while published do not unpublish. Staff can suspend or restore publication with an audit trail. Publication does not represent legal, safety, tax, insurance, or artistic-quality certification.
 
 ## 5. Private discovery and contact privacy
 
 - Public visitors see only the landing, sign-in, privacy, and terms surfaces (apply redirects into self-serve signup).
 - Active (non-suspended) accounts access private marketplace surfaces for search and explore.
 - **Role segregation (server-enforced):**
-  - Entertainers may search verified venues, venue spaces, and open opportunities only. They must not browse, search, or open other entertainers’ profiles (except their own).
-  - Venues may search verified entertainer profiles only. They must not browse, search, or open other venues’ private profiles, except where already a party to a shared booking involving that venue.
+  - Entertainers may search published venues, venue spaces, and open opportunities only. They must not browse, search, or open other entertainers’ profiles (except their own).
+  - Venues may search published entertainer profiles only. They must not browse, search, or open other venues’ private profiles, except where already a party to a shared booking involving that venue.
   - Staff may access both for moderation.
-- Unverified members can search but cannot initiate contact workflows until their own profile is verified.
+- Unpublished members can search but cannot initiate contact workflows until their own profile is published.
 - Search/filter entertainers by category, group size, price range, location, date availability, and production fit.
 - Search/filter venues/opportunities by location, date, budget, venue type, audience, capacity, and production resources.
 - Store contact methods separately from discoverable profile data.
@@ -209,13 +210,13 @@ No consumer event pages, public profile directory, public listings, public revie
 
 - Anonymous and suspended users cannot access private profiles, opportunities, contact data, or booking records.
 - Self-serve signup creates an active account with exactly one role (entertainer XOR venue) without staff account approval.
-- Staff can suspend/reactivate accounts and verify profile publication with an audit trail.
-- Unverified members can search the opposite side but cannot contact (apply / direct request) until their profile is verified; unverified profiles are invisible in discovery.
+- Staff can suspend/reactivate accounts and suspend/restore profile publication with an audit trail.
+- Unpublished members can search the opposite side but cannot contact (apply / direct request) until their profile is published; unpublished profiles are invisible in discovery.
 - An owner can invite/manage venue members.
-- Venue and entertainer profiles capture required fields and support verification submission.
+- Venue and entertainer profiles capture required fields and support self-serve publish/unpublish with a built-in checklist.
 - Entertainers cannot browse other entertainers; venues cannot browse other venues (server-enforced).
-- A verified entertainer can apply once to an open opportunity; a venue can shortlist or reject.
-- A verified venue can send a direct request; an entertainer can accept or decline.
+- A published entertainer can apply once to an open opportunity; a venue can shortlist or reject.
+- A published venue can send a direct request; an entertainer can accept or decline.
 - Both origins converge on one enforced booking state machine.
 - Contact unlock occurs only at shortlist/acceptance and is audited.
 - Both signatures on the current agreement version confirm the booking and atomically block both calendars.

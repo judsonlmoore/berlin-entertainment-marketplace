@@ -93,10 +93,10 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 - **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later. Account language/deletion live under `/account`, not profile.
 
 ### Autosave & publication status
-- Autosave while editing. Status copy is only **Saving…** and **Saved.** (no clock time).
-- Display-name strip hosts publication actions on the right: **Publish** when the profile is draft (or changes requested), otherwise a soft status tag (**Under review** / **Verified**). Autosave status sits beside the action, vertically centered. The strip is sticky on scroll so the action and status remain reachable at the bottom of the form.
-- **Publish** submits for staff verification (`draft` → `submitted`). Staff still approve before discovery. Editing a submitted/approved profile returns it to draft and requires Publish again.
-- Soft status tags: **Under review** (warning soft `#F3E8CF`, ink-readable) and **Verified** (success soft `#E3EEE5`, primary-tint text).
+- Autosave while editing. Status copy: **Unsaved changes**, **Saving…**, and **Saved.** (no clock time). Warn before leaving the page when there are unsaved changes.
+- Display-name strip hosts one publication control on the right: **Publish** when unpublished, **Unpublish** when live (plus **Suspended** when staff-locked). Autosave status sits beside it, vertically centered. The strip is sticky on scroll so the action remains reachable at the bottom of the form.
+- **Publish** is self-serve (`draft` → `approved`) after a built-in QA checklist passes. **Unpublish** returns to draft. Edits while published do **not** unpublish the profile.
+- Staff may still suspend publication for moderation; they are not in the critical path for going live.
 
 ### Media
 - Empty slots: **dashed outlined** rectangles/squares on white surface — not mystery-person silhouettes, not photo backgrounds as placeholders.
@@ -143,3 +143,4 @@ No live marketplace preview rail on profile edit.
 | 2026-08-03 | Legal pages from markdown under `content/legal` | Easier bilingual updates; shared prose template + public footer |
 | 2026-08-05 | Profile + onboarding as booking-asset editors | Presence-led, autosave, dashed media empties, platform URL validation, status tags instead of submit; preview approved in design consultation |
 | 2026-08-06 | Publish CTA on display-name strip | Owners explicitly submit ready drafts for staff verification; autosave + status tags alone were not actionable enough |
+| 2026-08-06 | Self-serve publish/unpublish with QA checklist | Staff review removed from the critical path; edits stay published; leave warning for unsaved changes |
