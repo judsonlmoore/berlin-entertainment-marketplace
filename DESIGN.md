@@ -18,21 +18,21 @@
 
 ## Typography
 - **Display/Hero:** Fraunces — brand wordmark and public landing hero only
-- **Body / UI / Labels:** Outfit — navigation, forms, tables, buttons, metadata, authenticated page titles
-- **Data/Tables:** Outfit with `font-variant-numeric: tabular-nums`
+- **Body / UI / Labels:** IBM Plex Sans — navigation, forms, tables, buttons, metadata, authenticated page titles
+- **Data/Tables:** IBM Plex Sans with `font-variant-numeric: tabular-nums`
 - **Code:** JetBrains Mono (admin/debug only if needed)
-- **Loading:** Google Fonts via `next/font` (Fraunces + Outfit)
-- **Rules:** Do not use Instrument Serif for every authenticated H1. Authenticated titles use Outfit 600 at `clamp(1.75rem, 2.5vw, 2.25rem)`.
+- **Loading:** Google Fonts via `next/font` (Fraunces + IBM Plex Sans)
+- **Rules:** Do not use Instrument Serif for every authenticated H1. Authenticated titles use IBM Plex Sans 600 at `clamp(1.75rem, 2.5vw, 2.25rem)`.
 - **Scale:**
   - Public hero: `clamp(3rem, 5.5vw, 5rem)` Fraunces, tight line-height
-  - Authenticated H1: `clamp(1.75rem, 2.5vw, 2.25rem)` Outfit 600
-  - Section H2: `1.15–1.35rem` Outfit 600
-  - Card title: `1.05–1.15rem` Outfit 600
+  - Authenticated H1: `clamp(1.75rem, 2.5vw, 2.25rem)` IBM Plex Sans 600
+  - Section H2: `1.15–1.35rem` IBM Plex Sans 600
+  - Card title: `1.05–1.15rem` IBM Plex Sans 600
   - Body: `1rem` / 400, line-height ~1.5
   - Labels: `0.875rem` / 500
   - UI/meta: `0.8–0.875rem` / 500 on muted
   - Eyebrow: `0.72rem` / 600, uppercase, `0.12–0.16em` tracking, accent color
-- **Blacklist / avoid as primary:** Inter, Roboto, Arial, system-ui as display, Space Grotesk, Instrument Sans as the long-term UI face (migrate to Outfit)
+- **Blacklist / avoid as primary:** Inter, Roboto, Arial, system-ui as display, Space Grotesk, Instrument Sans, Outfit (replaced — too geometric for ops UI)
 
 ## Color
 - **Approach:** Restrained — one primary voltage, rare accent, AA-first neutrals
@@ -71,7 +71,7 @@
 - Respect `prefers-reduced-motion`
 
 ## Forms (first-class)
-- Label above control, Outfit 500, ink
+- Label above control, IBM Plex Sans 500, ink
 - Control: white surface, 1px rule, 8px radius, min-height 44px, comfortable padding
 - Focus: 2px primary ring + offset (or `box-shadow` focus ring); never remove outline without replacement
 - Error: danger text + stronger border; `role="alert"`
@@ -136,6 +136,7 @@ No live marketplace preview rail on profile edit.
 | 2026-08-03 | Evolved visual system from warm-ivory editorial to crisp cultural-ops | Status quo felt dated; muted `#7B817D` failed readability; forms were under-designed. Preview approved in design consultation. |
 | 2026-08-03 | Cool stone canvas + true white surfaces | Improves contrast and modern marketplace feel while keeping cultural restraint |
 | 2026-08-03 | Fraunces for brand/hero; Outfit for UI | Serif demoted so ops screens stay scannable |
+| 2026-08-06 | IBM Plex Sans replaces Outfit for UI | Outfit felt too geometric/fashion for ops readability; keep Fraunces for brand/hero only |
 | 2026-08-03 | Form system with 8px radius and section groups | Profile/booking trust surfaces need first-class field UI |
 | 2026-08-03 | Remove authenticated sticky bottom nav | Mobile drawer + desktop rail already cover navigation; bottom bar was redundant |
 | 2026-08-03 | Legal pages from markdown under `content/legal` | Easier bilingual updates; shared prose template + public footer |
