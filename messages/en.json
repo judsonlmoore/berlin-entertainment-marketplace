@@ -74,13 +74,18 @@
     "active": "Active",
     "suspended": "Suspended"
   },
-  "verification": {
-    "title": "Profile verification in progress",
-    "body": "Staff usually verify profiles within 3 business days. Until then you can search the marketplace, update your profile, set availability, and explore — but you won’t appear in discovery or be able to contact other members yet.",
-    "linkProfile": "Complete your profile",
-    "linkCalendar": "Update availability",
-    "linkExplore": "Explore the marketplace",
-    "contactLocked": "Contact is available after staff verify your profile."
+  "onboardingChecklist": {
+    "title": "Getting started",
+    "steps": {
+      "published": "Publish your profile",
+      "searched": "Search the marketplace",
+      "openedResult": "Open a marketplace profile",
+      "enquiry": "Send your first enquiry"
+    },
+    "progress": "{done} of {total} complete",
+    "completeBody": "You’re set — welcome to the marketplace.",
+    "dismiss": "Got it",
+    "dismissing": "Saving…"
   },
   "home": {
     "eyebrow": "Berlin's private booking circle",
@@ -168,7 +173,7 @@
     "doneTitle": "You're in",
     "doneBody": "Your Salon account is ready. Finish your marketplace profile next — media, details, and links.",
     "doneHighlight": "Account created",
-    "donePending": "Continue to your profile to add media and the rest of your details. Verification comes after staff review.",
+    "donePending": "Continue to your profile to add media and the rest of your details.",
     "fieldsIncomplete": "Please fill in all required fields.",
     "steps": {
       "basics": {
@@ -238,7 +243,7 @@
     "languagePanelBody": "Choose the interface language for Salon. This switches English and German for the marketplace.",
     "builderIntro": "Build the act venues see in discovery — media, bio, and links. Account settings live under Account.",
     "whyFinishThisLabel": "Why finish this:",
-    "whyFinishThis": "Published profiles appear in discovery and can contact the other side. Fuller profiles get short-listed more often.",
+    "whyFinishThis": "Published profiles appear in the marketplace and can contact others. Fuller profiles get short-listed more often.",
     "sectionBasics": "Basics",
     "sectionMedia": "Media",
     "sectionDetails": "Details & fit",
@@ -250,7 +255,7 @@
     "statusVerified": "Published",
     "publishProfile": "Publish",
     "publishingProfile": "Publishing…",
-    "publishProfileHint": "Publish when the checklist is complete (photo, description, category, location, prices, and at least one link). You can unpublish anytime.",
+    "publishProfileHint": "Profile can be published once the following items are provided: photo, description, category, location, prices, and at least one link. You can unpublish anytime.",
     "publishProfileFailed": "Couldn’t publish — finish the required checklist first.",
     "editorToolbar": "Text formatting",
     "editorBold": "Bold",
@@ -447,7 +452,7 @@
     "statusSuspended": "Suspended",
     "unpublishProfile": "Unpublish",
     "unpublishingProfile": "Unpublishing…",
-    "publishedProfileHint": "This profile is live in discovery. Edits autosave without unpublishing.",
+    "publishedProfileHint": "This profile is live in the marketplace. Edits autosave.",
     "unpublishProfileFailed": "Couldn’t unpublish right now."
   },
   "membership": {

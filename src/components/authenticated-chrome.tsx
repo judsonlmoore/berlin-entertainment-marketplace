@@ -1,4 +1,5 @@
 import { AppShell } from "@/src/components/app-shell";
+import type { OnboardingChecklistView } from "@/src/domain/onboarding-checklist";
 import type { RailRoleContextData } from "@/src/lib/rail-role-context";
 
 type Props = {
@@ -11,6 +12,7 @@ type Props = {
   canDiscoverEntertainers: boolean;
   canDiscoverVenues: boolean;
   roleContext?: RailRoleContextData | null;
+  onboardingChecklist?: OnboardingChecklistView | null;
   supportBanner?: React.ReactNode;
 };
 
@@ -24,6 +26,7 @@ export async function AuthenticatedChrome({
   canDiscoverEntertainers,
   canDiscoverVenues,
   roleContext = null,
+  onboardingChecklist = null,
   supportBanner = null,
 }: Props) {
   return (
@@ -36,6 +39,7 @@ export async function AuthenticatedChrome({
       canDiscoverEntertainers={canDiscoverEntertainers}
       canDiscoverVenues={canDiscoverVenues}
       roleContext={roleContext}
+      onboardingChecklist={onboardingChecklist}
       supportBanner={supportBanner}
     >
       {children}

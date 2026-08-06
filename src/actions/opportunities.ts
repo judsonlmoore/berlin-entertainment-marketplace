@@ -358,6 +358,9 @@ export async function applyToOpportunity(
     revalidatePath(
       `/${parsed.data.locale}/marketplace/opportunities/${opportunity.id}`,
     );
+    if (isSubmit) {
+      revalidatePath("/", "layout");
+    }
     return { ok: true, ...(applicationId ? { id: applicationId } : {}) };
   } catch (error) {
     return toActionError(error);

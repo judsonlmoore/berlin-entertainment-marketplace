@@ -11,6 +11,7 @@ import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 import { supportDiscoveryFlags } from "@/src/lib/support-overlay";
+import { getOnboardingChecklistView } from "@/src/db/queries/onboarding-checklist";
 import { loadRailRoleContext } from "@/src/lib/rail-role-context";
 
 type Props = {
@@ -68,6 +69,7 @@ export default async function AppLayout({ children, params }: Props) {
   let canDiscoverVenues = isStaff;
   let roleContext = null;
   let support = null;
+  let onboardingChecklist = null;
 
   if (process.env.DATABASE_URL) {
     const resolved = await resolveEffectiveActor(user.id!);
@@ -84,6 +86,9 @@ export default async function AppLayout({ children, params }: Props) {
         };
       } else {
         roleContext = await loadRailRoleContext(resolved.staffActor);
+        onboardingChecklist = await getOnboardingChecklistView({
+          actor: effectiveActor,
+        });
       }
 
       isApproved = can(effectiveActor, "marketplace.discover");
@@ -108,6 +113,7 @@ export default async function AppLayout({ children, params }: Props) {
       canDiscoverEntertainers={canDiscoverEntertainers}
       canDiscoverVenues={canDiscoverVenues}
       roleContext={roleContext}
+      onboardingChecklist={onboardingChecklist}
       supportBanner={
         support ? (
           <SupportModeBanner locale={locale as "en" | "de"} support={support} />

@@ -5,6 +5,7 @@ import { PublicProfileView } from "@/src/components/marketplace/public-profile-v
 import { ProfileDocumentList } from "@/src/components/profile-document-list";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
 import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
 import {
@@ -158,63 +159,66 @@ export default async function EntertainerDetailPage({ params }: Props) {
   });
 
   return (
-    <PublicProfileView
-      backHref="/marketplace/entertainers"
-      backLabel={t("backToEntertainers")}
-      eyebrow={t("entertainerEyebrow")}
-      title={profile.actName}
-      subtitle={subtitle}
-      description={profile.description}
-      media={media}
-      facts={facts}
-      links={socialLinksToList(
-        profile.socialLinks,
-        (key) => SOCIAL_LABELS[key] ?? key,
-      )}
-      websiteUrl={profile.websiteUrl}
-      websiteLabel={t("website")}
-      contactTitle={t("contactTitle")}
-      contactLocked={profile.contactLocked}
-      contactLockedMessage={t("contactLocked")}
-      preferredLabel={t("preferred")}
-      contacts={profile.contacts}
-      aboutTitle={t("aboutTitle")}
-      detailsTitle={t("detailsTitle")}
-      galleryTitle={t("galleryTitle")}
-      videoTitle={t("videoTitle")}
-      linksTitle={t("linksTitle")}
-    >
-      <ProfileDocumentList
-        locale={locale}
-        documents={visibleDocuments.map((doc) => ({
-          id: doc.id,
-          title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
-          visibility: doc.visibility,
-          sizeBytes: doc.sizeBytes,
-        }))}
-      />
+    <>
+      <OnboardingChecklistTracker step="openedResult" />
+      <PublicProfileView
+        backHref="/marketplace/entertainers"
+        backLabel={t("backToEntertainers")}
+        eyebrow={t("entertainerEyebrow")}
+        title={profile.actName}
+        subtitle={subtitle}
+        description={profile.description}
+        media={media}
+        facts={facts}
+        links={socialLinksToList(
+          profile.socialLinks,
+          (key) => SOCIAL_LABELS[key] ?? key,
+        )}
+        websiteUrl={profile.websiteUrl}
+        websiteLabel={t("website")}
+        contactTitle={t("contactTitle")}
+        contactLocked={profile.contactLocked}
+        contactLockedMessage={t("contactLocked")}
+        preferredLabel={t("preferred")}
+        contacts={profile.contacts}
+        aboutTitle={t("aboutTitle")}
+        detailsTitle={t("detailsTitle")}
+        galleryTitle={t("galleryTitle")}
+        videoTitle={t("videoTitle")}
+        linksTitle={t("linksTitle")}
+      >
+        <ProfileDocumentList
+          locale={locale}
+          documents={visibleDocuments.map((doc) => ({
+            id: doc.id,
+            title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+            visibility: doc.visibility,
+            sizeBytes: doc.sizeBytes,
+          }))}
+        />
 
-      {!isOwnProfile && operableVenues.length > 0 ? (
-        <div id="direct-request" className="scroll-mt-24">
-          <DirectRequestForm
-            locale={appLocale}
-            entertainerProfileId={profile.id}
-            venues={operableVenues.map((venue) => ({
-              id: venue.id,
-              name: venue.name,
-            }))}
-          />
-        </div>
-      ) : null}
+        {!isOwnProfile && operableVenues.length > 0 ? (
+          <div id="direct-request" className="scroll-mt-24">
+            <DirectRequestForm
+              locale={appLocale}
+              entertainerProfileId={profile.id}
+              venues={operableVenues.map((venue) => ({
+                id: venue.id,
+                name: venue.name,
+              }))}
+            />
+          </div>
+        ) : null}
 
-      {showRequestLocked ? (
-        <p className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-5 text-sm text-[var(--text-muted)]">
-          {t("requestActLocked")}{" "}
-          <Link href="/profile" className="font-medium underline">
-            {t("viewProfile")}
-          </Link>
-        </p>
-      ) : null}
-    </PublicProfileView>
+        {showRequestLocked ? (
+          <p className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-5 text-sm text-[var(--text-muted)]">
+            {t("requestActLocked")}{" "}
+            <Link href="/profile" className="font-medium underline">
+              {t("viewProfile")}
+            </Link>
+          </p>
+        ) : null}
+      </PublicProfileView>
+    </>
   );
 }

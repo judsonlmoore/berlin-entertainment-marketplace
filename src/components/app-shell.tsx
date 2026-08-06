@@ -14,7 +14,9 @@ import {
   AccountMenu,
   type AccountNavItem,
 } from "@/src/components/account-menu";
+import { OnboardingChecklistRail } from "@/src/components/onboarding-checklist-rail";
 import { RailRoleContext } from "@/src/components/rail-role-context";
+import type { OnboardingChecklistView } from "@/src/domain/onboarding-checklist";
 import type { RailRoleContextData } from "@/src/lib/rail-role-context";
 
 type NavItem = {
@@ -46,6 +48,7 @@ type Props = {
   canDiscoverEntertainers: boolean;
   canDiscoverVenues: boolean;
   roleContext?: RailRoleContextData | null;
+  onboardingChecklist?: OnboardingChecklistView | null;
   supportBanner?: ReactNode;
 };
 
@@ -84,6 +87,7 @@ function RailNav({
   userImage,
   accountTypeLabel,
   roleContext,
+  onboardingChecklist,
   locale,
   navId,
   onNavigate,
@@ -95,6 +99,7 @@ function RailNav({
   userImage?: string | null | undefined;
   accountTypeLabel: string;
   roleContext?: RailRoleContextData | null;
+  onboardingChecklist?: OnboardingChecklistView | null;
   locale: "en" | "de";
   navId?: string;
   onNavigate?: () => void;
@@ -119,6 +124,9 @@ function RailNav({
           locale={locale}
           onNavigate={onNavigate}
         />
+      ) : null}
+      {onboardingChecklist ? (
+        <OnboardingChecklistRail checklist={onboardingChecklist} />
       ) : null}
       <nav
         id={navId}
@@ -166,6 +174,7 @@ export function AppShell({
   canDiscoverEntertainers,
   canDiscoverVenues,
   roleContext = null,
+  onboardingChecklist = null,
   supportBanner = null,
 }: Props) {
   const t = useTranslations("nav");
@@ -311,6 +320,7 @@ export function AppShell({
           userImage={userImage}
           accountTypeLabel={accountTypeLabel}
           roleContext={roleContext}
+          onboardingChecklist={onboardingChecklist}
           locale={locale}
         />
       </aside>
@@ -369,6 +379,7 @@ export function AppShell({
             userImage={userImage}
             accountTypeLabel={accountTypeLabel}
             roleContext={roleContext}
+            onboardingChecklist={onboardingChecklist}
             locale={locale}
             onNavigate={closeMenu}
           />

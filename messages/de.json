@@ -74,13 +74,18 @@
     "active": "Aktiv",
     "suspended": "Gesperrt"
   },
-  "verification": {
-    "title": "Profilverifizierung läuft",
-    "body": "Das Team prüft Profile in der Regel innerhalb von 3 Werktagen. Bis dahin können Sie den Marktplatz durchsuchen, Ihr Profil pflegen, Verfügbarkeit setzen und erkunden — aber Sie erscheinen noch nicht in der Discovery und können noch keine anderen Mitglieder kontaktieren.",
-    "linkProfile": "Profil vervollständigen",
-    "linkCalendar": "Verfügbarkeit aktualisieren",
-    "linkExplore": "Marktplatz erkunden",
-    "contactLocked": "Kontakt ist möglich, sobald das Team Ihr Profil verifiziert hat."
+  "onboardingChecklist": {
+    "title": "Erste Schritte",
+    "steps": {
+      "published": "Profil veröffentlichen",
+      "searched": "Marktplatz durchsuchen",
+      "openedResult": "Ein Marktplatz-Profil öffnen",
+      "enquiry": "Erste Anfrage senden"
+    },
+    "progress": "{done} von {total} erledigt",
+    "completeBody": "Alles erledigt — willkommen im Marktplatz.",
+    "dismiss": "Verstanden",
+    "dismissing": "Wird gespeichert…"
   },
   "home": {
     "eyebrow": "Berlins privater Booking-Kreis",
@@ -168,7 +173,7 @@
     "doneTitle": "Sie sind dabei",
     "doneBody": "Ihr Salon-Konto ist bereit. Vervollständigen Sie als Nächstes Ihr Marktplatz-Profil — Medien, Details und Links.",
     "doneHighlight": "Konto erstellt",
-    "donePending": "Weiter zum Profil, um Medien und weitere Details zu ergänzen. Die Freigabe erfolgt nach der Team-Prüfung.",
+    "donePending": "Weiter zum Profil, um Medien und weitere Details zu ergänzen.",
     "fieldsIncomplete": "Bitte füllen Sie alle erforderlichen Felder aus.",
     "steps": {
       "basics": {
@@ -238,7 +243,7 @@
     "languagePanelBody": "Wählen Sie die Oberflächensprache für Salon. Wechselt zwischen Englisch und Deutsch im Marktplatz.",
     "builderIntro": "Bauen Sie das Act-Profil, das Venues in der Discovery sehen — Medien, Bio und Links. Kontoeinstellungen finden Sie unter Konto.",
     "whyFinishThisLabel": "Warum fertigstellen:",
-    "whyFinishThis": "Veröffentlichte Profile erscheinen in der Discovery und können die andere Seite kontaktieren. Vollständigere Profile werden öfter short-listet.",
+    "whyFinishThis": "Veröffentlichte Profile erscheinen im Marktplatz und können andere kontaktieren. Vollständigere Profile werden öfter short-listet.",
     "sectionBasics": "Basics",
     "sectionMedia": "Medien",
     "sectionDetails": "Details & Passung",
@@ -250,7 +255,7 @@
     "statusVerified": "Veröffentlicht",
     "publishProfile": "Veröffentlichen",
     "publishingProfile": "Wird veröffentlicht…",
-    "publishProfileHint": "Veröffentlichen Sie, wenn die Checkliste vollständig ist (Foto, Beschreibung, Kategorie, Standort, Preise und mindestens ein Link). Sie können jederzeit zurückziehen.",
+    "publishProfileHint": "Profile können veröffentlicht werden, sobald die folgenden Elemente bereitgestellt sind: Foto, Beschreibung, Kategorie, Standort, Preise und mindestens ein Link. Sie können jederzeit zurückziehen.",
     "publishProfileFailed": "Veröffentlichen fehlgeschlagen — Checkliste zuerst erfüllen.",
     "editorToolbar": "Textformatierung",
     "editorBold": "Fett",
@@ -446,7 +451,7 @@
     "statusSuspended": "Gesperrt",
     "unpublishProfile": "Zurückziehen",
     "unpublishingProfile": "Wird zurückgezogen…",
-    "publishedProfileHint": "Dieses Profil ist in der Discovery sichtbar. Änderungen speichern automatisch, ohne die Veröffentlichung aufzuheben.",
+    "publishedProfileHint": "Dieses Profil ist im Marktplatz sichtbar. Änderungen speichern automatisch.",
     "unpublishProfileFailed": "Zurückziehen gerade nicht möglich.",
     "autosaveUnsaved": "Ungespeicherte Änderungen"
   },

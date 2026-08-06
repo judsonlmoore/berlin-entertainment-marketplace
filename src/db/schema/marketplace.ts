@@ -941,3 +941,25 @@ export const portfolioItems = pgTable(
     ),
   ],
 );
+
+/**
+ * Persistent getting-started rail checklist progress.
+ * Publish + enquiry are derived from domain tables; search/open/dismiss live here.
+ */
+export const onboardingChecklistState = pgTable("onboarding_checklist_state", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  searchedAt: timestamp("searched_at", { withTimezone: true, mode: "date" }),
+  openedResultAt: timestamp("opened_result_at", {
+    withTimezone: true,
+    mode: "date",
+  }),
+  dismissedAt: timestamp("dismissed_at", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});

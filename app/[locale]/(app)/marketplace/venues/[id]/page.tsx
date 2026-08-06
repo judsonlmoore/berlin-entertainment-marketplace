@@ -6,6 +6,7 @@ import {
   canViewVenueDiscoveryDetail,
   requireDiscoveryAccess,
 } from "@/src/db/queries/discovery-access";
+import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
 import {
   getCategoryNode,
   parseSubcategory,
@@ -127,31 +128,34 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
   }
 
   return (
-    <PublicProfileView
-      backHref="/marketplace/venues"
-      backLabel={t("backToVenues")}
-      eyebrow={t("venueEyebrow")}
-      title={venue.name}
-      subtitle={`${venue.district} · ${venueTypeLabel(venue.venueType, appLocale)}`}
-      description={venue.shortDescription}
-      media={splitPortfolioMedia(null)}
-      facts={facts}
-      links={socialLinksToList(
-        venue.socialLinks,
-        (key) => SOCIAL_LABELS[key] ?? key,
-      )}
-      websiteUrl={venue.websiteUrl}
-      websiteLabel={t("website")}
-      contactTitle={t("contactTitle")}
-      contactLocked={venue.contactLocked}
-      contactLockedMessage={t("contactLocked")}
-      preferredLabel={t("preferred")}
-      contacts={venue.contacts}
-      aboutTitle={t("aboutTitle")}
-      detailsTitle={t("detailsTitle")}
-      galleryTitle={t("galleryTitle")}
-      videoTitle={t("videoTitle")}
-      linksTitle={t("linksTitle")}
-    />
+    <>
+      <OnboardingChecklistTracker step="openedResult" />
+      <PublicProfileView
+        backHref="/marketplace/venues"
+        backLabel={t("backToVenues")}
+        eyebrow={t("venueEyebrow")}
+        title={venue.name}
+        subtitle={`${venue.district} · ${venueTypeLabel(venue.venueType, appLocale)}`}
+        description={venue.shortDescription}
+        media={splitPortfolioMedia(null)}
+        facts={facts}
+        links={socialLinksToList(
+          venue.socialLinks,
+          (key) => SOCIAL_LABELS[key] ?? key,
+        )}
+        websiteUrl={venue.websiteUrl}
+        websiteLabel={t("website")}
+        contactTitle={t("contactTitle")}
+        contactLocked={venue.contactLocked}
+        contactLockedMessage={t("contactLocked")}
+        preferredLabel={t("preferred")}
+        contacts={venue.contacts}
+        aboutTitle={t("aboutTitle")}
+        detailsTitle={t("detailsTitle")}
+        galleryTitle={t("galleryTitle")}
+        videoTitle={t("videoTitle")}
+        linksTitle={t("linksTitle")}
+      />
+    </>
   );
 }

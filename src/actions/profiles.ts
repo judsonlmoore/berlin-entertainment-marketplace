@@ -494,6 +494,7 @@ export async function publishEntertainerProfile(
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/marketplace`);
     revalidatePath(`/${locale}/admin`);
+    revalidatePath("/", "layout");
     return { ok: true, id: profile.id };
   } catch (error) {
     return toActionError(error);
@@ -800,6 +801,7 @@ export async function publishVenueProfile(
     revalidatePath(`/${locale}/profile/venues/${venueId}`);
     revalidatePath(`/${locale}/marketplace`);
     revalidatePath(`/${locale}/admin`);
+    revalidatePath("/", "layout");
     return { ok: true, id: venueId };
   } catch (error) {
     return toActionError(error);

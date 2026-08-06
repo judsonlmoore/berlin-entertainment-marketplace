@@ -123,6 +123,7 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 ## Shell
 - Desktop ≥1024px: sticky ~280px rail, slim surface top bar (~64–72px), breadcrumb + locale
 - Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav
+- Member rail may show a quiet **Getting started** checklist (publish → search → open a result → send an enquiry). When all steps are done, show a one-line congrats + dismiss; dismiss hides it permanently. Staff and support-mode overlays never see it.
 - Logged-out surfaces share one public footer (privacy, terms, cookies, sign-in)
 
 ## Explicitly prohibited
@@ -144,3 +145,4 @@ No live marketplace preview rail on profile edit.
 | 2026-08-05 | Profile + onboarding as booking-asset editors | Presence-led, autosave, dashed media empties, platform URL validation, status tags instead of submit; preview approved in design consultation |
 | 2026-08-06 | Publish CTA on display-name strip | Owners explicitly submit ready drafts for staff verification; autosave + status tags alone were not actionable enough |
 | 2026-08-06 | Self-serve publish/unpublish with QA checklist | Staff review removed from the critical path; edits stay published; leave warning for unsaved changes |
+| 2026-08-06 | Rail getting-started checklist replaces verification banner | Staff no longer review accounts; guide members through publish → discover → enquire, then dismiss forever |
