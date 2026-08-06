@@ -26,10 +26,8 @@ type NavItem = {
     | "discover"
     | "discoverActs"
     | "discoverVenues"
-    | "opportunities"
     | "bookings"
-    | "calendar"
-    | "requests";
+    | "calendar";
   match: string;
 };
 
@@ -238,11 +236,6 @@ export function AppShell({
     { href: "/marketplace", labelKey: "overview", match: "/marketplace$" },
     ...discoverItems,
     {
-      href: "/marketplace/opportunities",
-      labelKey: "opportunities",
-      match: "/marketplace/opportunities",
-    },
-    {
       href: "/marketplace/bookings",
       labelKey: "bookings",
       match: "/marketplace/bookings",
@@ -251,11 +244,6 @@ export function AppShell({
       href: "/marketplace/calendar",
       labelKey: "calendar",
       match: "/marketplace/calendar",
-    },
-    {
-      href: "/marketplace/requests",
-      labelKey: "requests",
-      match: "/marketplace/requests",
     },
   ];
 

@@ -287,10 +287,10 @@ const templates: Record<
     },
     getActionUrl: (params) =>
       params.bookingId
-        ? `/marketplace/leads/${params.bookingId}`
-        : `/marketplace/requests`,
+        ? `/marketplace/bookings/${params.bookingId}`
+        : `/marketplace/bookings`,
     getActionLabel: (locale) =>
-      locale === "de" ? "Lead ansehen" : "View lead",
+      locale === "de" ? "Booking ansehen" : "View booking",
   },
 
   profile_enquiry_interested: {
@@ -303,10 +303,10 @@ const templates: Record<
     },
     getActionUrl: (params) =>
       params.bookingId
-        ? `/marketplace/leads/${params.bookingId}`
-        : `/marketplace/requests`,
+        ? `/marketplace/bookings/${params.bookingId}`
+        : `/marketplace/bookings`,
     getActionLabel: (locale) =>
-      locale === "de" ? "Lead ansehen" : "View lead",
+      locale === "de" ? "Booking ansehen" : "View booking",
   },
 
   profile_enquiry_passed: {
@@ -317,9 +317,9 @@ const templates: Record<
         ? `${params.venueName} hat Ihr Profil-Interesse abgelehnt.`
         : `${params.venueName} passed on your profile enquiry.`;
     },
-    getActionUrl: () => `/marketplace/requests`,
+    getActionUrl: () => `/marketplace/bookings`,
     getActionLabel: (locale) =>
-      locale === "de" ? "Leads ansehen" : "View leads",
+      locale === "de" ? "Bookings ansehen" : "View bookings",
   },
 
   opportunity_published: {

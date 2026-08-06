@@ -67,7 +67,7 @@ export function DirectRequestForm({
             return;
           }
           setMessage(t("sent"));
-          router.push("/marketplace/requests");
+          router.push("/marketplace/bookings");
           router.refresh();
         });
       }}

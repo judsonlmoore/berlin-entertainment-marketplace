@@ -122,8 +122,7 @@ export async function submitProfileEnquiryAction(input: {
 
     const locale = parsed.data.locale ?? "en";
     revalidatePath(`/${locale}/marketplace/venues/${parsed.data.venueId}`);
-    revalidatePath(`/${locale}/marketplace/requests`);
-    revalidatePath(`/${locale}/marketplace/leads`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     revalidatePath("/", "layout");
     return {
       ok: true,
@@ -180,11 +179,9 @@ export async function respondToProfileEnquiryAction(input: {
     });
 
     const locale = parsed.data.locale ?? "en";
-    revalidatePath(`/${locale}/marketplace/requests`);
-    revalidatePath(`/${locale}/marketplace/leads`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     if (result.bookingId) {
       revalidatePath(`/${locale}/marketplace/bookings/${result.bookingId}`);
-      revalidatePath(`/${locale}/marketplace/leads/${result.bookingId}`);
     }
     revalidatePath("/", "layout");
     return { ok: true };
@@ -252,11 +249,9 @@ export async function updateLeadProposalAction(input: {
 
     const locale = parsed.data.locale ?? "en";
     const enquiry = await getProfileEnquiryById(parsed.data.enquiryId);
-    revalidatePath(`/${locale}/marketplace/requests`);
-    revalidatePath(`/${locale}/marketplace/leads`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     if (enquiry?.bookingId) {
       revalidatePath(`/${locale}/marketplace/bookings/${enquiry.bookingId}`);
-      revalidatePath(`/${locale}/marketplace/leads/${enquiry.bookingId}`);
     }
     return { ok: true };
   } catch (error) {

@@ -122,7 +122,7 @@ export function VenueProfileContactPanel({
           <p className="mt-4 text-sm text-[var(--ink)]">
             {t("enquiryAlreadyActive")}{" "}
             <Link
-              href={`/marketplace/leads/${activeEnquiryBookingId}`}
+              href={`/marketplace/bookings/${activeEnquiryBookingId}`}
               className="font-medium underline"
             >
               {t("viewLead")}

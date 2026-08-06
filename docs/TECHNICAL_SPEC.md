@@ -65,12 +65,12 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 
 ### Matching and booking
 
-- `opportunities`: venue/space, window, budget, constraints, deadline, draft/open/closed/cancelled state (member UI: **open call**)
+- `opportunities`: venue/space, **kind** `dated` | `standing`, window (required for dated; null for standing), optional standing schedule text, budget, constraints, deadline, draft/open/closed/cancelled state (member UI: **open call**)
 - `applications`: opportunity + entertainer, message/quote, lifecycle; unique pair
 - `direct_requests`: venue + entertainer, proposed terms, lifecycle
 - `profile_enquiries`: act→venue undated (or optionally dated) profile submission; pending/interested/passed/withdrawn; one active pending/interested pair per act↔venue (partial unique index); 30-day pass cooldown before re-submit
-- `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI projects these as **leads** (Pending/Open/Won/Lost/Completed) via `projectLeadStatus`
-- `booking_terms`: immutable versioned snapshots with currency amounts in integer cents (required once formal terms exist; open profile-enquiry leads may negotiate dates/fees on the enquiry row first)
+- `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI is the **Bookings** inbox (Pending/Open/Confirmed/Lost/Done)
+- `booking_terms`: immutable versioned snapshots with currency amounts in integer cents (required once formal terms exist; open undated bookings may negotiate dates/fees on the origin row first)
 - `contact_unlocks`: booking/application/request/profile_enquiry, parties, reason, timestamp; unlock on mutual opt-in (shortlist / accept / enquiry interested). Undated opens skip calendar holds until a performance window exists; adding dates later places requested holds.
 - `agreement_templates`: locale, version, legal review status
 - `agreements`: booking terms version, German/English rendered artifact references, provider/status
@@ -113,7 +113,7 @@ Representative pages:
 - Public: `/[locale]`, `/[locale]/apply`, `/[locale]/privacy`, `/[locale]/terms`
 - Auth: `/[locale]/sign-in`, `/api/session/[...nextauth]` (Auth.js `basePath`; legacy `/api/auth/*` redirects to sign-in)
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
-- Marketplace: `/[locale]/marketplace` (role-segregated entertainer vs venue discovery), `/opportunities`, `/opportunities/[id]`, `/requests` (Leads inbox), `/leads/[id]`, `/bookings/[id]`, `/calendar`, `/profile`
+- Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (pipeline + terms/agreement), `/calendar`, `/profile` (incl. open-call manage). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
 - Admin: `/[locale]/admin/reviews`, `/accounts/[id]`, `/operations`
 - Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, authorized download route
 
@@ -160,6 +160,7 @@ Define an `ESignProvider` interface for creating an envelope, retrieving status,
 - Validate all untrusted input and output projections; parameterize queries through Drizzle.
 - Apply CSRF protections provided by Auth.js and same-origin Server Actions; verify webhook signatures against raw bodies.
 - Rate limit sign-in, application, invitation, upload, profile enquiry, and webhook surfaces.
+- Entertainer discovery may filter `availableOn` (ISO date): exclude acts with a blocking calendar entry that Berlin local day (reuse overlap + RRULE expansion). Apply text/category/price filters before busy checks; document candidate-set limits.
 - Set CSP/security headers, production HTTPS, secure cookies, and least-privilege integration tokens.
 - Prevent IDOR with resource-scoped authorization, not opaque IDs alone.
 - Audit privileged reads/mutations and approval/contact/signature/calendar changes.
