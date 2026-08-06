@@ -21,6 +21,7 @@ type NavItem = {
   href: string;
   labelKey:
     | "overview"
+    | "profile"
     | "discover"
     | "discoverActs"
     | "discoverVenues"
@@ -214,6 +215,7 @@ export function AppShell({
 
   const mainNav: NavItem[] = [
     { href: "/marketplace", labelKey: "overview", match: "/marketplace$" },
+    { href: "/profile", labelKey: "profile", match: "/profile" },
     ...discoverItems,
     {
       href: "/marketplace/opportunities",
@@ -238,11 +240,14 @@ export function AppShell({
   ];
 
   const items = mainNav.filter(
-    (item) => isApproved || isStaff || item.labelKey === "overview",
+    (item) =>
+      isApproved ||
+      isStaff ||
+      item.labelKey === "overview" ||
+      item.labelKey === "profile",
   );
 
   const accountItems: AccountNavItem[] = [
-    { href: "/profile", labelKey: "profile", match: "/profile" },
     { href: "/account", labelKey: "account", match: "/account" },
     ...(isStaff
       ? [
@@ -386,7 +391,13 @@ export function AppShell({
             <MenuIcon open={menuOpen} />
           </button>
           {roleContext && mobileContextLabel ? (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Link
+              href="/profile"
+              className="flex min-w-0 flex-1 items-center gap-2 no-underline"
+              aria-label={tRole("editProfileAria", {
+                name: mobileContextLabel,
+              })}
+            >
               <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--surface)] px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-[0.1em] text-[var(--ink)] uppercase">
                 {roleContext.mode === "entertainer"
                   ? tRole("actBadge")
@@ -395,7 +406,10 @@ export function AppShell({
               <span className="min-w-0 truncate text-sm font-medium text-[var(--ink)]">
                 {mobileContextLabel}
               </span>
-            </div>
+              <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
+                {t("editProfile")}
+              </span>
+            </Link>
           ) : (
             <div className="flex-1" />
           )}

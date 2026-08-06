@@ -77,12 +77,6 @@ export default async function ProfilePage({ params }: Props) {
       : [];
   const storeConfigured = isDocumentStoreConfigured();
 
-  const profileTitle = showEntertainer
-    ? (entertainerProfile?.actName ?? t("entertainerTitle"))
-    : showVenue
-      ? (venueRows[0]?.name ?? t("venuesTitle"))
-      : t("title");
-
   const entertainerPanel = showEntertainer ? (
     <div className="grid gap-8">
       <EntertainerProfileForm
@@ -191,20 +185,6 @@ export default async function ProfilePage({ params }: Props) {
 
   return (
     <section className="mx-auto grid w-full max-w-3xl gap-8">
-      <div>
-        <PageHeader
-          eyebrow={t("eyebrow")}
-          title={profileTitle}
-          body={t("body")}
-        />
-        <p className="mt-3 max-w-2xl text-sm text-[var(--text-muted)]">
-          <span className="font-semibold text-[var(--ink)]">
-            {t("whyFinishThisLabel")}
-          </span>{" "}
-          {t("whyFinishThis")}
-        </p>
-      </div>
-
       {showEntertainer || showVenue ? (
         <ProfileRoleTabs
           showEntertainer={showEntertainer}

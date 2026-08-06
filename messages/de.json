@@ -45,7 +45,8 @@
     "calendar": "Kalender",
     "requests": "Anfragen",
     "onboarding": "Onboarding",
-    "profile": "Profile",
+    "profile": "Profil",
+    "editProfile": "Bearbeiten",
     "account": "Konto",
     "admin": "Admin",
     "superAdmin": "Super-Admin",
@@ -217,6 +218,7 @@
     "venueMode": "Veranstalter",
     "actBadge": "Akt",
     "venueBadge": "Venue",
+    "editProfileAria": "Profil bearbeiten: {name}",
     "explainer": "Ihr Konto ist entweder Entertainer oder Venue.",
     "applyForSecondRole": "Team kontaktieren, um Rollen zu ändern",
     "applyExplainer": "Konten haben eine Rolle. Kontaktieren Sie das Team, wenn Sie einen anderen Kontotyp brauchen."

@@ -46,6 +46,7 @@
     "requests": "Requests",
     "onboarding": "Onboarding",
     "profile": "Profile",
+    "editProfile": "Edit",
     "account": "Account",
     "admin": "Admin",
     "superAdmin": "Super admin",
@@ -217,6 +218,7 @@
     "venueMode": "Venue",
     "actBadge": "Act",
     "venueBadge": "Venue",
+    "editProfileAria": "Edit profile for {name}",
     "explainer": "Your account is either entertainer or venue.",
     "applyForSecondRole": "Contact staff to change roles",
     "applyExplainer": "Accounts are single-role. Contact staff if you need a different account type."
