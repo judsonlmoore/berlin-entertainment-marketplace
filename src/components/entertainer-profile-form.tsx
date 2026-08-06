@@ -90,7 +90,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="grid gap-4 border-t border-[var(--rule)] pt-6 first:border-t-0 first:pt-0">
+    <section className="panel grid gap-4 p-6">
       <div>
         <h3 className="text-sm font-semibold tracking-[0.12em] text-[var(--ink)] uppercase">
           {title}
@@ -295,18 +295,8 @@ export function EntertainerProfileForm({
         </div>
       </div>
 
-      <form ref={formRef} className="panel grid gap-6 p-6">
-        {mediaSlot ? (
-          <Section title={t("sectionMedia")}>{mediaSlot}</Section>
-        ) : (
-          <Section title={t("sectionMedia")}>
-            <p className="text-sm text-[var(--text-muted)]">
-              {t("portfolioNeedProfile")}
-            </p>
-          </Section>
-        )}
-
-        <Section title={t("sectionBasics")}>
+      <form ref={formRef} className="grid gap-5">
+        <Section title={t("displayNameEyebrow")}>
           <label className="grid gap-1 text-sm">
             <span className="font-medium">{t("actName")}</span>
             <input
@@ -331,7 +321,19 @@ export function EntertainerProfileForm({
               }}
             />
           </label>
+        </Section>
 
+        {mediaSlot ? (
+          <Section title={t("sectionMedia")}>{mediaSlot}</Section>
+        ) : (
+          <Section title={t("sectionMedia")}>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t("portfolioNeedProfile")}
+            </p>
+          </Section>
+        )}
+
+        <Section title={t("sectionBasics")}>
           <CategorySubcategorySelect
             kind="entertainer"
             categoryName="category"
@@ -467,16 +469,6 @@ export function EntertainerProfileForm({
           />
 
           <ParagraphTextField
-            name="accessibilityNotes"
-            label={t("accessibilityNotes")}
-            defaultValue={toParagraphEditorHtml(
-              defaultValues?.accessibilityNotes ?? "",
-            )}
-            min={0}
-            max={NOTES_MAX}
-            size="short"
-          />
-          <ParagraphTextField
             name="equipmentSupplied"
             label={t("equipmentSupplied")}
             defaultValue={toParagraphEditorHtml(
@@ -486,6 +478,18 @@ export function EntertainerProfileForm({
             max={NOTES_MAX}
             size="short"
           />
+
+          <ParagraphTextField
+            name="accessibilityNotes"
+            label={t("accessibilityNotes")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.accessibilityNotes ?? "",
+            )}
+            min={0}
+            max={NOTES_MAX}
+            size="short"
+          />
+
         </Section>
 
         <Section title={t("sectionLinks")} hint={t("linksHint")}>

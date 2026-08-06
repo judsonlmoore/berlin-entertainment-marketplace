@@ -827,54 +827,42 @@ export function PortfolioEditor({
           {t("portfolioYouTubeTitle")}
         </span>
         {youtube?.url ? (
-          <div className="grid gap-3">
-            <div className="relative">
-              <input
-                className="field w-full pr-20"
-                value={youtube.url}
-                readOnly
-              />
-              <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-xs font-semibold text-[var(--primary)]">
-                {t("urlValid")}
-              </span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-[180px_1fr] sm:items-center">
+          <div className="grid gap-3 sm:grid-cols-[180px_1fr] sm:items-center">
+            <button
+              type="button"
+              onClick={() => setVideoOpen(true)}
+              className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[#1e2a25]"
+              aria-label={t("portfolioPlayVideo")}
+            >
+              <span className="absolute inset-0 m-auto h-0 w-0 border-y-[10px] border-r-0 border-l-[16px] border-y-transparent border-l-white" />
+            </button>
+            <div>
+              <p className="text-sm font-semibold text-[var(--ink)]">
+                {youtube.caption || t("portfolioYouTubeTitle")}
+              </p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                {t("portfolioPlayHint")}
+              </p>
               <button
                 type="button"
-                onClick={() => setVideoOpen(true)}
-                className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[#1e2a25]"
-                aria-label={t("portfolioPlayVideo")}
-              >
-                <span className="absolute inset-0 m-auto h-0 w-0 border-y-[10px] border-r-0 border-l-[16px] border-y-transparent border-l-white" />
-              </button>
-              <div>
-                <p className="text-sm font-semibold text-[var(--ink)]">
-                  {youtube.caption || t("portfolioYouTubeTitle")}
-                </p>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  {t("portfolioPlayHint")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    startTransition(async () => {
-                      const result = await removePortfolioItem({
-                        entertainerProfileId,
-                        itemId: youtube.id,
-                        locale,
-                      });
-                      if (!result.ok) {
-                        setVideoError(result.message);
-                        return;
-                      }
-                      router.refresh();
+                onClick={() => {
+                  startTransition(async () => {
+                    const result = await removePortfolioItem({
+                      entertainerProfileId,
+                      itemId: youtube.id,
+                      locale,
                     });
-                  }}
-                  className="mt-2 text-xs font-medium text-[var(--danger)]"
-                >
-                  {t("portfolioRemoveYouTube")}
-                </button>
-              </div>
+                    if (!result.ok) {
+                      setVideoError(result.message);
+                      return;
+                    }
+                    router.refresh();
+                  });
+                }}
+                className="mt-2 text-xs font-medium text-[var(--danger)]"
+              >
+                {t("portfolioRemoveYouTube")}
+              </button>
             </div>
           </div>
         ) : (
