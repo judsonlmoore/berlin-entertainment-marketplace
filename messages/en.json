@@ -58,7 +58,12 @@
     "openMenu": "Open navigation menu",
     "closeMenu": "Close navigation menu",
     "accountMenu": "Account menu",
-    "switchLocale": "Switch language to {locale}"
+    "switchLocale": "Switch language to {locale}",
+    "localeLabel": "Interface language",
+    "localeName": {
+      "en": "English",
+      "de": "Deutsch"
+    }
   },
   "ui": {
     "working": "Working…"

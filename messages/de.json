@@ -58,7 +58,12 @@
     "openMenu": "Navigationsmenü öffnen",
     "closeMenu": "Navigationsmenü schließen",
     "accountMenu": "Kontomenü",
-    "switchLocale": "Sprache wechseln zu {locale}"
+    "switchLocale": "Sprache wechseln zu {locale}",
+    "localeLabel": "Oberflächensprache",
+    "localeName": {
+      "en": "English",
+      "de": "Deutsch"
+    }
   },
   "ui": {
     "working": "Wird ausgeführt…"
