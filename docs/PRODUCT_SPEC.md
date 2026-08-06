@@ -7,17 +7,33 @@ Default locale: English (`en`); secondary locale: German (`de`)
 
 ## 1. Purpose and outcome
 
-Salon is a private, curated B2B marketplace connecting Berlin venues with small-format entertainers. It replaces fragmented discovery, email negotiation, and calendar coordination with a trusted member directory and one auditable booking flow.
+Salon is a private, curated B2B marketplace connecting Berlin talent buyers (venues and bookers) with small-format talent. It replaces fragmented discovery, email negotiation, and calendar coordination with a trusted member directory and one auditable booking flow.
 
-The marketplace is **role-segregated**: entertainers discover venues and opportunities; venues discover entertainers. Peer profiles on the same side of the market are not browseable.
+The marketplace is **role-segregated**: talent discovers locations and opportunities; buyers discover talent. Peer profiles on the same side of the market are not browseable.
 
-The product succeeds when venues and entertainers can discover each other, complete trusted bookings, and platform staff can verify profiles for marketplace visibility and contact eligibility. Salon is not a consumer event platform, social network, payment custodian, or law firm.
+The product succeeds when buyers and talent can discover each other, complete trusted bookings, and platform staff can verify profiles for marketplace visibility and contact eligibility. Salon is not a consumer event platform, social network, payment custodian, or law firm.
 
-## 2. Personas
+## 2. Personas and glossary
 
-- **Entertainer:** solo performer or small act seeking appropriate paid bookings, with clear pricing, availability, production needs, and portfolio evidence.
-- **Venue owner:** accountable operator who creates a venue organization, manages members, publishes opportunities, requests acts, and signs agreements.
-- **Venue member:** staff member authorized by an owner to operate a venue within assigned permissions.
+User-facing language uses **Talent**, **Buyer**, and (later) **Agency**. Persistence and code may still use legacy identifiers `entertainer` and `venue` until a deliberate rename migration.
+
+| Term | Meaning | Marketplace side | MVP status |
+|---|---|---|---|
+| **Talent** | Solo performer or small act seeking paid bookings (profile = act listing) | Supply | Live — free for 1 talent listing |
+| **Buyer** | Venue operator or booker who searches talent and sends performance requests (listing = location / venue org) | Demand | Live — free for 1 location |
+| **Agency** | Org that manages a multi-talent roster on the supply side | Supply (multi-listing) | Coming soon — shown inactive on signup as a demand probe; no selectable role or backend yet |
+| **Location** | A buyer-owned place (venue org). Distinct from **spaces** (rooms inside one location) | Demand listing | Live |
+| **Platform staff** | Verifies profiles, suspends accounts, moderates | Ops | Live |
+
+**Monetization direction (not implemented):** free forever for 1 talent listing and 1 buyer location; paid plans later for multi-location buyer orgs and multi-talent agencies. Early-access paid tiers may show €0 to frame future pricing.
+
+**Expansion (out of scope):** additional supply listing kinds (e.g. production vendors: audio, lighting, catering). Prefer shared profile shell + `listing_kind` / discovery filters over new account-type UX.
+
+### Personas (operational)
+
+- **Talent:** act seeking appropriate paid bookings, with clear pricing, availability, production needs, and portfolio evidence.
+- **Buyer owner:** accountable operator who creates a location organization, manages members, publishes opportunities, requests acts, and signs agreements.
+- **Buyer member:** staff member authorized by an owner to operate a location within assigned permissions.
 - **Platform staff:** verifies profiles for discovery/contact eligibility, suspends abusive accounts, handles moderation, and monitors booking operations.
 
 ## 3. Roles, account status, and permissions
@@ -33,7 +49,7 @@ Signup does not require staff account approval. Staff may suspend or reactivate 
 
 ### 3.2 Profile verification (publication)
 
-Staff approve entertainer or venue **profile publication** independently of account status. Until a member’s relevant profile is verified (`publication_state = approved`):
+Staff approve talent or location **profile publication** independently of account status. Until a member’s relevant profile is verified (`publication_state = approved`):
 
 - The profile is not visible in marketplace discovery.
 - The member may still search the opposite side, edit their profile, manage availability, and explore the site.
@@ -43,18 +59,20 @@ Surface copy should set expectation that verification is usually complete within
 
 ### 3.3 Role model
 
-- A person has one account and exactly one marketplace role: entertainer **or** venue (XOR). Dual-role accounts are out of scope.
-- A venue is an organization, not a person.
-- Venue membership is many-to-many and has `owner` or `member` role.
+- A person has one account and exactly one selectable marketplace role: talent (**`entertainer`**) **or** buyer (**`venue`**) (XOR). Dual-role accounts are out of scope.
+- Agency is not a selectable role in MVP. Signup may show it as **Coming soon** (disabled) to test inbound interest; do not persist an agency role or build roster APIs until specified.
+- A buyer location is an organization, not a person.
+- Location membership is many-to-many and has `owner` or `member` role.
 - Owners manage organization profile, membership, opportunities, requests, bookings, and signatures.
-- Members may manage venue workflows granted by the permission set, but cannot remove the last owner or change platform account status.
+- Members may manage buyer workflows granted by the permission set, but cannot remove the last owner or change platform account status.
 - Every authorization decision is server-enforced; hidden UI is not authorization.
+- Future agency support should be modeled as a **supply-side org with multiple talent listings** (membership + plan limits), not a third XOR signup role.
 
 ## 4. Onboarding and profiles
 
 ### 4.1 Shared onboarding
 
-After OAuth sign-in, the member chooses entertainer or venue (XOR), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider; profile claims are staff-verified for publication, not automatic identity verification.
+After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider; profile claims are staff-verified for publication, not automatic identity verification. Agency may appear on the role picker as a non-selectable coming-soon option.
 
 ### 4.2 Venue organization profile
 
