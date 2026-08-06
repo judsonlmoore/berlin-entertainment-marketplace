@@ -1,4 +1,3 @@
-import { put, del, get } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -7,6 +6,14 @@ import {
   getPortfolioImageBytes,
   putPortfolioImageBytes,
 } from "@/src/integrations/portfolio-image-memory";
+import {
+  deletePrivateBlob,
+  getPrivateBlob,
+  hasBlobToken,
+  isPrivateBlobKey,
+  putPrivateBlob,
+  PRIVATE_BLOB_PREFIX,
+} from "@/src/integrations/private-blob";
 import { AppError } from "@/src/domain/errors";
 
 export type PortfolioImageBytes = {
@@ -16,7 +23,7 @@ export type PortfolioImageBytes = {
 
 const LOCAL_PREFIX = "local/";
 const MEMORY_PREFIX = "memory/";
-const BLOB_PREFIX = "blob/";
+const BLOB_PREFIX = PRIVATE_BLOB_PREFIX;
 
 function localRoot(): string {
   return path.join(process.cwd(), ".data", "portfolio");
@@ -24,10 +31,6 @@ function localRoot(): string {
 
 function allowsLocalDisk(): boolean {
   return process.env.NODE_ENV !== "production";
-}
-
-function hasBlobToken(): boolean {
-  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
 
 /**
@@ -94,24 +97,15 @@ async function saveToVercelBlob(input: {
   bytes: Uint8Array;
   filenameSuffix?: string;
 }): Promise<{ blobKey: string }> {
-  const token = process.env.BLOB_READ_WRITE_TOKEN;
-  if (!token) {
-    throw new AppError(
-      "integration_unconfigured",
-      "BLOB_READ_WRITE_TOKEN is required for production portfolio storage",
-    );
-  }
   const id = randomUUID();
   const ext = extensionForMime(input.mimeType);
   const suffix = input.filenameSuffix ?? "";
   const pathname = `portfolio/${input.ownerUserId}/${id}${suffix}.${ext}`;
-  const result = await put(pathname, Buffer.from(input.bytes), {
-    access: "private",
-    contentType: input.mimeType,
-    token,
+  const { blobKey } = await putPrivateBlob({
+    pathname,
+    mimeType: input.mimeType,
+    bytes: input.bytes,
   });
-  // Store remote URL under blob/ prefix so load/delete can route correctly.
-  const blobKey = `${BLOB_PREFIX}${result.url}`;
   putPortfolioImageBytes(blobKey, input.mimeType, input.bytes);
   return { blobKey };
 }
@@ -152,44 +146,10 @@ export async function loadPortfolioImage(
   }
 
   if (blobKey.startsWith(BLOB_PREFIX)) {
-    const raw = blobKey.slice(BLOB_PREFIX.length);
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) return null;
-
-    // Prefer clean URL / pathname — ignore any expired signed query params.
-    let urlOrPath: string;
-    try {
-      const parsed = new URL(raw);
-      parsed.search = "";
-      urlOrPath = parsed.toString();
-    } catch {
-      urlOrPath = raw.split("?")[0] ?? raw;
-    }
-
-    try {
-      const result = await get(urlOrPath, { access: "private", token });
-      if (!result) return null;
-      const mimeType = result.blob.contentType ?? "application/octet-stream";
-      const buffer = await new Response(result.stream).arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      putPortfolioImageBytes(blobKey, mimeType, bytes);
-      return { mimeType, bytes };
-    } catch {
-      // Retry with pathname only (portfolio/userId/file.ext).
-      try {
-        const pathname = new URL(urlOrPath).pathname.replace(/^\//, "");
-        if (!pathname.startsWith("portfolio/")) return null;
-        const result = await get(pathname, { access: "private", token });
-        if (!result) return null;
-        const mimeType = result.blob.contentType ?? "application/octet-stream";
-        const buffer = await new Response(result.stream).arrayBuffer();
-        const bytes = new Uint8Array(buffer);
-        putPortfolioImageBytes(blobKey, mimeType, bytes);
-        return { mimeType, bytes };
-      } catch {
-        return null;
-      }
-    }
+    const loaded = await getPrivateBlob(blobKey);
+    if (!loaded) return null;
+    putPortfolioImageBytes(blobKey, loaded.mimeType, loaded.bytes);
+    return loaded;
   }
 
   if (!allowsLocalDisk() && blobKey.startsWith(LOCAL_PREFIX)) {
@@ -231,14 +191,7 @@ export async function loadPortfolioImage(
 export async function deletePortfolioImage(blobKey: string): Promise<void> {
   deletePortfolioImageBytes(blobKey);
   if (blobKey.startsWith(BLOB_PREFIX)) {
-    const url = blobKey.slice(BLOB_PREFIX.length);
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) return;
-    try {
-      await del(url, { token });
-    } catch {
-      // best-effort
-    }
+    await deletePrivateBlob(blobKey);
     return;
   }
   const filePath = safeKeyToPath(blobKey);
@@ -251,5 +204,5 @@ export function isLocalPortfolioKey(blobKey: string): boolean {
 }
 
 export function isBlobPortfolioKey(blobKey: string): boolean {
-  return blobKey.startsWith(BLOB_PREFIX);
+  return isPrivateBlobKey(blobKey) || blobKey.startsWith(BLOB_PREFIX);
 }

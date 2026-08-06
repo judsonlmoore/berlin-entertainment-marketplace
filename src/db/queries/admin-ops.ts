@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, isNotNull, lte } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import { users } from "@/src/db/schema/auth";
 import {
@@ -159,6 +159,9 @@ export async function listRiderFilesForProfile(entertainerProfileId: string) {
   return db
     .select({
       id: riderFiles.id,
+      title: riderFiles.title,
+      visibility: riderFiles.visibility,
+      sortOrder: riderFiles.sortOrder,
       mimeType: riderFiles.mimeType,
       sizeBytes: riderFiles.sizeBytes,
       scanStatus: riderFiles.scanStatus,
@@ -168,5 +171,5 @@ export async function listRiderFilesForProfile(entertainerProfileId: string) {
     })
     .from(riderFiles)
     .where(eq(riderFiles.entertainerProfileId, entertainerProfileId))
-    .orderBy(desc(riderFiles.createdAt));
+    .orderBy(asc(riderFiles.sortOrder), desc(riderFiles.createdAt));
 }
