@@ -11,6 +11,7 @@ type Props = {
   canDiscoverEntertainers: boolean;
   canDiscoverVenues: boolean;
   roleContext?: RailRoleContextData | null;
+  supportBanner?: React.ReactNode;
 };
 
 export async function AuthenticatedChrome({
@@ -23,6 +24,7 @@ export async function AuthenticatedChrome({
   canDiscoverEntertainers,
   canDiscoverVenues,
   roleContext = null,
+  supportBanner = null,
 }: Props) {
   return (
     <AppShell
@@ -34,6 +36,7 @@ export async function AuthenticatedChrome({
       canDiscoverEntertainers={canDiscoverEntertainers}
       canDiscoverVenues={canDiscoverVenues}
       roleContext={roleContext}
+      supportBanner={supportBanner}
     >
       {children}
     </AppShell>

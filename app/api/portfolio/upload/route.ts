@@ -1,8 +1,5 @@
-import { NextResponse } from "next/server";
-import { and, count, eq } from "drizzle-orm";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { getActorContext } from "@/src/db/queries/actor";
 import {
   auditEvents,
   entertainerProfiles,
@@ -13,7 +10,10 @@ import {
   PORTFOLIO_MAX_IMAGES,
   validatePortfolioImageInput,
 } from "@/src/domain/portfolio";
-import { putPortfolioImageBytes } from "@/src/integrations/portfolio-image-memory";
+import { savePortfolioImage } from "@/src/integrations/portfolio-image-store";
+import { resolveEffectiveActor } from "@/src/lib/effective-actor";
+import { and, count, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -24,13 +24,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const actor = await getActorContext(session.user.id);
-  if (!actor || !can(actor, "entertainer.manage_own_profile")) {
+  const resolved = await resolveEffectiveActor(session.user.id);
+  if (!resolved) {
     return NextResponse.json(
       { ok: false, error: "forbidden" },
       { status: 403 },
     );
   }
+  const { actor, auditUserId } = resolved;
 
   const form = await request.formData();
   const entertainerProfileId = String(form.get("entertainerProfileId") ?? "");
@@ -38,6 +39,12 @@ export async function POST(request: Request) {
   const altText = String(form.get("altText") ?? "").trim();
   const file = form.get("file");
 
+  if (!can(actor, "entertainer.manage_own_profile")) {
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
+  }
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json(
       { ok: false, error: "file_required" },
@@ -62,7 +69,7 @@ export async function POST(request: Request) {
   const profile = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.id, entertainerProfileId),
   });
-  if (!profile || profile.userId !== session.user.id) {
+  if (!profile || profile.userId !== actor.userId) {
     return NextResponse.json(
       { ok: false, error: "forbidden" },
       { status: 403 },
@@ -92,8 +99,21 @@ export async function POST(request: Request) {
   const sortOrder = row?.value ?? 0;
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const blobKey = `memory/${session.user.id}/portfolio/${crypto.randomUUID()}`;
-  putPortfolioImageBytes(blobKey, file.type, bytes);
+  let blobKey: string;
+  try {
+    ({ blobKey } = await savePortfolioImage({
+      ownerUserId: profile.userId,
+      mimeType: file.type,
+      bytes,
+    }));
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "storage_unavailable";
+    return NextResponse.json(
+      { ok: false, error: "storage_unavailable", message },
+      { status: 503 },
+    );
+  }
 
   const [created] = await db
     .insert(portfolioItems)
@@ -108,7 +128,7 @@ export async function POST(request: Request) {
     .returning();
 
   await db.insert(auditEvents).values({
-    actorUserId: session.user.id,
+    actorUserId: auditUserId,
     action: "portfolio.image_uploaded",
     subjectType: "portfolio_item",
     subjectId: created!.id,

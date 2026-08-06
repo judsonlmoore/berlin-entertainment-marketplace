@@ -123,7 +123,16 @@ export default async function EntertainersDiscoveryPage({
                   href={`/marketplace/entertainers/${act.id}`}
                   className="block no-underline"
                 >
-                  <Monogram name={act.actName} className="h-40 w-full" />
+                  {act.heroImageId ? (
+                    // Auth-proxied private portfolio bytes — same-origin /api route.
+                    <img
+                      src={`/api/portfolio/${act.heroImageId}`}
+                      alt={act.actName}
+                      className="h-40 w-full object-cover"
+                    />
+                  ) : (
+                    <Monogram name={act.actName} className="h-40 w-full" />
+                  )}
                 </Link>
                 <div className="grid flex-1 gap-2 p-4">
                   <StatusLabel tone="info">{act.category}</StatusLabel>

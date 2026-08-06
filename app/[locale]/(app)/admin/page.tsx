@@ -1,19 +1,13 @@
-import { desc, eq } from "drizzle-orm";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
 import { ExpireHoldsButton } from "@/src/components/admin-expire-holds";
 import { QuarantineRiderButton } from "@/src/components/admin-rider-quarantine";
-import { ApprovalForm } from "@/src/components/approval-form";
 import { StaffProfileReviewForm } from "@/src/components/staff-profile-review-form";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
-import { getDb } from "@/src/db/client";
 import { getActorContext } from "@/src/db/queries/actor";
 import { getAdminOperationsSnapshot } from "@/src/db/queries/admin-ops";
 import { listProfilesForStaffReview } from "@/src/db/queries/profiles";
-import { users } from "@/src/db/schema";
-import { marketplaceAccounts } from "@/src/db/schema/marketplace";
-import type { AccountStatus } from "@/src/domain/approval";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
@@ -23,7 +17,7 @@ export default async function AdminPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("admin");
-  const accountStatus = await getTranslations("accountStatus");
+  const tSupport = await getTranslations("adminSupport");
   const publication = await getTranslations("publication");
   const session = await auth();
 
@@ -57,22 +51,6 @@ export default async function AdminPage({ params }: Props) {
     );
   }
 
-  const db = getDb();
-  const accounts = can(actor, "admin.review_accounts")
-    ? await db
-        .select({
-          id: marketplaceAccounts.id,
-          accountStatus: marketplaceAccounts.accountStatus,
-          berlinConnection: marketplaceAccounts.berlinConnection,
-          reviewReason: marketplaceAccounts.reviewReason,
-          userName: users.name,
-          userEmail: users.email,
-        })
-        .from(marketplaceAccounts)
-        .innerJoin(users, eq(users.id, marketplaceAccounts.userId))
-        .orderBy(desc(marketplaceAccounts.createdAt))
-    : [];
-
   const profiles = can(actor, "admin.review_profiles")
     ? await listProfilesForStaffReview()
     : { entertainers: [], venues: [] };
@@ -90,6 +68,13 @@ export default async function AdminPage({ params }: Props) {
   return (
     <section className="mx-auto grid max-w-4xl gap-12">
       <PageHeader title={t("title")} body={t("body")} />
+      {can(actor, "admin.review_accounts") ? (
+        <p className="text-sm">
+          <Link href="/admin/accounts" className="text-[var(--primary)]">
+            {tSupport("title")} — {tSupport("searchLabel")}
+          </Link>
+        </p>
+      ) : null}
 
       {ops ? (
         <div className="grid gap-6">
@@ -241,38 +226,6 @@ export default async function AdminPage({ params }: Props) {
                 </ul>
               )}
             </section>
-          </div>
-        </div>
-      ) : null}
-
-      {can(actor, "admin.review_accounts") ? (
-        <div>
-          <h2 className="page-title text-xl">{t("accountsTitle")}</h2>
-          <div className="mt-4 grid gap-4">
-            {accounts.length === 0 ? (
-              <p className="panel p-6">{t("empty")}</p>
-            ) : null}
-            {accounts.map((account) => (
-              <article key={account.id} className="panel p-6">
-                <h3 className="text-xl font-semibold">
-                  {account.userName ?? "Unnamed"}
-                </h3>
-                <p className="text-sm text-[var(--muted)]">
-                  {account.userEmail}
-                </p>
-                <p className="mt-2 text-sm">
-                  {accountStatus(account.accountStatus as AccountStatus)}
-                </p>
-                {account.berlinConnection ? (
-                  <p className="mt-2 text-sm">{account.berlinConnection}</p>
-                ) : null}
-                <ApprovalForm
-                  locale={locale as "en" | "de"}
-                  marketplaceAccountId={account.id}
-                  currentStatus={account.accountStatus as AccountStatus}
-                />
-              </article>
-            ))}
           </div>
         </div>
       ) : null}

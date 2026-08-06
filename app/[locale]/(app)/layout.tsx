@@ -3,12 +3,14 @@ import type { ReactNode } from "react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { redirect } from "@/src/i18n/navigation";
 import { AuthenticatedChrome } from "@/src/components/authenticated-chrome";
+import { SupportModeBanner } from "@/src/components/support-mode-banner";
 import { auth } from "@/src/auth";
-import { getActorContext } from "@/src/db/queries/actor";
 import { can } from "@/src/domain/permissions";
 import { resolveOnboardingDestination } from "@/src/lib/onboarding-gate";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
+import { resolveEffectiveActor } from "@/src/lib/effective-actor";
+import { supportDiscoveryFlags } from "@/src/lib/support-overlay";
 import { loadRailRoleContext } from "@/src/lib/rail-role-context";
 
 type Props = {
@@ -65,14 +67,34 @@ export default async function AppLayout({ children, params }: Props) {
   let canDiscoverEntertainers = isStaff;
   let canDiscoverVenues = isStaff;
   let roleContext = null;
+  let support = null;
 
   if (process.env.DATABASE_URL) {
-    const actor = await getActorContext(user.id!);
-    if (actor) {
-      isApproved = can(actor, "marketplace.discover");
-      canDiscoverEntertainers = can(actor, "discover.entertainers");
-      canDiscoverVenues = can(actor, "discover.venues");
-      roleContext = await loadRailRoleContext(actor);
+    const resolved = await resolveEffectiveActor(user.id!);
+    if (resolved) {
+      support = resolved.support;
+      const effectiveActor = resolved.actor;
+
+      if (support) {
+        roleContext = {
+          mode: support.entityType,
+          label: support.label,
+          canSwitch: false,
+          otherMode: null,
+        };
+      } else {
+        roleContext = await loadRailRoleContext(resolved.staffActor);
+      }
+
+      isApproved = can(effectiveActor, "marketplace.discover");
+      const discovery = supportDiscoveryFlags(support);
+      if (discovery) {
+        canDiscoverEntertainers = discovery.canDiscoverEntertainers;
+        canDiscoverVenues = discovery.canDiscoverVenues;
+      } else {
+        canDiscoverEntertainers = can(effectiveActor, "discover.entertainers");
+        canDiscoverVenues = can(effectiveActor, "discover.venues");
+      }
     }
   }
 
@@ -86,6 +108,11 @@ export default async function AppLayout({ children, params }: Props) {
       canDiscoverEntertainers={canDiscoverEntertainers}
       canDiscoverVenues={canDiscoverVenues}
       roleContext={roleContext}
+      supportBanner={
+        support ? (
+          <SupportModeBanner locale={locale as "en" | "de"} support={support} />
+        ) : null
+      }
     >
       {children}
     </AuthenticatedChrome>

@@ -6,16 +6,19 @@ import { ProfileRoleTabs } from "@/src/components/profile-role-tabs";
 import { RiderUploadForm } from "@/src/components/rider-upload-form";
 import { VenueProfileForm } from "@/src/components/venue-profile-form";
 import { PageHeader } from "@/src/components/ui/page-header";
-import { getActorContext } from "@/src/db/queries/actor";
 import { listRiderFilesForProfile } from "@/src/db/queries/admin-ops";
 import {
   getEntertainerProfileForUser,
   listPortfolioItemsForProfile,
   listVenuesForUser,
 } from "@/src/db/queries/profiles";
+import { getDb } from "@/src/db/client";
+import { users } from "@/src/db/schema";
+import { eq } from "drizzle-orm";
 import { can } from "@/src/domain/permissions";
 import { isFileStoreConfigured } from "@/src/integrations/files";
 import { Link } from "@/src/i18n/navigation";
+import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -34,8 +37,8 @@ export default async function ProfilePage({ params }: Props) {
     );
   }
 
-  const actor = await getActorContext(session.user.id);
-  if (!actor) {
+  const resolved = await resolveEffectiveActor(session.user.id);
+  if (!resolved) {
     return (
       <section className="mx-auto max-w-2xl">
         <PageHeader title={t("title")} body={t("signedOut")} />
@@ -43,12 +46,27 @@ export default async function ProfilePage({ params }: Props) {
     );
   }
 
-  const showEntertainer = can(actor, "entertainer.manage_own_profile");
-  const showVenue = can(actor, "venue.create");
+  const effectiveActor = resolved.actor;
+  const support = resolved.support;
+  let profileUserId = effectiveActor.userId;
+  let accountEmail = session.user.email ?? "";
+
+  if (support) {
+    profileUserId = support.subjectUserId;
+    const db = getDb();
+    const subjectUser = await db.query.users.findFirst({
+      where: eq(users.id, support.subjectUserId),
+      columns: { email: true },
+    });
+    accountEmail = subjectUser?.email ?? accountEmail;
+  }
+
+  const showEntertainer = can(effectiveActor, "entertainer.manage_own_profile");
+  const showVenue = can(effectiveActor, "venue.create");
   const entertainerProfile = showEntertainer
-    ? await getEntertainerProfileForUser(session.user.id)
+    ? await getEntertainerProfileForUser(profileUserId)
     : null;
-  const venueRows = showVenue ? await listVenuesForUser(session.user.id) : [];
+  const venueRows = showVenue ? await listVenuesForUser(profileUserId) : [];
   const riderFiles =
     entertainerProfile && process.env.DATABASE_URL
       ? await listRiderFilesForProfile(entertainerProfile.id)
@@ -69,7 +87,7 @@ export default async function ProfilePage({ params }: Props) {
     <div className="grid gap-8">
       <EntertainerProfileForm
         locale={locale as "en" | "de"}
-        accountEmail={session.user.email ?? ""}
+        accountEmail={accountEmail}
         {...(entertainerProfile
           ? {
               publicationState: entertainerProfile.publicationState,

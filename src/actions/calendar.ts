@@ -90,7 +90,7 @@ export async function upsertAvailability(
   input: z.infer<typeof upsertSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = upsertSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid calendar entry");
@@ -106,7 +106,7 @@ export async function upsertAvailability(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       parsed.data.ownerType,
       parsed.data.ownerId,
     );
@@ -246,7 +246,7 @@ export async function upsertAvailability(
         entryId = updated.id;
 
         await tx.insert(auditEvents).values({
-          actorUserId: session.user.id,
+          actorUserId: auditUserId,
           action: "calendar.entry_updated",
           subjectType: "calendar_entry",
           subjectId: updated.id,
@@ -273,7 +273,7 @@ export async function upsertAvailability(
             privateNote: parsed.data.privateNote ?? null,
             recurrenceRule,
             sourceType: "manual",
-            sourceId: session.user.id,
+            sourceId: actor.userId,
           })
           .returning();
         if (!created) {
@@ -282,7 +282,7 @@ export async function upsertAvailability(
         entryId = created.id;
 
         await tx.insert(auditEvents).values({
-          actorUserId: session.user.id,
+          actorUserId: auditUserId,
           action: "calendar.entry_created",
           subjectType: "calendar_entry",
           subjectId: created.id,
@@ -308,7 +308,7 @@ export async function deleteAvailability(
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     if (!can(actor, "calendar.manage")) {
       throw new AppError("forbidden", "Calendar access denied");
     }
@@ -328,7 +328,7 @@ export async function deleteAvailability(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       entry.ownerType as CalendarOwnerType,
       entry.ownerId,
     );
@@ -336,7 +336,7 @@ export async function deleteAvailability(
     await db.transaction(async (tx) => {
       await tx.delete(calendarEntries).where(eq(calendarEntries.id, entryId));
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "calendar.entry_deleted",
         subjectType: "calendar_entry",
         subjectId: entryId,
@@ -363,7 +363,7 @@ export async function moveCalendarEntry(
   input: z.infer<typeof moveSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = moveSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid calendar entry move");
@@ -395,7 +395,7 @@ export async function moveCalendarEntry(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       entry.ownerType as CalendarOwnerType,
       entry.ownerId,
     );
@@ -475,7 +475,7 @@ export async function moveCalendarEntry(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "calendar.entry_moved",
         subjectType: "calendar_entry",
         subjectId: entry.id,
@@ -507,7 +507,7 @@ export async function skipRecurringOccurrence(
   input: z.infer<typeof skipOccurrenceSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = skipOccurrenceSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid recurrence exception");
@@ -528,7 +528,7 @@ export async function skipRecurringOccurrence(
     }
 
     await assertOwnsResource(
-      session.user.id,
+      actor.userId,
       parent.ownerType as CalendarOwnerType,
       parent.ownerId,
     );
@@ -540,7 +540,7 @@ export async function skipRecurringOccurrence(
         kind: "skip",
       });
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "calendar.recurrence_exception_created",
         subjectType: "calendar_entry",
         subjectId: parent.id,

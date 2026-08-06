@@ -34,6 +34,7 @@
     "@tiptap/pm": "^3.29.2",
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",
+    "@vercel/blob": "^2.6.1",
     "drizzle-orm": "^0.45.2",
     "gray-matter": "^4.0.3",
     "ical.js": "^2.2.1",

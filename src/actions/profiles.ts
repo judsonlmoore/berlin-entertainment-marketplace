@@ -3,6 +3,7 @@
 import {
   type ActionResult,
   requireActor,
+  requireStaffActor,
   toActionError,
 } from "@/src/actions/_shared";
 import { and, eq } from "drizzle-orm";
@@ -246,10 +247,11 @@ export async function upsertEntertainerProfile(
   input: z.input<typeof entertainerSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     if (!can(actor, "entertainer.manage_own_profile")) {
       throw new AppError("forbidden", "Entertainer role required");
     }
+    const ownerUserId = actor.userId;
 
     const parsed = entertainerSchema.safeParse(input);
     if (!parsed.success) {
@@ -296,7 +298,7 @@ export async function upsertEntertainerProfile(
 
     const db = getDb();
     const existing = await db.query.entertainerProfiles.findFirst({
-      where: eq(entertainerProfiles.userId, session.user.id),
+      where: eq(entertainerProfiles.userId, ownerUserId),
     });
 
     const now = new Date();
@@ -341,7 +343,7 @@ export async function upsertEntertainerProfile(
         const [created] = await tx
           .insert(entertainerProfiles)
           .values({
-            userId: session.user.id,
+            userId: ownerUserId,
             ...values,
             currency: "EUR",
           })
@@ -351,7 +353,7 @@ export async function upsertEntertainerProfile(
 
       await upsertPreferredContact(tx, {
         ownerType: "entertainer",
-        ownerId: profileId ?? session.user.id,
+        ownerId: profileId ?? ownerUserId,
         kind: "email",
         value: parsed.data.contactEmail,
       });
@@ -359,18 +361,23 @@ export async function upsertEntertainerProfile(
       if (parsed.data.contactPhone?.trim()) {
         await upsertPreferredContact(tx, {
           ownerType: "entertainer",
-          ownerId: profileId ?? session.user.id,
+          ownerId: profileId ?? ownerUserId,
           kind: "phone",
           value: parsed.data.contactPhone.trim(),
         });
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "entertainer_profile.upserted",
         subjectType: "entertainer_profile",
-        subjectId: profileId ?? session.user.id,
-        metadata: { publicationState: values.publicationState },
+        subjectId: profileId ?? ownerUserId,
+        metadata: {
+          publicationState: values.publicationState,
+          ...(ownerUserId !== auditUserId
+            ? { supportSubjectUserId: ownerUserId }
+            : {}),
+        },
       });
     });
 
@@ -385,14 +392,14 @@ export async function submitEntertainerProfile(
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     if (!can(actor, "entertainer.manage_own_profile")) {
       throw new AppError("forbidden", "Entertainer role required");
     }
 
     const db = getDb();
     const profile = await db.query.entertainerProfiles.findFirst({
-      where: eq(entertainerProfiles.userId, session.user.id),
+      where: eq(entertainerProfiles.userId, actor.userId),
     });
     if (!profile) {
       throw new AppError("not_found", "Create a profile draft first");
@@ -411,7 +418,7 @@ export async function submitEntertainerProfile(
         .set({ publicationState: "submitted", updatedAt: new Date() })
         .where(eq(entertainerProfiles.id, profile.id));
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "entertainer_profile.submitted",
         subjectType: "entertainer_profile",
         subjectId: profile.id,
@@ -431,7 +438,7 @@ export async function createVenue(
   input: z.input<typeof venueSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     if (!can(actor, "venue.create")) {
       throw new AppError("forbidden", "Venue role required");
     }
@@ -490,7 +497,7 @@ export async function createVenue(
 
       await tx.insert(venueMemberships).values({
         venueId: created.id,
-        userId: session.user.id,
+        userId: actor.userId,
         role: "owner",
         status: "active",
       });
@@ -519,7 +526,7 @@ export async function createVenue(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "venue.created",
         subjectType: "venue",
         subjectId: created.id,
@@ -539,8 +546,9 @@ export async function updateVenue(
   input: z.input<typeof venueSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
-    if (!can(actor, "venue.manage", { venueId })) {
+    const { session, actor, auditUserId } = await requireActor();
+    const allowed = can(actor, "venue.manage", { venueId });
+    if (!allowed) {
       throw new AppError("forbidden", "Venue owner required");
     }
 
@@ -609,7 +617,7 @@ export async function updateVenue(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "venue.updated",
         subjectType: "venue",
         subjectId: venueId,
@@ -630,7 +638,7 @@ export async function submitVenueProfile(
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     if (!can(actor, "venue.manage", { venueId })) {
       throw new AppError("forbidden", "Venue owner required");
     }
@@ -667,7 +675,7 @@ export async function submitVenueProfile(
         .set({ publicationState: "submitted", updatedAt: new Date() })
         .where(eq(venues.id, venueId));
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "venue.submitted",
         subjectType: "venue",
         subjectId: venueId,
@@ -702,7 +710,7 @@ export async function staffReviewProfile(
   input: z.infer<typeof staffProfileReviewSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireStaffActor();
     if (!can(actor, "admin.review_profiles")) {
       throw new AppError("forbidden", "Staff only");
     }
@@ -736,7 +744,7 @@ export async function staffReviewProfile(
           })
           .where(eq(entertainerProfiles.id, profile.id));
         await tx.insert(auditEvents).values({
-          actorUserId: session.user.id,
+          actorUserId: auditUserId,
           action: "entertainer_profile.reviewed",
           subjectType: "entertainer_profile",
           subjectId: profile.id,
@@ -770,7 +778,7 @@ export async function staffReviewProfile(
           })
           .where(eq(venues.id, venue.id));
         await tx.insert(auditEvents).values({
-          actorUserId: session.user.id,
+          actorUserId: auditUserId,
           action: "venue.reviewed",
           subjectType: "venue",
           subjectId: venue.id,
@@ -805,7 +813,7 @@ export async function upsertVenueSpace(
   input: z.infer<typeof venueSpaceSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = venueSpaceSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid venue space");
@@ -846,7 +854,7 @@ export async function upsertVenueSpace(
     }
 
     await db.insert(auditEvents).values({
-      actorUserId: session.user.id,
+      actorUserId: auditUserId,
       action: parsed.data.spaceId
         ? "venue_space.updated"
         : "venue_space.created",

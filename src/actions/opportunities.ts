@@ -56,7 +56,7 @@ export async function createOpportunity(
   input: z.infer<typeof opportunitySchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = opportunitySchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid opportunity");
@@ -76,7 +76,7 @@ export async function createOpportunity(
       .insert(opportunities)
       .values({
         venueId: parsed.data.venueId,
-        createdByUserId: session.user.id,
+        createdByUserId: actor.userId,
         title: parsed.data.title,
         startsAt,
         endsAt,
@@ -106,7 +106,7 @@ export async function createOpportunity(
     }
 
     await db.insert(auditEvents).values({
-      actorUserId: session.user.id,
+      actorUserId: auditUserId,
       action: "opportunity.created",
       subjectType: "opportunity",
       subjectId: created.id,
@@ -129,7 +129,7 @@ export async function transitionOpportunity(input: {
   locale?: "en" | "de";
 }): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const locale = input.locale ?? "en";
     const db = getDb();
     const opportunity = await db.query.opportunities.findFirst({
@@ -156,7 +156,7 @@ export async function transitionOpportunity(input: {
         .set({ state: input.nextState, updatedAt: new Date() })
         .where(eq(opportunities.id, opportunity.id));
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "opportunity.state_changed",
         subjectType: "opportunity",
         subjectId: opportunity.id,
@@ -185,7 +185,7 @@ export async function applyToOpportunity(
   input: z.infer<typeof applySchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     checkRateLimit({
       key: rateLimitKey("opportunity.apply", session.user.id),
       limit: 20,
@@ -211,7 +211,7 @@ export async function applyToOpportunity(
     const db = getDb();
     const profile = await db.query.entertainerProfiles.findFirst({
       where: and(
-        eq(entertainerProfiles.userId, session.user.id),
+        eq(entertainerProfiles.userId, actor.userId),
         eq(entertainerProfiles.publicationState, "approved"),
       ),
     });
@@ -305,7 +305,7 @@ export async function applyToOpportunity(
         }
 
         await tx.insert(auditEvents).values({
-          actorUserId: session.user.id,
+          actorUserId: auditUserId,
           action: isSubmit
             ? "application.submitted"
             : "application.draft_saved",
@@ -347,7 +347,7 @@ export async function applyToOpportunity(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: isSubmit ? "application.submitted" : "application.draft_saved",
         subjectType: "application",
         subjectId: created.id,
@@ -374,7 +374,7 @@ export async function requestClarification(
   input: z.infer<typeof clarificationNoteSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const parsed = clarificationNoteSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid clarification request");
@@ -409,7 +409,7 @@ export async function requestClarification(
     await db.transaction(async (tx) => {
       await tx.insert(applicationClarificationNotes).values({
         applicationId: application.id,
-        authorUserId: session.user.id,
+        authorUserId: actor.userId,
         body: parsed.data.body,
       });
       await tx
@@ -417,7 +417,7 @@ export async function requestClarification(
         .set({ state: "clarification_requested", updatedAt: new Date() })
         .where(eq(applications.id, application.id));
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "application.clarification_requested",
         subjectType: "application",
         subjectId: application.id,
@@ -438,7 +438,7 @@ export async function replyClarification(
   input: z.infer<typeof clarificationNoteSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     checkRateLimit({
       key: rateLimitKey("opportunity.apply", session.user.id),
       limit: 20,
@@ -464,7 +464,7 @@ export async function replyClarification(
     const profile = await db.query.entertainerProfiles.findFirst({
       where: eq(entertainerProfiles.id, application.entertainerProfileId),
     });
-    if (!profile || profile.userId !== session.user.id) {
+    if (!profile || profile.userId !== actor.userId) {
       throw new AppError("forbidden", "Only the applicant can reply");
     }
 
@@ -483,7 +483,7 @@ export async function replyClarification(
     await db.transaction(async (tx) => {
       await tx.insert(applicationClarificationNotes).values({
         applicationId: application.id,
-        authorUserId: session.user.id,
+        authorUserId: actor.userId,
         body: parsed.data.body,
       });
       await tx
@@ -508,7 +508,7 @@ export async function replyClarification(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "application.clarification_replied",
         subjectType: "application",
         subjectId: application.id,
@@ -530,7 +530,7 @@ export async function withdrawApplication(
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const db = getDb();
     const application = await db.query.applications.findFirst({
       where: eq(applications.id, applicationId),
@@ -542,7 +542,7 @@ export async function withdrawApplication(
     const profile = await db.query.entertainerProfiles.findFirst({
       where: eq(entertainerProfiles.id, application.entertainerProfileId),
     });
-    if (!profile || profile.userId !== session.user.id) {
+    if (!profile || profile.userId !== actor.userId) {
       throw new AppError("forbidden", "Only the applicant can withdraw");
     }
     if (!can(actor, "opportunity.apply")) {
@@ -574,7 +574,7 @@ export async function withdrawApplication(
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: "application.withdrawn",
         subjectType: "application",
         subjectId: applicationId,
@@ -595,7 +595,7 @@ export async function reviewApplication(input: {
   locale?: "en" | "de";
 }): Promise<ActionResult> {
   try {
-    const { session, actor } = await requireActor();
+    const { session, actor, auditUserId } = await requireActor();
     const locale = input.locale ?? "en";
     const db = getDb();
 
@@ -682,7 +682,7 @@ export async function reviewApplication(input: {
       }
 
       await tx.insert(auditEvents).values({
-        actorUserId: session.user.id,
+        actorUserId: auditUserId,
         action: `application.${input.nextState}`,
         subjectType: "application",
         subjectId: application.id,

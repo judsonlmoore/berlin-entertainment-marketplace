@@ -1,16 +1,16 @@
 import { and, eq } from "drizzle-orm";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { getActorContext } from "@/src/db/queries/actor";
 import { bookings, entertainerProfiles } from "@/src/db/schema/marketplace";
 import {
   can,
   type ActorContext,
   type Permission,
 } from "@/src/domain/permissions";
+import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 
 export type DiscoveryAccess =
-  | { ok: true; actor: ActorContext }
+  | { ok: true; actor: ActorContext; auditUserId: string }
   | { ok: false; reason: "signed_out" | "forbidden" };
 
 async function requireAccess(
@@ -21,12 +21,16 @@ async function requireAccess(
     return { ok: false, reason: "signed_out" };
   }
 
-  const actor = await getActorContext(session.user.id);
-  if (!actor || !can(actor, permission)) {
+  const resolved = await resolveEffectiveActor(session.user.id);
+  if (!resolved || !can(resolved.actor, permission)) {
     return { ok: false, reason: "forbidden" };
   }
 
-  return { ok: true, actor };
+  return {
+    ok: true,
+    actor: resolved.actor,
+    auditUserId: resolved.auditUserId,
+  };
 }
 
 export async function requireDiscoveryAccess(): Promise<DiscoveryAccess> {

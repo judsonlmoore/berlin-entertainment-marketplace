@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { auth } from "@/src/auth";
-import { getActorContext } from "@/src/db/queries/actor";
 import { getDb } from "@/src/db/client";
 import {
   entertainerProfiles,
@@ -9,7 +8,12 @@ import {
 } from "@/src/db/schema/marketplace";
 import { can } from "@/src/domain/permissions";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
-import { getPortfolioImageBytes } from "@/src/integrations/portfolio-image-memory";
+import {
+  isBlobPortfolioKey,
+  isLocalPortfolioKey,
+  loadPortfolioImage,
+} from "@/src/integrations/portfolio-image-store";
+import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -23,13 +27,14 @@ export async function GET(_request: Request, { params }: Props) {
     );
   }
 
-  const actor = await getActorContext(session.user.id);
-  if (!actor) {
+  const resolved = await resolveEffectiveActor(session.user.id);
+  if (!resolved) {
     return NextResponse.json(
       { ok: false, error: "unauthorized" },
       { status: 401 },
     );
   }
+  const { actor } = resolved;
 
   const db = getDb();
   const item = await db.query.portfolioItems.findFirst({
@@ -52,7 +57,7 @@ export async function GET(_request: Request, { params }: Props) {
     );
   }
 
-  const isOwner = profile.userId === session.user.id;
+  const isOwner = profile.userId === actor.userId;
   if (!isOwner) {
     if (!can(actor, "discover.entertainers")) {
       return NextResponse.json(
@@ -68,11 +73,17 @@ export async function GET(_request: Request, { params }: Props) {
     }
   }
 
-  if (item.blobKey.startsWith("memory/")) {
-    const stored = getPortfolioImageBytes(item.blobKey);
+  // Local disk + Vercel Blob keys are both served through our auth proxy.
+  if (isLocalPortfolioKey(item.blobKey) || isBlobPortfolioKey(item.blobKey)) {
+    const stored = await loadPortfolioImage(item.blobKey);
     if (!stored) {
       return NextResponse.json(
-        { ok: false, error: "not_found" },
+        {
+          ok: false,
+          error: isBlobPortfolioKey(item.blobKey)
+            ? "blob_fetch_failed"
+            : "not_found",
+        },
         { status: 404 },
       );
     }
@@ -82,6 +93,18 @@ export async function GET(_request: Request, { params }: Props) {
         "Cache-Control": "private, no-store",
       },
     });
+  }
+
+  // Legacy pending/* rows registered without storing bytes.
+  if (item.blobKey.startsWith("pending/")) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "bytes_missing",
+        message: "Re-upload this image — bytes were never stored.",
+      },
+      { status: 404 },
+    );
   }
 
   if (!isFileStoreConfigured()) {
