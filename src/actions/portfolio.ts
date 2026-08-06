@@ -5,8 +5,7 @@ import {
   requireActor,
   toActionError,
 } from "@/src/actions/_shared";
-import { and, asc, count, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { and, asc, count, eq, type SQL } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
 import {
@@ -25,50 +24,133 @@ import { deletePortfolioImage } from "@/src/integrations/portfolio-image-store";
 
 const localeSchema = z.enum(["en", "de"]).default("en");
 
-async function requireEntertainerOwner(entertainerProfileId: string) {
-  const { actor, auditUserId } = await requireActor();
-  if (!can(actor, "entertainer.manage_own_profile")) {
-    throw new AppError("forbidden", "Not your entertainer profile");
-  }
-
-  const db = getDb();
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.id, entertainerProfileId),
+const ownerFieldsSchema = z
+  .object({
+    entertainerProfileId: z.string().uuid().optional(),
+    venueId: z.string().uuid().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasProfile = Boolean(data.entertainerProfileId);
+    const hasVenue = Boolean(data.venueId);
+    if (hasProfile === hasVenue) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Exactly one of entertainerProfileId or venueId is required",
+      });
+    }
   });
-  if (!profile || profile.userId !== actor.userId) {
-    throw new AppError("forbidden", "Not your entertainer profile");
+
+type PortfolioOwner =
+  | {
+      kind: "entertainer";
+      entertainerProfileId: string;
+      ownerFilter: SQL;
+      subjectType: "entertainer_profile";
+      subjectId: string;
+    }
+  | {
+      kind: "venue";
+      venueId: string;
+      ownerFilter: SQL;
+      subjectType: "venue";
+      subjectId: string;
+    };
+
+async function requirePortfolioOwner(input: {
+  entertainerProfileId?: string | undefined;
+  venueId?: string | undefined;
+}): Promise<{
+  actor: Awaited<ReturnType<typeof requireActor>>["actor"];
+  auditUserId: string;
+  db: ReturnType<typeof getDb>;
+  owner: PortfolioOwner;
+}> {
+  const { actor, auditUserId } = await requireActor();
+  const db = getDb();
+
+  if (input.entertainerProfileId && !input.venueId) {
+    if (!can(actor, "entertainer.manage_own_profile")) {
+      throw new AppError("forbidden", "Not your entertainer profile");
+    }
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, input.entertainerProfileId),
+    });
+    if (!profile || profile.userId !== actor.userId) {
+      throw new AppError("forbidden", "Not your entertainer profile");
+    }
+    return {
+      actor,
+      auditUserId,
+      db,
+      owner: {
+        kind: "entertainer",
+        entertainerProfileId: profile.id,
+        ownerFilter: eq(portfolioItems.entertainerProfileId, profile.id),
+        subjectType: "entertainer_profile",
+        subjectId: profile.id,
+      },
+    };
   }
 
-  return { actor, auditUserId, profile, db };
+  if (input.venueId && !input.entertainerProfileId) {
+    if (!can(actor, "venue.manage", { venueId: input.venueId })) {
+      throw new AppError("forbidden", "Not your venue");
+    }
+    return {
+      actor,
+      auditUserId,
+      db,
+      owner: {
+        kind: "venue",
+        venueId: input.venueId,
+        ownerFilter: eq(portfolioItems.venueId, input.venueId),
+        subjectType: "venue",
+        subjectId: input.venueId,
+      },
+    };
+  }
+
+  throw new AppError(
+    "validation",
+    "Exactly one of entertainerProfileId or venueId is required",
+  );
 }
 
-async function nextSortOrder(db: ReturnType<typeof getDb>, profileId: string) {
+function ownerInsertValues(owner: PortfolioOwner) {
+  if (owner.kind === "entertainer") {
+    return { entertainerProfileId: owner.entertainerProfileId };
+  }
+  return { venueId: owner.venueId };
+}
+
+async function nextSortOrder(db: ReturnType<typeof getDb>, ownerFilter: SQL) {
   const [row] = await db
     .select({ value: count() })
     .from(portfolioItems)
-    .where(eq(portfolioItems.entertainerProfileId, profileId));
+    .where(ownerFilter);
   return row?.value ?? 0;
 }
 
 async function assertPortfolioCapacity(
   db: ReturnType<typeof getDb>,
-  profileId: string,
+  ownerFilter: SQL,
 ) {
   const [row] = await db
     .select({ value: count() })
     .from(portfolioItems)
-    .where(eq(portfolioItems.entertainerProfileId, profileId));
+    .where(ownerFilter);
   if ((row?.value ?? 0) >= PORTFOLIO_MAX_ITEMS) {
     throw new AppError("validation", "Portfolio item limit reached");
   }
 }
 
-const linkSchema = z.object({
-  entertainerProfileId: z.string().uuid(),
-  url: z.string().trim().min(1).max(500),
-  caption: z.string().trim().max(500).optional(),
-  locale: localeSchema,
-});
+const linkSchema = ownerFieldsSchema.and(
+  z.object({
+    url: z.string().trim().min(1).max(500),
+    caption: z.string().trim().max(500).optional(),
+    locale: localeSchema,
+  }),
+);
 
 export async function addPortfolioLink(
   input: z.infer<typeof linkSchema>,
@@ -86,16 +168,14 @@ export async function addPortfolioLink(
       throw new AppError("validation", check.reason);
     }
 
-    const { auditUserId, profile, db } = await requireEntertainerOwner(
-      parsed.data.entertainerProfileId,
-    );
-    await assertPortfolioCapacity(db, profile.id);
+    const { auditUserId, owner, db } = await requirePortfolioOwner(parsed.data);
+    await assertPortfolioCapacity(db, owner.ownerFilter);
 
-    const sortOrder = await nextSortOrder(db, profile.id);
+    const sortOrder = await nextSortOrder(db, owner.ownerFilter);
     const [created] = await db
       .insert(portfolioItems)
       .values({
-        entertainerProfileId: profile.id,
+        ...ownerInsertValues(owner),
         kind: "link",
         url: check.url,
         caption: parsed.data.caption?.trim() || null,
@@ -110,20 +190,19 @@ export async function addPortfolioLink(
       subjectId: created!.id,
       metadata: { kind: "link" },
     });
-
-    revalidatePath(`/${parsed.data.locale}/profile`);
     return { ok: true, id: created!.id };
   } catch (error) {
     return toActionError(error);
   }
 }
 
-const youtubeSchema = z.object({
-  entertainerProfileId: z.string().uuid(),
-  url: z.string().trim().min(1).max(500),
-  caption: z.string().trim().max(500).optional(),
-  locale: localeSchema,
-});
+const youtubeSchema = ownerFieldsSchema.and(
+  z.object({
+    url: z.string().trim().min(1).max(500),
+    caption: z.string().trim().max(500).optional(),
+    locale: localeSchema,
+  }),
+);
 
 export async function addPortfolioYouTube(
   input: z.infer<typeof youtubeSchema>,
@@ -141,15 +220,10 @@ export async function addPortfolioYouTube(
       throw new AppError("validation", check.reason);
     }
 
-    const { auditUserId, profile, db } = await requireEntertainerOwner(
-      parsed.data.entertainerProfileId,
-    );
+    const { auditUserId, owner, db } = await requirePortfolioOwner(parsed.data);
 
     const existingYoutube = await db.query.portfolioItems.findFirst({
-      where: and(
-        eq(portfolioItems.entertainerProfileId, profile.id),
-        eq(portfolioItems.kind, "youtube"),
-      ),
+      where: and(owner.ownerFilter, eq(portfolioItems.kind, "youtube")),
       columns: { id: true },
     });
     if (existingYoutube) {
@@ -159,13 +233,13 @@ export async function addPortfolioYouTube(
       );
     }
 
-    await assertPortfolioCapacity(db, profile.id);
+    await assertPortfolioCapacity(db, owner.ownerFilter);
 
-    const sortOrder = await nextSortOrder(db, profile.id);
+    const sortOrder = await nextSortOrder(db, owner.ownerFilter);
     const [created] = await db
       .insert(portfolioItems)
       .values({
-        entertainerProfileId: profile.id,
+        ...ownerInsertValues(owner),
         kind: "youtube",
         url: check.url,
         caption: parsed.data.caption?.trim() || null,
@@ -180,19 +254,18 @@ export async function addPortfolioYouTube(
       subjectId: created!.id,
       metadata: { kind: "youtube", videoId: check.videoId },
     });
-
-    revalidatePath(`/${parsed.data.locale}/profile`);
     return { ok: true, id: created!.id };
   } catch (error) {
     return toActionError(error);
   }
 }
 
-const removeSchema = z.object({
-  entertainerProfileId: z.string().uuid(),
-  itemId: z.string().uuid(),
-  locale: localeSchema,
-});
+const removeSchema = ownerFieldsSchema.and(
+  z.object({
+    itemId: z.string().uuid(),
+    locale: localeSchema,
+  }),
+);
 
 export async function removePortfolioItem(
   input: z.infer<typeof removeSchema>,
@@ -203,15 +276,10 @@ export async function removePortfolioItem(
       throw new AppError("validation", "Invalid portfolio removal");
     }
 
-    const { auditUserId, profile, db } = await requireEntertainerOwner(
-      parsed.data.entertainerProfileId,
-    );
+    const { auditUserId, owner, db } = await requirePortfolioOwner(parsed.data);
 
     const item = await db.query.portfolioItems.findFirst({
-      where: and(
-        eq(portfolioItems.id, parsed.data.itemId),
-        eq(portfolioItems.entertainerProfileId, profile.id),
-      ),
+      where: and(eq(portfolioItems.id, parsed.data.itemId), owner.ownerFilter),
     });
     if (!item) {
       throw new AppError("not_found", "Portfolio item not found");
@@ -232,19 +300,18 @@ export async function removePortfolioItem(
       subjectId: item.id,
       metadata: { kind: item.kind },
     });
-
-    revalidatePath(`/${parsed.data.locale}/profile`);
     return { ok: true, id: item.id };
   } catch (error) {
     return toActionError(error);
   }
 }
 
-const reorderSchema = z.object({
-  entertainerProfileId: z.string().uuid(),
-  orderedIds: z.array(z.string().uuid()).min(1).max(PORTFOLIO_MAX_ITEMS),
-  locale: localeSchema,
-});
+const reorderSchema = ownerFieldsSchema.and(
+  z.object({
+    orderedIds: z.array(z.string().uuid()).min(1).max(PORTFOLIO_MAX_ITEMS),
+    locale: localeSchema,
+  }),
+);
 
 export async function reorderPortfolioItems(
   input: z.infer<typeof reorderSchema>,
@@ -255,14 +322,12 @@ export async function reorderPortfolioItems(
       throw new AppError("validation", "Invalid portfolio reorder");
     }
 
-    const { auditUserId, profile, db } = await requireEntertainerOwner(
-      parsed.data.entertainerProfileId,
-    );
+    const { auditUserId, owner, db } = await requirePortfolioOwner(parsed.data);
 
     const existing = await db
       .select({ id: portfolioItems.id })
       .from(portfolioItems)
-      .where(eq(portfolioItems.entertainerProfileId, profile.id));
+      .where(owner.ownerFilter);
 
     const existingIds = new Set(existing.map((row) => row.id));
     if (
@@ -285,29 +350,23 @@ export async function reorderPortfolioItems(
       await tx.insert(auditEvents).values({
         actorUserId: auditUserId,
         action: "portfolio.reordered",
-        subjectType: "entertainer_profile",
-        subjectId: profile.id,
+        subjectType: owner.subjectType,
+        subjectId: owner.subjectId,
         metadata: { count: parsed.data.orderedIds.length },
       });
     });
-
-    revalidatePath(`/${parsed.data.locale}/profile`);
-    return { ok: true, id: profile.id };
+    return { ok: true, id: owner.subjectId };
   } catch (error) {
     return toActionError(error);
   }
 }
 
-export async function listOwnPortfolioItems(entertainerProfileId: string) {
+export async function listOwnPortfolioItems(input: {
+  entertainerProfileId?: string | undefined;
+  venueId?: string | undefined;
+}) {
   try {
-    const { actor } = await requireActor();
-    if (!can(actor, "entertainer.manage_own_profile")) return [];
-
-    const db = getDb();
-    const profile = await db.query.entertainerProfiles.findFirst({
-      where: eq(entertainerProfiles.id, entertainerProfileId),
-    });
-    if (!profile || profile.userId !== actor.userId) return [];
+    const { owner, db } = await requirePortfolioOwner(input);
 
     return db
       .select({
@@ -320,7 +379,7 @@ export async function listOwnPortfolioItems(entertainerProfileId: string) {
         sortOrder: portfolioItems.sortOrder,
       })
       .from(portfolioItems)
-      .where(eq(portfolioItems.entertainerProfileId, entertainerProfileId))
+      .where(owner.ownerFilter)
       .orderBy(asc(portfolioItems.sortOrder), asc(portfolioItems.createdAt));
   } catch {
     return [];

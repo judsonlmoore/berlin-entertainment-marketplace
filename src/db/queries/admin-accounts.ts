@@ -1,11 +1,10 @@
-import { and, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import { users } from "@/src/db/schema";
 import {
   entertainerProfiles,
   marketplaceAccounts,
   userRoles,
-  venueMemberships,
   venues,
 } from "@/src/db/schema/marketplace";
 
@@ -68,16 +67,8 @@ export async function searchAdminAccounts(
   for (const row of actRows) matchingUserIds.add(row.userId);
 
   const venueOwnerRows = await db
-    .select({ userId: venueMemberships.userId })
+    .select({ userId: venues.ownerUserId })
     .from(venues)
-    .innerJoin(
-      venueMemberships,
-      and(
-        eq(venueMemberships.venueId, venues.id),
-        eq(venueMemberships.status, "active"),
-        eq(venueMemberships.role, "owner"),
-      ),
-    )
     .where(ilike(venues.name, pattern))
     .limit(limit);
 
@@ -87,7 +78,7 @@ export async function searchAdminAccounts(
 
   const ids = [...matchingUserIds].slice(0, limit);
 
-  const [userList, accounts, roles, entertainers, membershipRows] =
+  const [userList, accounts, roles, entertainers, ownedVenueRows] =
     await Promise.all([
       db
         .select({
@@ -123,20 +114,13 @@ export async function searchAdminAccounts(
         .where(inArray(entertainerProfiles.userId, ids)),
       db
         .select({
-          userId: venueMemberships.userId,
+          userId: venues.ownerUserId,
           id: venues.id,
           name: venues.name,
           publicationState: venues.publicationState,
-          membershipRole: venueMemberships.role,
         })
-        .from(venueMemberships)
-        .innerJoin(venues, eq(venues.id, venueMemberships.venueId))
-        .where(
-          and(
-            inArray(venueMemberships.userId, ids),
-            eq(venueMemberships.status, "active"),
-          ),
-        ),
+        .from(venues)
+        .where(inArray(venues.ownerUserId, ids)),
     ]);
 
   const accountByUser = new Map(
@@ -147,13 +131,13 @@ export async function searchAdminAccounts(
     entertainers.map((row) => [row.userId, row]),
   );
   const venuesByUser = new Map<string, AdminAccountSearchHit["venues"]>();
-  for (const row of membershipRows) {
+  for (const row of ownedVenueRows) {
     const list = venuesByUser.get(row.userId) ?? [];
     list.push({
       id: row.id,
       name: row.name,
       publicationState: row.publicationState,
-      membershipRole: row.membershipRole,
+      membershipRole: "owner",
     });
     venuesByUser.set(row.userId, list);
   }

@@ -9,8 +9,10 @@ import {
   SignAgreementButton,
 } from "@/src/components/booking-actions";
 import { BookingLifecycleTrack } from "@/src/components/booking-lifecycle-track";
+import { LeadProposalForm } from "@/src/components/lead-proposal-form";
 import { formatEur, toDatetimeLocal } from "@/src/lib/format";
 import { BookingTermsForm } from "@/src/components/booking-terms-form";
+import { ProfileEnquiryRespondButtons } from "@/src/components/profile-enquiry-actions";
 import { Avatar } from "@/src/components/ui/monogram";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { PostGigSurveyForm } from "@/src/components/post-gig-survey-form";
@@ -18,6 +20,7 @@ import { ProfileDocumentList } from "@/src/components/profile-document-list";
 import { getDb } from "@/src/db/client";
 import { getBookingDetail } from "@/src/db/queries/bookings";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { getLeadByBookingId } from "@/src/db/queries/leads";
 import { getPostGigSurveyInvitationForActor } from "@/src/db/queries/post-gig-surveys";
 import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import {
@@ -33,6 +36,7 @@ import {
   type BookingState,
 } from "@/src/domain/booking";
 import { canGenerateAgreement } from "@/src/domain/agreement";
+import { leadContactsUnlocked } from "@/src/domain/lead";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
@@ -44,6 +48,7 @@ export default async function BookingDetailPage({ params }: Props) {
   const { locale, id } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("bookings");
+  const leadsT = await getTranslations("leads");
   const market = await getTranslations("marketplace");
   const access = await requireDiscoveryAccess();
 
@@ -62,13 +67,12 @@ export default async function BookingDetailPage({ params }: Props) {
   }
 
   const { booking, terms, depositEvents, agreement } = detail;
+  const lead = await getLeadByBookingId({
+    bookingId: id,
+    actor: access.actor,
+  });
   const isEntertainer = booking.entertainerUserId === access.actor.userId;
-  const isVenue = access.actor.venueMemberships.some(
-    (m) =>
-      m.venueId === booking.venueId &&
-      m.status === "active" &&
-      (m.role === "owner" || m.role === "member"),
-  );
+  const isVenue = access.actor.venueId === booking.venueId;
   const isStaff = access.actor.isPlatformStaff;
 
   if (!isEntertainer && !isVenue && !isStaff) {
@@ -184,8 +188,12 @@ export default async function BookingDetailPage({ params }: Props) {
       });
       if (opportunity) {
         defaults = {
-          startsAtLocal: toDatetimeLocal(opportunity.startsAt),
-          endsAtLocal: toDatetimeLocal(opportunity.endsAt),
+          startsAtLocal: opportunity.startsAt
+            ? toDatetimeLocal(opportunity.startsAt)
+            : defaults.startsAtLocal,
+          endsAtLocal: opportunity.endsAt
+            ? toDatetimeLocal(opportunity.endsAt)
+            : defaults.endsAtLocal,
           feeEur: Math.round(
             (application.quoteMinCents + application.quoteMaxCents) / 200,
           ),
@@ -201,6 +209,42 @@ export default async function BookingDetailPage({ params }: Props) {
     timeZone: "Europe/Berlin",
   });
 
+  const enquiry =
+    lead &&
+    lead.booking.originType === "profile_enquiry" &&
+    lead.originDetail.enquiry &&
+    typeof lead.originDetail.enquiry === "object"
+      ? (lead.originDetail.enquiry as {
+          id: string;
+          state: string;
+          note: string | null;
+          submittedByUserId: string;
+          proposedStartsAt: Date | null;
+          proposedEndsAt: Date | null;
+          proposedFeeCents: number | null;
+          proposedFormat: string | null;
+        })
+      : null;
+
+  const canEditProposal =
+    Boolean(enquiry) &&
+    (enquiry!.state === "interested" || enquiry!.state === "pending") &&
+    lead != null &&
+    (lead.leadStatus === "open" || lead.leadStatus === "pending");
+
+  const enquiryInitiatedByAct =
+    Boolean(enquiry) &&
+    enquiry!.submittedByUserId === booking.entertainerUserId;
+  const canRespondToEnquiry =
+    enquiry?.state === "pending" &&
+    (enquiryInitiatedByAct
+      ? can(access.actor, "profile_enquiry.respond", {
+          venueId: booking.venueId,
+        })
+      : isEntertainer && access.actor.entertainerVerified);
+
+  const contactsUnlocked = lead ? leadContactsUnlocked(lead.leadStatus) : false;
+
   return (
     <section className="mx-auto grid max-w-2xl gap-6">
       <div>
@@ -215,15 +259,115 @@ export default async function BookingDetailPage({ params }: Props) {
           {booking.actName} · {booking.venueName}
         </h1>
         <p className="mt-2 text-[var(--text-muted)]">
-          {booking.originType} · {booking.id.slice(0, 8)} · v{booking.version}
+          {(
+            ["application", "direct_request", "profile_enquiry"] as const
+          ).includes(
+            booking.originType as
+              "application" | "direct_request" | "profile_enquiry",
+          )
+            ? leadsT(
+                `channel.${booking.originType as "application" | "direct_request" | "profile_enquiry"}`,
+              )
+            : booking.originType}{" "}
+          · {booking.id.slice(0, 8)} · v{booking.version}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
+          {lead ? (
+            <StatusLabel>{leadsT(`status.${lead.leadStatus}`)}</StatusLabel>
+          ) : null}
           <StatusLabel>{booking.state}</StatusLabel>
           <StatusLabel>
             {t("depositCurrent")}: {booking.depositStatus}
           </StatusLabel>
+          {contactsUnlocked ? (
+            <StatusLabel tone="success">
+              {leadsT("contactsUnlocked")}
+            </StatusLabel>
+          ) : null}
         </div>
       </div>
+
+      {lead ? (
+        <div className="panel grid gap-3 p-6 text-sm">
+          <p>
+            <span className="font-medium">{leadsT("parties")}:</span>{" "}
+            {booking.actName} ↔ {booking.venueName}
+            {lead.venue?.district ? ` (${lead.venue.district})` : ""}
+          </p>
+          {lead.performanceStartsAt ? (
+            <p>
+              <span className="font-medium">{leadsT("window")}:</span>{" "}
+              {dateFmt.format(lead.performanceStartsAt)}
+              {lead.performanceEndsAt
+                ? ` – ${dateFmt.format(lead.performanceEndsAt)}`
+                : ""}
+            </p>
+          ) : (
+            <p className="text-[var(--text-muted)]">{leadsT("noDateYet")}</p>
+          )}
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Link
+              href={`/marketplace/entertainers/${booking.entertainerProfileId}`}
+              className="underline"
+            >
+              {leadsT("viewActProfile")}
+            </Link>
+            <Link
+              href={`/marketplace/venues/${booking.venueId}`}
+              className="underline"
+            >
+              {leadsT("viewVenueProfile")}
+            </Link>
+          </div>
+        </div>
+      ) : null}
+
+      {canRespondToEnquiry && enquiry ? (
+        <div className="panel grid gap-3 p-6">
+          <h2 className="text-lg font-medium">{leadsT("respondTitle")}</h2>
+          {enquiry.note ? (
+            <p className="text-sm text-[var(--text-muted)]">{enquiry.note}</p>
+          ) : null}
+          <ProfileEnquiryRespondButtons
+            locale={locale as "en" | "de"}
+            enquiryId={enquiry.id}
+            state={enquiry.state}
+          />
+        </div>
+      ) : null}
+
+      {canEditProposal && enquiry ? (
+        <div className="panel p-6">
+          <LeadProposalForm
+            locale={locale as "en" | "de"}
+            enquiryId={enquiry.id}
+            initial={{
+              note: enquiry.note ?? "",
+              proposedFormat: enquiry.proposedFormat ?? "",
+              proposedFeeEur:
+                enquiry.proposedFeeCents != null
+                  ? String(enquiry.proposedFeeCents / 100)
+                  : "",
+              proposedStartsAt: enquiry.proposedStartsAt
+                ? toDatetimeLocal(enquiry.proposedStartsAt)
+                : "",
+              proposedEndsAt: enquiry.proposedEndsAt
+                ? toDatetimeLocal(enquiry.proposedEndsAt)
+                : "",
+            }}
+          />
+          {enquiry.proposedFeeCents != null ? (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {leadsT("proposedFee")}:{" "}
+              {formatEur(enquiry.proposedFeeCents, locale)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {lead?.leadStatus === "open" ? (
+        <p className="text-sm text-[var(--text-muted)]">{leadsT("openHint")}</p>
+      ) : null}
 
       <div className="panel grid gap-4 p-6">
         <h2 className="text-sm font-semibold tracking-[0.12em] uppercase">

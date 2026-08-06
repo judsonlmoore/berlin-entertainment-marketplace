@@ -51,6 +51,7 @@ export function DiscoveryFilterBar({
       drop("groupSizeMax", t("filterGroupSizeMax"));
       drop("priceMinEur", t("filterPriceMin"));
       drop("priceMaxEur", t("filterPriceMax"));
+      drop("availableOn", t("filterAvailableOn"));
     } else {
       drop("district", t("filterDistrict"));
       drop("venueType", t("filterVenueType"));
@@ -240,6 +241,15 @@ export function DiscoveryFilterBar({
                   type="number"
                   min={0}
                   defaultValue={values.priceMaxEur ?? ""}
+                  className="field"
+                />
+              </label>
+              <label className="label">
+                <span>{t("filterAvailableOn")}</span>
+                <input
+                  name="availableOn"
+                  type="date"
+                  defaultValue={values.availableOn ?? ""}
                   className="field"
                 />
               </label>

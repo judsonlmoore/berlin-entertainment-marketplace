@@ -32,13 +32,10 @@ async function hasPublishedProfile(actor: ActorContext): Promise<boolean> {
   }
 
   if (actor.roles.includes("venue")) {
-    const venueIds = actor.venueMemberships
-      .filter((m) => m.status === "active" && m.role === "owner")
-      .map((m) => m.venueId);
-    if (venueIds.length === 0) return false;
+    if (!actor.venueId) return false;
     const published = await db.query.venues.findFirst({
       where: and(
-        inArray(venues.id, venueIds),
+        eq(venues.id, actor.venueId),
         eq(venues.publicationState, "approved"),
       ),
       columns: { id: true },
@@ -86,14 +83,11 @@ async function hasSubmittedEnquiry(actor: ActorContext): Promise<boolean> {
   }
 
   if (actor.roles.includes("venue")) {
-    const venueIds = actor.venueMemberships
-      .filter((m) => m.status === "active")
-      .map((m) => m.venueId);
-    if (venueIds.length === 0) return false;
+    if (!actor.venueId) return false;
     const [row] = await db
       .select({ id: directRequests.id })
       .from(directRequests)
-      .where(inArray(directRequests.venueId, venueIds))
+      .where(eq(directRequests.venueId, actor.venueId))
       .limit(1);
     return Boolean(row);
   }

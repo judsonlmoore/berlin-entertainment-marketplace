@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, count, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   applications,
@@ -17,8 +17,10 @@ export async function listOpenOpportunities(input?: {
     .select({
       id: opportunities.id,
       title: opportunities.title,
+      kind: opportunities.kind,
       startsAt: opportunities.startsAt,
       endsAt: opportunities.endsAt,
+      standingSchedule: opportunities.standingSchedule,
       formatCategory: opportunities.formatCategory,
       budgetMinCents: opportunities.budgetMinCents,
       budgetMaxCents: opportunities.budgetMaxCents,
@@ -33,7 +35,10 @@ export async function listOpenOpportunities(input?: {
     .from(opportunities)
     .innerJoin(venues, eq(venues.id, opportunities.venueId))
     .where(eq(opportunities.state, "open"))
-    .orderBy(opportunities.startsAt);
+    .orderBy(
+      sql`${opportunities.startsAt} ASC NULLS LAST`,
+      desc(opportunities.createdAt),
+    );
 
   const opportunityIds = rows.map((row) => row.id);
   const countRows =
@@ -99,8 +104,10 @@ export async function listOpenCallsForVenue(input: {
     .select({
       id: opportunities.id,
       title: opportunities.title,
+      kind: opportunities.kind,
       startsAt: opportunities.startsAt,
       endsAt: opportunities.endsAt,
+      standingSchedule: opportunities.standingSchedule,
       formatCategory: opportunities.formatCategory,
       budgetMinCents: opportunities.budgetMinCents,
       budgetMaxCents: opportunities.budgetMaxCents,
@@ -114,7 +121,10 @@ export async function listOpenCallsForVenue(input: {
         eq(opportunities.state, "open"),
       ),
     )
-    .orderBy(opportunities.startsAt);
+    .orderBy(
+      sql`${opportunities.startsAt} ASC NULLS LAST`,
+      desc(opportunities.createdAt),
+    );
 
   if (!input.entertainerProfileId || rows.length === 0) {
     return rows.map((row) => ({
@@ -151,8 +161,10 @@ export async function getOpportunityDetail(opportunityId: string) {
     .select({
       id: opportunities.id,
       title: opportunities.title,
+      kind: opportunities.kind,
       startsAt: opportunities.startsAt,
       endsAt: opportunities.endsAt,
+      standingSchedule: opportunities.standingSchedule,
       timezone: opportunities.timezone,
       formatCategory: opportunities.formatCategory,
       expectedAudience: opportunities.expectedAudience,

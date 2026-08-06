@@ -1,9 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   entertainerProfiles,
   userRoles,
-  venueMemberships,
   venues,
 } from "@/src/db/schema/marketplace";
 
@@ -20,19 +19,8 @@ async function hasEntertainerProfile(userId: string): Promise<boolean> {
 
 async function hasOwnedVenueProfile(userId: string): Promise<boolean> {
   const db = getDb();
-  const membership = await db.query.venueMemberships.findFirst({
-    where: and(
-      eq(venueMemberships.userId, userId),
-      eq(venueMemberships.status, "active"),
-      eq(venueMemberships.role, "owner"),
-    ),
-    columns: { venueId: true },
-  });
-  if (!membership) {
-    return false;
-  }
   const venue = await db.query.venues.findFirst({
-    where: eq(venues.id, membership.venueId),
+    where: eq(venues.ownerUserId, userId),
     columns: { id: true },
   });
   return Boolean(venue);

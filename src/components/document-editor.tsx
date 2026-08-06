@@ -32,7 +32,6 @@ import {
   updateProfileDocumentMeta,
 } from "@/src/actions/profile-documents";
 import { PROFILE_DOCUMENT_MAX } from "@/src/domain/profile-document";
-import { useRouter } from "@/src/i18n/navigation";
 
 export type DocumentRow = {
   id: string;
@@ -45,10 +44,25 @@ export type DocumentRow = {
 
 type Props = {
   locale: "en" | "de";
-  entertainerProfileId: string;
+  /** Exactly one of entertainerProfileId or venueId is required. */
+  entertainerProfileId?: string;
+  venueId?: string;
   documents: DocumentRow[];
   storeConfigured: boolean;
 };
+
+function documentOwnerFields(
+  entertainerProfileId: string | undefined,
+  venueId: string | undefined,
+): { entertainerProfileId: string } | { venueId: string } | null {
+  if (entertainerProfileId && !venueId) {
+    return { entertainerProfileId };
+  }
+  if (venueId && !entertainerProfileId) {
+    return { venueId };
+  }
+  return null;
+}
 
 type PendingUpload = {
   localId: string;
@@ -66,7 +80,16 @@ function docSignature(docs: DocumentRow[]) {
 function uploadWithProgress(
   formData: FormData,
   onProgress: (percent: number) => void,
-): Promise<{ ok: boolean; error?: string; id?: string }> {
+): Promise<{
+  ok: boolean;
+  error?: string;
+  id?: string;
+  title?: string;
+  originalFilename?: string | null;
+  visibility?: "marketplace" | "engagement";
+  sortOrder?: number;
+  sizeBytes?: number;
+}> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/documents/upload");
@@ -81,11 +104,27 @@ function uploadWithProgress(
           ok?: boolean;
           error?: string;
           id?: string;
+          title?: string;
+          originalFilename?: string | null;
+          visibility?: "marketplace" | "engagement";
+          sortOrder?: number;
+          sizeBytes?: number;
         };
         resolve({
           ok: Boolean(json.ok),
           ...(json.error ? { error: json.error } : {}),
           ...(json.id ? { id: json.id } : {}),
+          ...(json.title ? { title: json.title } : {}),
+          ...(json.originalFilename !== undefined
+            ? { originalFilename: json.originalFilename }
+            : {}),
+          ...(json.visibility ? { visibility: json.visibility } : {}),
+          ...(typeof json.sortOrder === "number"
+            ? { sortOrder: json.sortOrder }
+            : {}),
+          ...(typeof json.sizeBytes === "number"
+            ? { sizeBytes: json.sizeBytes }
+            : {}),
         });
       } catch {
         reject(new Error("Invalid upload response"));
@@ -202,7 +241,7 @@ function PendingDocumentRow({ upload }: { upload: PendingUpload }) {
 function DocumentRowCard({
   doc,
   locale,
-  entertainerProfileId,
+  owner,
   pending,
   onRemoved,
   onUpdated,
@@ -213,7 +252,7 @@ function DocumentRowCard({
 }: {
   doc: DocumentRow;
   locale: "en" | "de";
-  entertainerProfileId: string;
+  owner: { entertainerProfileId: string } | { venueId: string };
   pending: boolean;
   onRemoved: (id: string) => void;
   onUpdated: (doc: DocumentRow) => void;
@@ -236,7 +275,7 @@ function DocumentRowCard({
     startMeta(async () => {
       setError(null);
       const result = await updateProfileDocumentMeta({
-        entertainerProfileId,
+        ...owner,
         documentId: doc.id,
         title: next.title,
         visibility: next.visibility,
@@ -437,7 +476,7 @@ function DocumentRowCard({
             startRemove(async () => {
               setError(null);
               const result = await removeProfileDocument({
-                entertainerProfileId,
+                ...owner,
                 documentId: doc.id,
                 locale,
               });
@@ -482,14 +521,14 @@ function DocumentRowCard({
 function SortableDocumentRow({
   doc,
   locale,
-  entertainerProfileId,
+  owner,
   pending,
   onRemoved,
   onUpdated,
 }: {
   doc: DocumentRow;
   locale: "en" | "de";
-  entertainerProfileId: string;
+  owner: { entertainerProfileId: string } | { venueId: string };
   pending: boolean;
   onRemoved: (id: string) => void;
   onUpdated: (doc: DocumentRow) => void;
@@ -511,7 +550,7 @@ function SortableDocumentRow({
     <DocumentRowCard
       doc={doc}
       locale={locale}
-      entertainerProfileId={entertainerProfileId}
+      owner={owner}
       pending={pending}
       onRemoved={onRemoved}
       onUpdated={onUpdated}
@@ -526,13 +565,14 @@ function SortableDocumentRow({
 export function DocumentEditor({
   locale,
   entertainerProfileId,
+  venueId,
   documents,
   storeConfigured,
 }: Props) {
   const t = useTranslations("profile");
-  const router = useRouter();
   const inputId = useId();
   const fileRef = useRef<HTMLInputElement>(null);
+  const owner = documentOwnerFields(entertainerProfileId, venueId);
   const [items, setItems] = useState(() =>
     [...documents].sort((a, b) => a.sortOrder - b.sortOrder),
   );
@@ -554,10 +594,17 @@ export function DocumentEditor({
   const canAddMore =
     items.length + pendingUploads.length < PROFILE_DOCUMENT_MAX;
   const showList = items.length > 0 || pendingUploads.length > 0;
+  const needOwnerMessage = venueId
+    ? t("riderNeedVenue")
+    : t("riderNeedProfile");
 
   async function uploadFiles(files: FileList | File[]) {
     const list = Array.from(files).filter((f) => f.size > 0);
     if (list.length === 0) return;
+    if (!owner) {
+      setError(needOwnerMessage);
+      return;
+    }
     const remaining =
       PROFILE_DOCUMENT_MAX - items.length - pendingUploads.length;
     if (remaining <= 0) {
@@ -579,7 +626,11 @@ export function DocumentEditor({
       ]);
       const formData = new FormData();
       formData.set("file", file);
-      formData.set("entertainerProfileId", entertainerProfileId);
+      if ("entertainerProfileId" in owner) {
+        formData.set("entertainerProfileId", owner.entertainerProfileId);
+      } else {
+        formData.set("venueId", owner.venueId);
+      }
       formData.set("visibility", "engagement");
       formData.set("locale", locale);
       try {
@@ -590,8 +641,23 @@ export function DocumentEditor({
             ),
           );
         });
-        if (!result.ok) {
+        if (!result.ok || !result.id) {
           setError(result.error ?? t("documentUploadFailed"));
+        } else {
+          setItems((prev) => {
+            if (prev.some((row) => row.id === result.id)) return prev;
+            return [
+              ...prev,
+              {
+                id: result.id!,
+                title: result.title ?? file.name,
+                originalFilename: result.originalFilename ?? file.name,
+                visibility: result.visibility ?? "engagement",
+                sortOrder: result.sortOrder ?? prev.length,
+                sizeBytes: result.sizeBytes ?? file.size,
+              },
+            ];
+          });
         }
       } catch {
         setError(t("documentUploadFailed"));
@@ -601,15 +667,19 @@ export function DocumentEditor({
         );
       }
     }
-    router.refresh();
   }
 
   function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
+    if (!owner) {
+      setError(needOwnerMessage);
+      return;
+    }
     const oldIndex = items.findIndex((d) => d.id === active.id);
     const newIndex = items.findIndex((d) => d.id === over.id);
     if (oldIndex < 0 || newIndex < 0) return;
+    const previous = items;
     const next = arrayMove(items, oldIndex, newIndex).map((doc, index) => ({
       ...doc,
       sortOrder: index,
@@ -617,13 +687,13 @@ export function DocumentEditor({
     setItems(next);
     startTransition(async () => {
       const result = await reorderProfileDocuments({
-        entertainerProfileId,
+        ...owner,
         orderedIds: next.map((d) => d.id),
         locale,
       });
       if (!result.ok) {
         setError(result.message);
-        router.refresh();
+        setItems(previous);
       }
     });
   }
@@ -638,6 +708,12 @@ export function DocumentEditor({
       <p className="text-sm text-[var(--text-muted)]">
         {t("documentStoreUnconfigured")}
       </p>
+    );
+  }
+
+  if (!owner) {
+    return (
+      <p className="text-sm text-[var(--text-muted)]">{needOwnerMessage}</p>
     );
   }
 
@@ -708,11 +784,10 @@ export function DocumentEditor({
                       key={doc.id}
                       doc={doc}
                       locale={locale}
-                      entertainerProfileId={entertainerProfileId}
+                      owner={owner}
                       pending={pending}
                       onRemoved={(id) => {
                         setItems((prev) => prev.filter((row) => row.id !== id));
-                        router.refresh();
                       }}
                       onUpdated={(next) => {
                         setItems((prev) =>

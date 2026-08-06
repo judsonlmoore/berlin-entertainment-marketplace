@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { desc, eq, inArray, or } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   applications,
@@ -69,9 +69,7 @@ export async function listLeadsForActor(
   filter?: { status?: LeadStatus | "all" },
 ): Promise<LeadListItem[]> {
   const db = getDb();
-  const venueIds = actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const venueIds = actor.venueId ? [actor.venueId] : [];
 
   const profile = actor.roles.includes("entertainer")
     ? await db.query.entertainerProfiles.findFirst({
@@ -278,9 +276,7 @@ export async function getLeadByBookingId(input: {
   });
   if (!booking) return null;
 
-  const venueIds = input.actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const venueIds = input.actor.venueId ? [input.actor.venueId] : [];
   const profile = input.actor.roles.includes("entertainer")
     ? await db.query.entertainerProfiles.findFirst({
         where: eq(entertainerProfiles.userId, input.actor.userId),

@@ -6,7 +6,7 @@ import {
   requireStaffActor,
   toActionError,
 } from "@/src/actions/_shared";
-import { and, count, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
@@ -15,7 +15,6 @@ import {
   auditEvents,
   entertainerProfiles,
   portfolioItems,
-  venueMemberships,
   venueSpaces,
   venues,
 } from "@/src/db/schema/marketplace";
@@ -126,10 +125,13 @@ const venueSchema = z.object({
   postalCode: z.string().trim().max(16).optional().or(z.literal("")),
   latitude: z.string().trim().max(32).optional(),
   longitude: z.string().trim().max(32).optional(),
+  googlePlaceId: z.string().trim().max(256).optional().or(z.literal("")),
   venueType: z.string().trim().max(120).optional().or(z.literal("")),
   audienceDescription: z.string().trim().max(8000).optional().or(z.literal("")),
   capacity: z.coerce.number().int().min(1).max(100000).default(50),
   capacityContext: z.string().trim().max(500).optional(),
+  roomName: z.string().trim().max(160).optional().or(z.literal("")),
+  roomStageDimensions: z.string().trim().max(200).optional().or(z.literal("")),
   productionNotes: z.string().trim().max(8000).optional(),
   productionPa: venueProductionField,
   productionMixer: venueProductionField,
@@ -227,8 +229,11 @@ function assertVenueReadyForPublish(venue: {
   addressLine1: string;
   district: string;
   postalCode: string;
+  latitude: string | null;
+  longitude: string | null;
   venueType: string;
   audienceDescription: string;
+  capacity: number;
 }) {
   if (!venue.name.trim()) {
     throw new AppError("validation", "Venue name is required");
@@ -249,8 +254,17 @@ function assertVenueReadyForPublish(venue: {
   if (!venue.postalCode.trim()) {
     throw new AppError("validation", "Postal code is required");
   }
+  if (!venue.latitude?.trim() || !venue.longitude?.trim()) {
+    throw new AppError(
+      "validation",
+      "Map coordinates are required (use Places search or enter them)",
+    );
+  }
   if (!venue.venueType.trim()) {
     throw new AppError("validation", "Venue type is required");
+  }
+  if (!Number.isFinite(venue.capacity) || venue.capacity < 1) {
+    throw new AppError("validation", "Capacity is required");
   }
   const audienceCheck = validateRichTextField(venue.audienceDescription, {
     min: DESCRIPTION_MIN,
@@ -567,8 +581,19 @@ export async function createVenue(
       throw new AppError("validation", "Invalid venue profile");
     }
 
-    const prose = sanitizeVenueProse(parsed.data);
     const db = getDb();
+    const existing = await db.query.venues.findFirst({
+      where: eq(venues.ownerUserId, actor.userId),
+      columns: { id: true },
+    });
+    if (existing) {
+      throw new AppError(
+        "conflict",
+        "This account already has a venue profile",
+      );
+    }
+
+    const prose = sanitizeVenueProse(parsed.data);
     const now = new Date();
     let venueId: string | undefined;
 
@@ -576,6 +601,7 @@ export async function createVenue(
       const [created] = await tx
         .insert(venues)
         .values({
+          ownerUserId: actor.userId,
           name: parsed.data.name,
           shortDescription: prose.shortDescription,
           addressLine1: parsed.data.addressLine1 ?? "",
@@ -587,6 +613,9 @@ export async function createVenue(
           ...(parsed.data.latitude ? { latitude: parsed.data.latitude } : {}),
           ...(parsed.data.longitude
             ? { longitude: parsed.data.longitude }
+            : {}),
+          ...(parsed.data.googlePlaceId
+            ? { googlePlaceId: parsed.data.googlePlaceId }
             : {}),
           venueType: parsed.data.venueType ?? "",
           audienceDescription: prose.audienceDescription,
@@ -613,16 +642,9 @@ export async function createVenue(
       }
       venueId = created.id;
 
-      await tx.insert(venueMemberships).values({
-        venueId: created.id,
-        userId: actor.userId,
-        role: "owner",
-        status: "active",
-      });
-
       await tx.insert(venueSpaces).values({
         venueId: created.id,
-        name: `${created.name} — Main room`,
+        name: parsed.data.roomName?.trim() || `${created.name} — Main room`,
         capacity: created.capacity,
         productionResources: {},
       });
@@ -699,6 +721,7 @@ export async function updateVenue(
           postalCode: parsed.data.postalCode ?? "",
           latitude: parsed.data.latitude ?? null,
           longitude: parsed.data.longitude ?? null,
+          googlePlaceId: parsed.data.googlePlaceId?.trim() || null,
           venueType: parsed.data.venueType ?? "",
           audienceDescription: prose.audienceDescription,
           capacity: parsed.data.capacity,
@@ -713,6 +736,26 @@ export async function updateVenue(
           updatedAt: new Date(),
         })
         .where(eq(venues.id, venueId));
+
+      const spaces = await tx
+        .select({ id: venueSpaces.id })
+        .from(venueSpaces)
+        .where(eq(venueSpaces.venueId, venueId))
+        .orderBy(asc(venueSpaces.createdAt))
+        .limit(1);
+      const primarySpace = spaces[0];
+      if (primarySpace) {
+        await tx
+          .update(venueSpaces)
+          .set({
+            name:
+              parsed.data.roomName?.trim() || `${parsed.data.name} — Main room`,
+            capacity: parsed.data.capacity,
+            stageDimensions: parsed.data.roomStageDimensions?.trim() || null,
+            updatedAt: new Date(),
+          })
+          .where(eq(venueSpaces.id, primarySpace.id));
+      }
 
       await upsertPreferredContact(tx, {
         ownerType: "venue",
@@ -772,14 +815,7 @@ export async function publishVenueProfile(
       throw new AppError("invalid_transition", `Cannot publish from ${from}`);
     }
 
-    const ownerMembership = await db.query.venueMemberships.findFirst({
-      where: and(
-        eq(venueMemberships.venueId, venueId),
-        eq(venueMemberships.role, "owner"),
-        eq(venueMemberships.status, "active"),
-      ),
-    });
-    if (!ownerMembership) {
+    if (!venue.ownerUserId) {
       throw new AppError("validation", "Venue requires an active owner");
     }
 
@@ -1020,6 +1056,17 @@ export async function upsertVenueSpace(
         .set(values)
         .where(eq(venueSpaces.id, parsed.data.spaceId));
     } else {
+      const existingSpaces = await db
+        .select({ id: venueSpaces.id })
+        .from(venueSpaces)
+        .where(eq(venueSpaces.venueId, parsed.data.venueId))
+        .limit(1);
+      if (existingSpaces[0]) {
+        throw new AppError(
+          "conflict",
+          "This venue already has its one room. Edit the existing room instead.",
+        );
+      }
       const [created] = await db
         .insert(venueSpaces)
         .values({ ...values, createdAt: now })
@@ -1037,9 +1084,7 @@ export async function upsertVenueSpace(
       metadata: { venueId: parsed.data.venueId },
     });
 
-    revalidatePath(
-      `/${parsed.data.locale}/profile/venues/${parsed.data.venueId}`,
-    );
+    revalidatePath(`/${parsed.data.locale}/profile`);
     return { ok: true, ...(spaceId ? { id: spaceId } : {}) };
   } catch (error) {
     return toActionError(error);

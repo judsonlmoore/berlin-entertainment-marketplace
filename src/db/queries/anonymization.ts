@@ -11,7 +11,7 @@ import {
   auditEvents,
   bookings,
   entertainerProfiles,
-  venueMemberships,
+  venues,
 } from "@/src/db/schema/marketplace";
 import {
   anonymizePii,
@@ -50,14 +50,9 @@ async function listActiveVenueIds(
   userId: string,
 ): Promise<string[]> {
   const rows = await db
-    .select({ venueId: venueMemberships.venueId })
-    .from(venueMemberships)
-    .where(
-      and(
-        eq(venueMemberships.userId, userId),
-        eq(venueMemberships.status, "active"),
-      ),
-    );
+    .select({ venueId: venues.id })
+    .from(venues)
+    .where(eq(venues.ownerUserId, userId));
   return rows.map((row) => row.venueId);
 }
 
@@ -65,17 +60,7 @@ async function listOwnedVenueIds(
   db: DbExecutor,
   userId: string,
 ): Promise<string[]> {
-  const rows = await db
-    .select({ venueId: venueMemberships.venueId })
-    .from(venueMemberships)
-    .where(
-      and(
-        eq(venueMemberships.userId, userId),
-        eq(venueMemberships.status, "active"),
-        eq(venueMemberships.role, "owner"),
-      ),
-    );
-  return rows.map((row) => row.venueId);
+  return listActiveVenueIds(db, userId);
 }
 
 /**

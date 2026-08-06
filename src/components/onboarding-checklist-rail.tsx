@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { dismissOnboardingChecklistAction } from "@/src/actions/onboarding-checklist";
 import type { OnboardingChecklistView } from "@/src/domain/onboarding-checklist";
 import { ONBOARDING_CHECKLIST_STEPS } from "@/src/domain/onboarding-checklist";
+import { Link } from "@/src/i18n/navigation";
 
 type Props = {
   checklist: OnboardingChecklistView;
@@ -106,6 +107,15 @@ export function OnboardingChecklistRail({ checklist }: Props) {
           })}
         </p>
       )}
+
+      <p className="mt-3 border-t border-white/10 pt-3">
+        <Link
+          href="/marketplace/help"
+          className="text-[0.65rem] font-medium text-white/55 no-underline hover:text-white/80"
+        >
+          {t("needHelp")}
+        </Link>
+      </p>
     </section>
   );
 }

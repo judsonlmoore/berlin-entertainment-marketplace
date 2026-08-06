@@ -66,6 +66,24 @@
 .wrapper :global(.fc .fc-timegrid-event) {
   border-radius: 6px;
   margin: 1px 2px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+@media (pointer: coarse) {
+  .wrapper :global(.fc .fc-daygrid-event),
+  .wrapper :global(.fc .fc-timegrid-event) {
+    min-height: 2rem;
+  }
+
+  .timedMonthRow {
+    min-height: 1.75rem;
+  }
+
+  .wrapper :global(.fc .fc-daygrid-day-frame) {
+    min-height: 5.5rem;
+  }
 }
 
 /* Kill FC harness padding so our month insets are the only left offset. */

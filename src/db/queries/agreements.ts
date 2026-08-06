@@ -1,10 +1,10 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   agreementTemplates,
   agreements,
   signatures,
-  venueMemberships,
+  venues,
 } from "@/src/db/schema/marketplace";
 
 export async function getLatestSandboxTemplates() {
@@ -42,16 +42,9 @@ export async function getAgreementForBooking(bookingId: string) {
 
 export async function getVenueOwnerUserId(venueId: string) {
   const db = getDb();
-  const [owner] = await db
-    .select({ userId: venueMemberships.userId })
-    .from(venueMemberships)
-    .where(
-      and(
-        eq(venueMemberships.venueId, venueId),
-        eq(venueMemberships.role, "owner"),
-        eq(venueMemberships.status, "active"),
-      ),
-    )
-    .limit(1);
-  return owner?.userId ?? null;
+  const venue = await db.query.venues.findFirst({
+    where: eq(venues.id, venueId),
+    columns: { ownerUserId: true },
+  });
+  return venue?.ownerUserId ?? null;
 }

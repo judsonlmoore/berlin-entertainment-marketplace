@@ -10,7 +10,7 @@ function actor(partial: Partial<ActorContext>): ActorContext {
     roles: [],
     entertainerVerified: false,
     venueVerified: false,
-    venueMemberships: [],
+    venueId: null,
     ...partial,
   };
 }
@@ -27,22 +27,18 @@ describe("resolveEffectiveRoleMode", () => {
       resolveEffectiveRoleMode(
         actor({
           roles: ["venue"],
-          venueMemberships: [
-            { venueId: "v1", role: "owner", status: "active" },
-          ],
+          venueId: "v1",
         }),
       ),
     ).toBe("venue");
   });
 
-  it("returns venue for membership-only operators", () => {
+  it("returns venue for owners with venueId only", () => {
     expect(
       resolveEffectiveRoleMode(
         actor({
           roles: [],
-          venueMemberships: [
-            { venueId: "v1", role: "member", status: "active" },
-          ],
+          venueId: "v1",
         }),
       ),
     ).toBe("venue");

@@ -7,14 +7,21 @@ import {
   bookings,
   entertainerProfiles,
   profileEnquiries,
-  venueMemberships,
   venues,
 } from "@/src/db/schema/marketplace";
 import { canTransitionBooking, type BookingState } from "@/src/domain/booking";
 import type { ActorContext } from "@/src/domain/permissions";
 import { AppError } from "@/src/domain/errors";
+import {
+  PROFILE_ENQUIRY_PASS_COOLDOWN_DAYS,
+  PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS,
+  enquiryRequestCooldownDaysRemaining,
+} from "@/src/domain/profile-enquiry-cooldown";
 
-export const PROFILE_ENQUIRY_PASS_COOLDOWN_DAYS = 30;
+export {
+  PROFILE_ENQUIRY_PASS_COOLDOWN_DAYS,
+  PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS,
+};
 
 const ACTIVE_ENQUIRY_STATES = ["pending", "interested"] as const;
 
@@ -56,6 +63,118 @@ export async function findRecentPassedEnquiry(input: {
   return row ?? null;
 }
 
+/** Most recent enquiry for the pair (any state), optionally within a window. */
+export async function findRecentProfileEnquiry(input: {
+  venueId: string;
+  entertainerProfileId: string;
+  withinDays?: number;
+}) {
+  const db = getDb();
+  const conditions = [
+    eq(profileEnquiries.venueId, input.venueId),
+    eq(profileEnquiries.entertainerProfileId, input.entertainerProfileId),
+  ];
+  if (input.withinDays != null) {
+    const since = new Date(Date.now() - input.withinDays * 24 * 60 * 60 * 1000);
+    conditions.push(sql`${profileEnquiries.createdAt} >= ${since}`);
+  }
+  const [row] = await db
+    .select()
+    .from(profileEnquiries)
+    .where(and(...conditions))
+    .orderBy(desc(profileEnquiries.createdAt))
+    .limit(1);
+  return row ?? null;
+}
+
+export type VenueActConnectionStatus = {
+  venueId: string;
+  activeBookingId: string | null;
+  /** Whole days left before another request is allowed; null if not on cooldown. */
+  cooldownDaysRemaining: number | null;
+};
+
+/**
+ * Per-venue connection status for a talent profile (active lead + 7-day request cooldown).
+ */
+export async function listVenueActConnectionStatuses(input: {
+  entertainerProfileId: string;
+  venueIds: string[];
+}): Promise<VenueActConnectionStatus[]> {
+  if (input.venueIds.length === 0) return [];
+
+  const db = getDb();
+  const rows = await db
+    .select({
+      venueId: profileEnquiries.venueId,
+      state: profileEnquiries.state,
+      createdAt: profileEnquiries.createdAt,
+      bookingId: bookings.id,
+    })
+    .from(profileEnquiries)
+    .leftJoin(
+      bookings,
+      and(
+        eq(bookings.originType, "profile_enquiry"),
+        eq(bookings.originId, profileEnquiries.id),
+      ),
+    )
+    .where(
+      and(
+        eq(profileEnquiries.entertainerProfileId, input.entertainerProfileId),
+        inArray(profileEnquiries.venueId, input.venueIds),
+      ),
+    )
+    .orderBy(desc(profileEnquiries.createdAt));
+
+  const byVenue = new Map<
+    string,
+    { latestCreatedAt: Date; activeBookingId: string | null }
+  >();
+
+  for (const row of rows) {
+    const existing = byVenue.get(row.venueId);
+    if (!existing) {
+      byVenue.set(row.venueId, {
+        latestCreatedAt: row.createdAt,
+        activeBookingId:
+          ACTIVE_ENQUIRY_STATES.includes(
+            row.state as (typeof ACTIVE_ENQUIRY_STATES)[number],
+          ) && row.bookingId
+            ? row.bookingId
+            : null,
+      });
+      continue;
+    }
+    if (
+      !existing.activeBookingId &&
+      ACTIVE_ENQUIRY_STATES.includes(
+        row.state as (typeof ACTIVE_ENQUIRY_STATES)[number],
+      ) &&
+      row.bookingId
+    ) {
+      existing.activeBookingId = row.bookingId;
+    }
+  }
+
+  const now = new Date();
+  return input.venueIds.map((venueId) => {
+    const status = byVenue.get(venueId);
+    if (!status) {
+      return { venueId, activeBookingId: null, cooldownDaysRemaining: null };
+    }
+    const daysRemaining = enquiryRequestCooldownDaysRemaining(
+      status.latestCreatedAt,
+      now,
+    );
+    return {
+      venueId,
+      activeBookingId: status.activeBookingId,
+      cooldownDaysRemaining: daysRemaining > 0 ? daysRemaining : null,
+    };
+  });
+}
+
 export async function submitProfileEnquiry(input: {
   actor: ActorContext;
   venueId: string;
@@ -83,9 +202,77 @@ export async function submitProfileEnquiry(input: {
     throw new AppError("not_found", "Venue not found");
   }
 
-  const existing = await findActiveProfileEnquiry({
+  return createProfileEnquiry({
+    actorUserId: input.actor.userId,
     venueId: input.venueId,
     entertainerProfileId: profile.id,
+    ...(input.note !== undefined ? { note: input.note } : {}),
+    bookingState: "applied",
+    auditAction: "profile_enquiry.submitted",
+  });
+}
+
+/**
+ * Venue-initiated undated connection request (mirror of profile enquiry).
+ * Act responds Interested / Pass; Interest unlocks contacts.
+ */
+export async function sendVenueConnectionRequest(input: {
+  actor: ActorContext;
+  venueId: string;
+  entertainerProfileId: string;
+  note?: string;
+}): Promise<{ enquiryId: string; bookingId: string }> {
+  const db = getDb();
+
+  const venue = await db.query.venues.findFirst({
+    where: eq(venues.id, input.venueId),
+  });
+  if (!venue) {
+    throw new AppError("not_found", "Venue not found");
+  }
+  if (venue.publicationState !== "approved") {
+    throw new AppError(
+      "validation",
+      "Publish your venue profile before requesting a connection",
+    );
+  }
+
+  const profile = await db.query.entertainerProfiles.findFirst({
+    where: and(
+      eq(entertainerProfiles.id, input.entertainerProfileId),
+      eq(entertainerProfiles.publicationState, "approved"),
+    ),
+  });
+  if (!profile) {
+    throw new AppError("not_found", "Act not found");
+  }
+  if (profile.userId === input.actor.userId) {
+    throw new AppError("validation", "Cannot connect to yourself");
+  }
+
+  return createProfileEnquiry({
+    actorUserId: input.actor.userId,
+    venueId: input.venueId,
+    entertainerProfileId: profile.id,
+    ...(input.note !== undefined ? { note: input.note } : {}),
+    bookingState: "requested",
+    auditAction: "profile_enquiry.connection_requested",
+  });
+}
+
+async function createProfileEnquiry(input: {
+  actorUserId: string;
+  venueId: string;
+  entertainerProfileId: string;
+  note?: string;
+  bookingState: "applied" | "requested";
+  auditAction: string;
+}): Promise<{ enquiryId: string; bookingId: string }> {
+  const db = getDb();
+
+  const existing = await findActiveProfileEnquiry({
+    venueId: input.venueId,
+    entertainerProfileId: input.entertainerProfileId,
   });
   if (existing) {
     const booking = await db.query.bookings.findFirst({
@@ -101,14 +288,26 @@ export async function submitProfileEnquiry(input: {
     throw new AppError("conflict", "An active enquiry already exists");
   }
 
+  const recent = await findRecentProfileEnquiry({
+    venueId: input.venueId,
+    entertainerProfileId: input.entertainerProfileId,
+    withinDays: PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS,
+  });
+  if (recent) {
+    throw new AppError(
+      "conflict",
+      `A connection was already requested. Try again after ${PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS} days.`,
+    );
+  }
+
   const passed = await findRecentPassedEnquiry({
     venueId: input.venueId,
-    entertainerProfileId: profile.id,
+    entertainerProfileId: input.entertainerProfileId,
   });
   if (passed) {
     throw new AppError(
       "conflict",
-      "This venue passed recently. Try again after the cooldown.",
+      "A recent pass blocks a new connection. Try again after the cooldown.",
     );
   }
 
@@ -121,8 +320,8 @@ export async function submitProfileEnquiry(input: {
       .insert(profileEnquiries)
       .values({
         venueId: input.venueId,
-        entertainerProfileId: profile.id,
-        submittedByUserId: input.actor.userId,
+        entertainerProfileId: input.entertainerProfileId,
+        submittedByUserId: input.actorUserId,
         note,
         state: "pending",
       })
@@ -136,16 +335,16 @@ export async function submitProfileEnquiry(input: {
         originType: "profile_enquiry",
         originId: enquiry.id,
         venueId: input.venueId,
-        entertainerProfileId: profile.id,
-        state: "applied",
+        entertainerProfileId: input.entertainerProfileId,
+        state: input.bookingState,
       })
       .returning({ id: bookings.id });
     if (!booking) throw new AppError("conflict", "Could not create lead");
     bookingId = booking.id;
 
     await tx.insert(auditEvents).values({
-      actorUserId: input.actor.userId,
-      action: "profile_enquiry.submitted",
+      actorUserId: input.actorUserId,
+      action: input.auditAction,
       subjectType: "profile_enquiry",
       subjectId: enquiry.id,
       metadata: { venueId: input.venueId, bookingId: booking.id },
@@ -166,19 +365,23 @@ export async function respondToProfileEnquiry(input: {
   });
   if (!enquiry) throw new AppError("not_found", "Enquiry not found");
 
-  if (
-    !input.actor.venueMemberships.some(
-      (m) =>
-        m.venueId === enquiry.venueId &&
-        m.status === "active" &&
-        (m.role === "owner" || m.role === "member"),
-    )
-  ) {
-    throw new AppError("forbidden", "Not a venue operator for this enquiry");
-  }
-
   if (enquiry.state !== "pending") {
     throw new AppError("invalid_transition", "Enquiry is no longer pending");
+  }
+
+  const profile = await db.query.entertainerProfiles.findFirst({
+    where: eq(entertainerProfiles.id, enquiry.entertainerProfileId),
+    columns: { userId: true },
+  });
+  if (!profile) throw new AppError("not_found", "Act profile not found");
+
+  const isVenueMember = input.actor.venueId === enquiry.venueId;
+  const isActOwner = profile.userId === input.actor.userId;
+  const initiatedByAct = enquiry.submittedByUserId === profile.userId;
+
+  // Receiver responds: venue if act submitted; act if venue submitted.
+  if (initiatedByAct ? !isVenueMember : !isActOwner) {
+    throw new AppError("forbidden", "Not allowed to respond to this enquiry");
   }
 
   const booking = await db.query.bookings.findFirst({
@@ -189,20 +392,22 @@ export async function respondToProfileEnquiry(input: {
   });
   if (!booking) throw new AppError("not_found", "Lead not found");
 
+  // Act→venue pending uses applied→shortlisted/rejected;
+  // venue→act connection uses requested→accepted/declined.
   const nextBookingState: BookingState =
-    input.decision === "interested" ? "shortlisted" : "rejected";
+    input.decision === "interested"
+      ? initiatedByAct
+        ? "shortlisted"
+        : "accepted"
+      : initiatedByAct
+        ? "rejected"
+        : "declined";
   if (!canTransitionBooking(booking.state as BookingState, nextBookingState)) {
     throw new AppError(
       "invalid_transition",
       `Cannot move booking from ${booking.state} to ${nextBookingState}`,
     );
   }
-
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.id, enquiry.entertainerProfileId),
-    columns: { userId: true },
-  });
-  if (!profile) throw new AppError("not_found", "Act profile not found");
 
   const { settleMatchAcceptance } =
     await import("@/src/db/queries/match-settlement");
@@ -275,9 +480,7 @@ export async function updateProfileEnquiryProposal(input: {
     columns: { userId: true },
   });
   const isAct = profile?.userId === input.actor.userId;
-  const isVenue = input.actor.venueMemberships.some(
-    (m) => m.venueId === enquiry.venueId && m.status === "active",
-  );
+  const isVenue = input.actor.venueId === enquiry.venueId;
   if (!isAct && !isVenue && !input.actor.isPlatformStaff) {
     throw new AppError("forbidden", "Not a party to this lead");
   }
@@ -396,6 +599,8 @@ export async function listProfileEnquiriesForVenues(venueIds: string[]) {
       venueName: venues.name,
       actName: entertainerProfiles.actName,
       entertainerProfileId: profileEnquiries.entertainerProfileId,
+      entertainerUserId: entertainerProfiles.userId,
+      submittedByUserId: profileEnquiries.submittedByUserId,
       createdAt: profileEnquiries.createdAt,
       proposedStartsAt: profileEnquiries.proposedStartsAt,
       proposedEndsAt: profileEnquiries.proposedEndsAt,
@@ -439,6 +644,8 @@ export async function listProfileEnquiriesForEntertainer(userId: string) {
       district: venues.district,
       actName: entertainerProfiles.actName,
       entertainerProfileId: profileEnquiries.entertainerProfileId,
+      entertainerUserId: entertainerProfiles.userId,
+      submittedByUserId: profileEnquiries.submittedByUserId,
       createdAt: profileEnquiries.createdAt,
       proposedStartsAt: profileEnquiries.proposedStartsAt,
       proposedEndsAt: profileEnquiries.proposedEndsAt,
@@ -464,19 +671,14 @@ export async function listProfileEnquiriesForEntertainer(userId: string) {
     .orderBy(desc(profileEnquiries.createdAt));
 }
 
-/** Venue operators who should receive enquiry notifications. */
+/** Venue owner who should receive enquiry notifications. */
 export async function listVenueOperatorUserIds(venueId: string) {
   const db = getDb();
-  const rows = await db
-    .select({ userId: venueMemberships.userId })
-    .from(venueMemberships)
-    .where(
-      and(
-        eq(venueMemberships.venueId, venueId),
-        eq(venueMemberships.status, "active"),
-      ),
-    );
-  return rows.map((r) => r.userId);
+  const venue = await db.query.venues.findFirst({
+    where: eq(venues.id, venueId),
+    columns: { ownerUserId: true },
+  });
+  return venue?.ownerUserId ? [venue.ownerUserId] : [];
 }
 
 export async function getProfileEnquiryById(enquiryId: string) {
@@ -491,6 +693,7 @@ export async function getProfileEnquiryById(enquiryId: string) {
       actName: entertainerProfiles.actName,
       entertainerProfileId: profileEnquiries.entertainerProfileId,
       entertainerUserId: entertainerProfiles.userId,
+      submittedByUserId: profileEnquiries.submittedByUserId,
       createdAt: profileEnquiries.createdAt,
       proposedStartsAt: profileEnquiries.proposedStartsAt,
       proposedEndsAt: profileEnquiries.proposedEndsAt,

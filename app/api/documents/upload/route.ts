@@ -4,6 +4,7 @@ import {
   auditEvents,
   entertainerProfiles,
   riderFiles,
+  venues,
 } from "@/src/db/schema/marketplace";
 import { can } from "@/src/domain/permissions";
 import {
@@ -18,7 +19,7 @@ import {
   saveDocumentFile,
 } from "@/src/integrations/document-file-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
-import { count, eq, sql } from "drizzle-orm";
+import { count, eq, sql, type SQL } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 class DocumentLimitError extends Error {
@@ -27,6 +28,20 @@ class DocumentLimitError extends Error {
     this.name = "DocumentLimitError";
   }
 }
+
+type DocumentOwner =
+  | {
+      kind: "entertainer";
+      lockId: string;
+      ownerFilter: SQL;
+      insert: { entertainerProfileId: string };
+    }
+  | {
+      kind: "venue";
+      lockId: string;
+      ownerFilter: SQL;
+      insert: { venueId: string };
+    };
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -58,19 +73,24 @@ export async function POST(request: Request) {
   }
   const { actor, auditUserId } = resolved;
 
-  if (!can(actor, "entertainer.manage_own_profile")) {
-    return NextResponse.json(
-      { ok: false, error: "forbidden" },
-      { status: 403 },
-    );
-  }
-
   const form = await request.formData();
-  const entertainerProfileId = String(form.get("entertainerProfileId") ?? "");
+  const entertainerProfileIdRaw = String(
+    form.get("entertainerProfileId") ?? "",
+  ).trim();
+  const venueIdRaw = String(form.get("venueId") ?? "").trim();
   const rawTitle = String(form.get("title") ?? "");
   const visibility = String(form.get("visibility") ?? "engagement");
   const locale = String(form.get("locale") ?? "en");
   const file = form.get("file");
+
+  const hasProfile = Boolean(entertainerProfileIdRaw);
+  const hasVenue = Boolean(venueIdRaw);
+  if (hasProfile === hasVenue) {
+    return NextResponse.json(
+      { ok: false, error: "owner_required" },
+      { status: 400 },
+    );
+  }
 
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json(
@@ -94,14 +114,43 @@ export async function POST(request: Request) {
   }
 
   const db = getDb();
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.id, entertainerProfileId),
-  });
-  if (!profile || profile.userId !== actor.userId) {
-    return NextResponse.json(
-      { ok: false, error: "forbidden" },
-      { status: 403 },
-    );
+  let owner: DocumentOwner;
+
+  if (hasProfile) {
+    if (!can(actor, "entertainer.manage_own_profile")) {
+      return NextResponse.json(
+        { ok: false, error: "forbidden" },
+        { status: 403 },
+      );
+    }
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, entertainerProfileIdRaw),
+    });
+    if (!profile || profile.userId !== actor.userId) {
+      return NextResponse.json(
+        { ok: false, error: "forbidden" },
+        { status: 403 },
+      );
+    }
+    owner = {
+      kind: "entertainer",
+      lockId: profile.id,
+      ownerFilter: eq(riderFiles.entertainerProfileId, profile.id),
+      insert: { entertainerProfileId: profile.id },
+    };
+  } else {
+    if (!can(actor, "venue.manage", { venueId: venueIdRaw })) {
+      return NextResponse.json(
+        { ok: false, error: "forbidden" },
+        { status: 403 },
+      );
+    }
+    owner = {
+      kind: "venue",
+      lockId: venueIdRaw,
+      ownerFilter: eq(riderFiles.venueId, venueIdRaw),
+      insert: { venueId: venueIdRaw },
+    };
   }
 
   const title = check.title || titleFromFilename(originalFilename);
@@ -118,17 +167,25 @@ export async function POST(request: Request) {
     storedBlobKey = stored.blobKey;
 
     const created = await db.transaction(async (tx) => {
-      // Serialize uploads per profile so concurrent requests cannot exceed the cap.
-      await tx
-        .select({ id: entertainerProfiles.id })
-        .from(entertainerProfiles)
-        .where(eq(entertainerProfiles.id, profile.id))
-        .for("update");
+      // Serialize uploads per owner so concurrent requests cannot exceed the cap.
+      if (owner.kind === "entertainer") {
+        await tx
+          .select({ id: entertainerProfiles.id })
+          .from(entertainerProfiles)
+          .where(eq(entertainerProfiles.id, owner.lockId))
+          .for("update");
+      } else {
+        await tx
+          .select({ id: venues.id })
+          .from(venues)
+          .where(eq(venues.id, owner.lockId))
+          .for("update");
+      }
 
       const [docCount] = await tx
         .select({ value: count() })
         .from(riderFiles)
-        .where(eq(riderFiles.entertainerProfileId, profile.id));
+        .where(owner.ownerFilter);
       if ((docCount?.value ?? 0) >= PROFILE_DOCUMENT_MAX) {
         throw new DocumentLimitError();
       }
@@ -138,14 +195,14 @@ export async function POST(request: Request) {
           value: sql<number>`coalesce(max(${riderFiles.sortOrder}), -1)`,
         })
         .from(riderFiles)
-        .where(eq(riderFiles.entertainerProfileId, profile.id));
+        .where(owner.ownerFilter);
       const nextSort = Number(maxSort?.value ?? -1) + 1;
 
       const [row] = await tx
         .insert(riderFiles)
         .values({
           ownerUserId: actor.userId,
-          entertainerProfileId: profile.id,
+          ...owner.insert,
           blobKey: stored.blobKey,
           title,
           visibility: check.visibility,

@@ -9,7 +9,7 @@ function actor(overrides: Partial<ActorContext> = {}): ActorContext {
     roles: ["entertainer"],
     entertainerVerified: true,
     venueVerified: false,
-    venueMemberships: [],
+    venueId: null,
     ...overrides,
   };
 }
@@ -34,14 +34,12 @@ describe("permissions", () => {
     ).toBe(true);
   });
 
-  it("denies venue manage for non-owners", () => {
+  it("denies venue manage when actor does not own the venue", () => {
     expect(
       can(
         actor({
           roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "member", status: "active" },
-          ],
+          venueId: "venue-other",
         }),
         "venue.manage",
         { venueId: "venue-1" },
@@ -49,14 +47,12 @@ describe("permissions", () => {
     ).toBe(false);
   });
 
-  it("allows venue operate for active members", () => {
+  it("allows venue operate for the venue owner", () => {
     expect(
       can(
         actor({
           roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "member", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "venue.operate",
         { venueId: "venue-1" },
@@ -70,9 +66,7 @@ describe("permissions", () => {
         actor({
           accountStatus: "suspended",
           roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "owner", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "venue.operate",
         { venueId: "venue-1" },
@@ -119,9 +113,7 @@ describe("permissions", () => {
           roles: ["venue"],
           entertainerVerified: false,
           venueVerified: true,
-          venueMemberships: [
-            { venueId: "venue-1", role: "owner", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "profile_enquiry.respond",
         { venueId: "venue-1" },
@@ -135,9 +127,7 @@ describe("permissions", () => {
         actor({
           roles: ["venue"],
           venueVerified: true,
-          venueMemberships: [
-            { venueId: "venue-1", role: "member", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "direct_request.send",
         { venueId: "venue-1" },
@@ -148,9 +138,7 @@ describe("permissions", () => {
         actor({
           roles: ["venue"],
           venueVerified: false,
-          venueMemberships: [
-            { venueId: "venue-1", role: "owner", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "direct_request.send",
         { venueId: "venue-1" },
@@ -170,9 +158,7 @@ describe("permissions", () => {
       can(
         actor({
           roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "owner", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "discover.entertainers",
       ),
@@ -181,9 +167,7 @@ describe("permissions", () => {
       can(
         actor({
           roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "owner", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "discover.venues",
       ),
@@ -206,9 +190,7 @@ describe("permissions", () => {
       can(
         actor({
           roles: ["venue"],
-          venueMemberships: [
-            { venueId: "venue-1", role: "owner", status: "active" },
-          ],
+          venueId: "venue-1",
         }),
         "booking.record_deposit",
         { venueId: "venue-1" },

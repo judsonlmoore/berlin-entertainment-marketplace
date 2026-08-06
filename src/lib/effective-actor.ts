@@ -6,7 +6,6 @@ import {
   resolveSupportEntity,
 } from "@/src/lib/support-entity";
 import {
-  clearSupportSession,
   readSupportSession,
   type SupportSessionPayload,
 } from "@/src/lib/support-session";
@@ -64,7 +63,10 @@ export async function resolveEffectiveActor(
       resolved,
     })
   ) {
-    await clearSupportSession();
+    // Do not clearSupportSession() here — resolveEffectiveActor runs from
+    // Server Components (e.g. app layout). Cookie deletes are only allowed in
+    // Server Actions / Route Handlers. Ignore the stale session for this
+    // request; TTL or exit-support action removes the cookie.
     return {
       actor: staffActor,
       auditUserId: sessionUserId,
@@ -75,7 +77,6 @@ export async function resolveEffectiveActor(
 
   const subject = await getActorContext(support.subjectUserId);
   if (!subject) {
-    await clearSupportSession();
     return {
       actor: staffActor,
       auditUserId: sessionUserId,

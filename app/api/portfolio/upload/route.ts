@@ -15,8 +15,22 @@ import {
   savePortfolioImage,
 } from "@/src/integrations/portfolio-image-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, type SQL } from "drizzle-orm";
 import { NextResponse } from "next/server";
+
+type PortfolioOwner =
+  | {
+      kind: "entertainer";
+      ownerUserId: string;
+      ownerFilter: SQL;
+      insert: { entertainerProfileId: string };
+    }
+  | {
+      kind: "venue";
+      ownerUserId: string;
+      ownerFilter: SQL;
+      insert: { venueId: string };
+    };
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -37,17 +51,23 @@ export async function POST(request: Request) {
   const { actor, auditUserId } = resolved;
 
   const form = await request.formData();
-  const entertainerProfileId = String(form.get("entertainerProfileId") ?? "");
+  const entertainerProfileIdRaw = String(
+    form.get("entertainerProfileId") ?? "",
+  ).trim();
+  const venueIdRaw = String(form.get("venueId") ?? "").trim();
   const caption = String(form.get("caption") ?? "").trim();
   const altText = String(form.get("altText") ?? "").trim();
   const file = form.get("file");
 
-  if (!can(actor, "entertainer.manage_own_profile")) {
+  const hasProfile = Boolean(entertainerProfileIdRaw);
+  const hasVenue = Boolean(venueIdRaw);
+  if (hasProfile === hasVenue) {
     return NextResponse.json(
-      { ok: false, error: "forbidden" },
-      { status: 403 },
+      { ok: false, error: "owner_required" },
+      { status: 400 },
     );
   }
+
   if (!(file instanceof File) || file.size === 0) {
     return NextResponse.json(
       { ok: false, error: "file_required" },
@@ -69,25 +89,49 @@ export async function POST(request: Request) {
   }
 
   const db = getDb();
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.id, entertainerProfileId),
-  });
-  if (!profile || profile.userId !== actor.userId) {
-    return NextResponse.json(
-      { ok: false, error: "forbidden" },
-      { status: 403 },
-    );
+  let owner: PortfolioOwner;
+
+  if (hasProfile) {
+    if (!can(actor, "entertainer.manage_own_profile")) {
+      return NextResponse.json(
+        { ok: false, error: "forbidden" },
+        { status: 403 },
+      );
+    }
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, entertainerProfileIdRaw),
+    });
+    if (!profile || profile.userId !== actor.userId) {
+      return NextResponse.json(
+        { ok: false, error: "forbidden" },
+        { status: 403 },
+      );
+    }
+    owner = {
+      kind: "entertainer",
+      ownerUserId: profile.userId,
+      ownerFilter: eq(portfolioItems.entertainerProfileId, profile.id),
+      insert: { entertainerProfileId: profile.id },
+    };
+  } else {
+    if (!can(actor, "venue.manage", { venueId: venueIdRaw })) {
+      return NextResponse.json(
+        { ok: false, error: "forbidden" },
+        { status: 403 },
+      );
+    }
+    owner = {
+      kind: "venue",
+      ownerUserId: actor.userId,
+      ownerFilter: eq(portfolioItems.venueId, venueIdRaw),
+      insert: { venueId: venueIdRaw },
+    };
   }
 
   const [imageCount] = await db
     .select({ value: count() })
     .from(portfolioItems)
-    .where(
-      and(
-        eq(portfolioItems.entertainerProfileId, profile.id),
-        eq(portfolioItems.kind, "image"),
-      ),
-    );
+    .where(and(owner.ownerFilter, eq(portfolioItems.kind, "image")));
   if ((imageCount?.value ?? 0) >= PORTFOLIO_MAX_IMAGES) {
     return NextResponse.json(
       { ok: false, error: "image_limit" },
@@ -98,7 +142,7 @@ export async function POST(request: Request) {
   const [row] = await db
     .select({ value: count() })
     .from(portfolioItems)
-    .where(eq(portfolioItems.entertainerProfileId, profile.id));
+    .where(owner.ownerFilter);
   const sortOrder = row?.value ?? 0;
 
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -106,7 +150,7 @@ export async function POST(request: Request) {
   let thumbBlobKey: string | null = null;
   try {
     ({ blobKey } = await savePortfolioImage({
-      ownerUserId: profile.userId,
+      ownerUserId: owner.ownerUserId,
       mimeType: file.type,
       bytes,
     }));
@@ -115,7 +159,7 @@ export async function POST(request: Request) {
         await import("@/src/integrations/portfolio-image-thumb");
       const thumbBytes = await createPortfolioThumbBytes(bytes);
       ({ blobKey: thumbBlobKey } = await savePortfolioImage({
-        ownerUserId: profile.userId,
+        ownerUserId: owner.ownerUserId,
         mimeType: "image/webp",
         bytes: thumbBytes,
         filenameSuffix: "-thumb",
@@ -128,7 +172,7 @@ export async function POST(request: Request) {
     const [created] = await db
       .insert(portfolioItems)
       .values({
-        entertainerProfileId: profile.id,
+        ...owner.insert,
         kind: "image",
         blobKey,
         thumbBlobKey,

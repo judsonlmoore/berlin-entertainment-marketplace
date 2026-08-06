@@ -7,6 +7,10 @@ export const OPPORTUNITY_STATES = [
 
 export type OpportunityState = (typeof OPPORTUNITY_STATES)[number];
 
+export const OPPORTUNITY_KINDS = ["dated", "standing"] as const;
+
+export type OpportunityKind = (typeof OPPORTUNITY_KINDS)[number];
+
 const OWNER_TRANSITIONS: Record<OpportunityState, readonly OpportunityState[]> =
   {
     draft: ["open", "cancelled"],
@@ -31,6 +35,19 @@ export function isOpportunityAcceptingApplications(
   if (state !== "open") return false;
   if (deadline && deadline.getTime() < now.getTime()) return false;
   return true;
+}
+
+/** Validate kind ↔ performance window invariants (mirrors DB check). */
+export function isValidOpportunityWindow(input: {
+  kind: OpportunityKind;
+  startsAt: Date | null | undefined;
+  endsAt: Date | null | undefined;
+}): boolean {
+  if (input.kind === "dated") {
+    if (!input.startsAt || !input.endsAt) return false;
+    return input.endsAt.getTime() > input.startsAt.getTime();
+  }
+  return !input.startsAt && !input.endsAt;
 }
 
 /** Staff may force-close an open opportunity or cancel a non-terminal one. */

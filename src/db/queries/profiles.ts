@@ -1,10 +1,9 @@
-import { and, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import { users } from "@/src/db/schema";
 import {
   entertainerProfiles,
   portfolioItems,
-  venueMemberships,
   venueSpaces,
   venues,
 } from "@/src/db/schema/marketplace";
@@ -32,6 +31,23 @@ export async function listPortfolioItemsForProfile(
     })
     .from(portfolioItems)
     .where(eq(portfolioItems.entertainerProfileId, entertainerProfileId))
+    .orderBy(portfolioItems.sortOrder, portfolioItems.createdAt);
+}
+
+export async function listPortfolioItemsForVenue(venueId: string) {
+  const db = getDb();
+  return db
+    .select({
+      id: portfolioItems.id,
+      kind: portfolioItems.kind,
+      caption: portfolioItems.caption,
+      altText: portfolioItems.altText,
+      url: portfolioItems.url,
+      blobKey: portfolioItems.blobKey,
+      sortOrder: portfolioItems.sortOrder,
+    })
+    .from(portfolioItems)
+    .where(eq(portfolioItems.venueId, venueId))
     .orderBy(portfolioItems.sortOrder, portfolioItems.createdAt);
 }
 
@@ -66,35 +82,10 @@ export async function listVenuesForUser(userId: string) {
       name: venues.name,
       publicationState: venues.publicationState,
       district: venues.district,
-      role: venueMemberships.role,
-      membershipStatus: venueMemberships.status,
     })
-    .from(venueMemberships)
-    .innerJoin(venues, eq(venues.id, venueMemberships.venueId))
-    .where(
-      and(
-        eq(venueMemberships.userId, userId),
-        eq(venueMemberships.status, "active"),
-      ),
-    )
+    .from(venues)
+    .where(eq(venues.ownerUserId, userId))
     .orderBy(desc(venues.updatedAt));
-}
-
-export async function listVenueMembers(venueId: string) {
-  const db = getDb();
-  return db
-    .select({
-      id: venueMemberships.id,
-      userId: venueMemberships.userId,
-      role: venueMemberships.role,
-      status: venueMemberships.status,
-      name: users.name,
-      email: users.email,
-    })
-    .from(venueMemberships)
-    .innerJoin(users, eq(users.id, venueMemberships.userId))
-    .where(eq(venueMemberships.venueId, venueId))
-    .orderBy(venueMemberships.createdAt);
 }
 
 export async function listProfilesForStaffReview() {

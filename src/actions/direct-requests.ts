@@ -149,7 +149,7 @@ export async function sendDirectRequest(
       });
     });
 
-    revalidatePath(`/${parsed.data.locale}/marketplace/requests`);
+    revalidatePath(`/${parsed.data.locale}/marketplace/bookings`);
     revalidatePath(
       `/${parsed.data.locale}/marketplace/entertainers/${profile.id}`,
     );
@@ -255,7 +255,7 @@ export async function respondToDirectRequest(input: {
       });
     });
 
-    revalidatePath(`/${locale}/marketplace/requests`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     revalidatePath(
       `/${locale}/marketplace/entertainers/${request.entertainerProfileId}`,
     );
@@ -311,7 +311,7 @@ export async function withdrawDirectRequest(
       });
     });
 
-    revalidatePath(`/${locale}/marketplace/requests`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     return { ok: true, id: requestId };
   } catch (error) {
     return toActionError(error);
@@ -448,7 +448,7 @@ export async function proposeDirectRequestChanges(
       });
     });
 
-    revalidatePath(`/${parsed.data.locale}/marketplace/requests`);
+    revalidatePath(`/${parsed.data.locale}/marketplace/bookings`);
     revalidatePath(
       `/${parsed.data.locale}/marketplace/entertainers/${request.entertainerProfileId}`,
     );
@@ -553,7 +553,7 @@ export async function venueRespondToDirectRequestChanges(input: {
       });
     });
 
-    revalidatePath(`/${locale}/marketplace/requests`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     revalidatePath(
       `/${locale}/marketplace/entertainers/${request.entertainerProfileId}`,
     );

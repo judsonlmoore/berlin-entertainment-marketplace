@@ -48,9 +48,7 @@ export default async function MarketplacePage({ params }: Props) {
     );
   }
 
-  const venueIds = access.actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const venueIds = access.actor.venueId ? [access.actor.venueId] : [];
   const metrics = await getOverviewMetrics(access.actor);
   const recentApps = await listRecentApplicationsForVenues(venueIds, 5);
   const nextBooking = await getNextActiveBooking({
@@ -96,7 +94,7 @@ export default async function MarketplacePage({ params }: Props) {
         </div>
         {metrics.canPostOpportunity && metrics.firstVenueId ? (
           <Link
-            href={`/profile/venues/${metrics.firstVenueId}`}
+            href="/profile#open-calls"
             className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
           >
             {t("postOpportunity")}
@@ -111,25 +109,35 @@ export default async function MarketplacePage({ params }: Props) {
               t("metricOpenOps"),
               metrics.openOpportunities,
               t("metricOpenOpsHint", { count: metrics.pendingApplications }),
+              metrics.canPostOpportunity && metrics.firstVenueId
+                ? "/profile#open-calls"
+                : "/marketplace/bookings",
             ],
             [
               t("metricRequests"),
               metrics.pendingRequests,
               t("metricRequestsHint"),
+              "/marketplace/bookings?status=pending",
             ],
             [
               t("metricActiveBookings"),
               metrics.activeBookings,
               t("metricActiveBookingsHint"),
+              "/marketplace/bookings?status=open",
             ],
             [
               t("metricConfirmed"),
               metrics.confirmedBookings,
               t("metricConfirmedHint"),
+              "/marketplace/bookings?status=won",
             ],
           ] as const
-        ).map(([label, value, hint]) => (
-          <div key={label} className="panel p-4">
+        ).map(([label, value, hint, href]) => (
+          <Link
+            key={label}
+            href={href}
+            className="panel block p-4 no-underline"
+          >
             <p className="text-xs font-medium tracking-[0.12em] text-[var(--text-muted)] uppercase">
               {label}
             </p>
@@ -137,7 +145,7 @@ export default async function MarketplacePage({ params }: Props) {
               {value}
             </p>
             <p className="mt-2 text-sm text-[var(--text-muted)]">{hint}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

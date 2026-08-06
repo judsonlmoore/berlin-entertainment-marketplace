@@ -6,7 +6,7 @@ alwaysApply: true
 - Treat `docs/MARKETPLACE_REQUIREMENTS.md` as product direction and `docs/PRODUCT_SPEC.md` as the implementation source of truth; do not silently broaden scope.
 - User-facing roles: **Talent** and **Buyer** (legacy persistence: `entertainer` / `venue`). **Agency** is coming-soon only — not selectable and not persisted until specified.
 - Account status is `active` or `suspended`. Self-serve signup creates an active account with exactly one marketplace role (talent XOR buyer). Staff may suspend/reactivate; there is no staff account-approval wait to enter the marketplace.
-- Model buyer locations (venues) as organizations with owner/member membership. One account holds one role type only (no dual-role). Future multi-talent agencies are supply-side orgs, not a third XOR signup role.
+- Model buyer locations as **one venue per buyer account** (`venues.owner_user_id` unique) with **one room** for calendar ownership. Team memberships / multi-venue orgs are out of scope until specified. One account holds one role type only (no dual-role). Future multi-talent agencies are supply-side orgs, not a third XOR signup role.
 - Enforce role-segregated discovery on the server: talent discovers locations/opportunities only; buyers discover talent only; staff may moderate both.
 - Unpublished profiles (`publication_state` ≠ `approved`) are invisible in discovery. Active members may search the opposite side before publishing, but may not contact (apply / send or respond to direct requests) until their own profile is published.
 - Keep contact values hidden until shortlist or accepted direct request.

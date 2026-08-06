@@ -57,6 +57,7 @@ export default async function EntertainersDiscoveryPage({
     groupSizeMax: first(query.groupSizeMax)?.trim(),
     priceMinEur: first(query.priceMinEur)?.trim(),
     priceMaxEur: first(query.priceMaxEur)?.trim(),
+    availableOn: first(query.availableOn)?.trim(),
     page: first(query.page)?.trim(),
   };
 
@@ -65,6 +66,10 @@ export default async function EntertainersDiscoveryPage({
   const priceMinEur = Number(values.priceMinEur);
   const priceMaxEur = Number(values.priceMaxEur);
   const page = Number(values.page) || 1;
+  const availableOn =
+    values.availableOn && /^\d{4}-\d{2}-\d{2}$/.test(values.availableOn)
+      ? values.availableOn
+      : undefined;
 
   const [result, categoryFacets] = await Promise.all([
     listDiscoverableEntertainers(
@@ -84,17 +89,18 @@ export default async function EntertainersDiscoveryPage({
         ...(Number.isFinite(priceMaxEur) && values.priceMaxEur
           ? { priceMaxCents: Math.round(priceMaxEur * 100) }
           : {}),
+        ...(availableOn ? { availableOn } : {}),
       },
       { page, pageSize: 12 },
     ),
     listEntertainerCategoryFacets(),
   ]);
 
-  const canRequest = access.actor.venueMemberships.some(
-    (m) =>
-      m.status === "active" &&
-      can(access.actor, "direct_request.send", { venueId: m.venueId }),
-  );
+  const canRequest =
+    Boolean(access.actor.venueId) &&
+    can(access.actor, "direct_request.send", {
+      venueId: access.actor.venueId!,
+    });
 
   const hasPerformedSearch = Boolean(values.q);
 
@@ -115,12 +121,20 @@ export default async function EntertainersDiscoveryPage({
         categoryFacets={categoryFacets}
       />
 
+      {availableOn ? (
+        <p className="text-sm text-[var(--text-muted)]">
+          {t("availableOnActive", { date: availableOn })}
+        </p>
+      ) : null}
+
       <p className="tabular text-sm text-[var(--text-muted)]">
         {t("resultCount", { count: result.total })}
       </p>
 
       {result.items.length === 0 ? (
-        <p className="panel p-6 text-[var(--text-muted)]">{t("empty")}</p>
+        <p className="panel p-6 text-[var(--text-muted)]">
+          {availableOn ? t("availableOnEmpty") : t("empty")}
+        </p>
       ) : (
         <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
           {result.items.map((act) => (
@@ -170,10 +184,10 @@ export default async function EntertainersDiscoveryPage({
                     </Link>
                     {canRequest ? (
                       <Link
-                        href={`/marketplace/entertainers/${act.id}#direct-request`}
-                        className="text-sm font-medium text-[var(--terracotta)]"
+                        href={`/marketplace/entertainers/${act.id}`}
+                        className="text-sm font-medium text-[var(--primary)]"
                       >
-                        {t("requestAct")}
+                        {t("connectionRequestCta")}
                       </Link>
                     ) : null}
                   </div>

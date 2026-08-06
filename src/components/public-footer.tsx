@@ -14,6 +14,10 @@ export async function PublicFooter() {
           </p>
         </div>
         <nav aria-label={t("footerNavLabel")} className="text-sm font-medium">
+          <Link href="/help">{t("footerHelp")}</Link>
+          {" · "}
+          <Link href="/contact">{t("footerContact")}</Link>
+          {" · "}
           <Link href="/privacy">{t("footerLegal")}</Link>
           {" · "}
           <Link href="/terms">{t("footerTerms")}</Link>

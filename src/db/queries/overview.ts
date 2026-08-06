@@ -38,9 +38,7 @@ function bookingPartyFilter(input: {
 
 export async function getOverviewMetrics(actor: ActorContext) {
   const db = getDb();
-  const venueIds = actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const venueIds = actor.venueId ? [actor.venueId] : [];
 
   const entertainer = await db.query.entertainerProfiles.findFirst({
     where: eq(entertainerProfiles.userId, actor.userId),

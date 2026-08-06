@@ -11,10 +11,12 @@ import {
   sql,
 } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
+import { listBusyEntertainerProfileIds } from "@/src/db/queries/calendar";
 import {
   contactMethods,
   contactUnlocks,
   entertainerProfiles,
+  opportunities,
   portfolioItems,
   venues,
 } from "@/src/db/schema/marketplace";
@@ -23,6 +25,7 @@ import {
   type RevealedContact,
   type StoredContactMethod,
 } from "@/src/domain/contact-projection";
+import { berlinCivilDayWindow } from "@/src/lib/format";
 
 /** True when an image row can be served via /api/portfolio/[id]. */
 export function isServablePortfolioImageKey(
@@ -87,6 +90,7 @@ export type VenueDiscoveryCard = {
   audienceDescription: string;
   capacity: number;
   capacityContext: string | null;
+  openCallCount: number;
 };
 
 export type VenueDiscoveryDetail = VenueDiscoveryCard & {
@@ -114,7 +118,12 @@ export type EntertainerFilters = {
   groupSizeMax?: number;
   priceMinCents?: number;
   priceMaxCents?: number;
+  /** ISO date (YYYY-MM-DD): free that Berlin civil day (no blocking calendar). */
+  availableOn?: string;
 };
+
+/** Cap for availableOn busy-check candidate set (SQL filters first). */
+export const AVAILABLE_ON_CANDIDATE_CAP = 120;
 
 export type VenueFilters = {
   q?: string;
@@ -289,6 +298,55 @@ export async function listDiscoverableEntertainers(
     options.pageSize ?? 12,
   );
 
+  const availableOn =
+    filters.availableOn && /^\d{4}-\d{2}-\d{2}$/.test(filters.availableOn)
+      ? filters.availableOn
+      : null;
+
+  if (availableOn) {
+    const { startsAt, endsAt } = berlinCivilDayWindow(availableOn);
+    const candidates = await db
+      .select({
+        id: entertainerProfiles.id,
+        actName: entertainerProfiles.actName,
+        category: entertainerProfiles.category,
+        description: entertainerProfiles.description,
+        groupSize: entertainerProfiles.groupSize,
+        berlinBase: entertainerProfiles.berlinBase,
+        travelRadiusKm: entertainerProfiles.travelRadiusKm,
+        priceMinCents: entertainerProfiles.priceMinCents,
+        priceMaxCents: entertainerProfiles.priceMaxCents,
+        currency: entertainerProfiles.currency,
+        durationMinutes: entertainerProfiles.durationMinutes,
+      })
+      .from(entertainerProfiles)
+      .where(where)
+      .orderBy(entertainerProfiles.actName)
+      .limit(AVAILABLE_ON_CANDIDATE_CAP);
+
+    const busy = await listBusyEntertainerProfileIds({
+      profileIds: candidates.map((row) => row.id),
+      startsAt,
+      endsAt,
+    });
+    const free = candidates.filter((row) => !busy.has(row.id));
+    const pageItems = free.slice(offset, offset + pageSize);
+    const heroByProfile = await loadHeroImageIds(
+      pageItems.map((row) => row.id),
+    );
+    const total = free.length;
+    return {
+      items: pageItems.map((row) => ({
+        ...row,
+        heroImageId: heroByProfile.get(row.id) ?? null,
+      })),
+      total,
+      page,
+      pageSize,
+      pageCount: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  }
+
   const [totalRow] = await db
     .select({ value: count() })
     .from(entertainerProfiles)
@@ -354,7 +412,7 @@ async function loadHeroImageIds(
     .orderBy(asc(portfolioItems.sortOrder), asc(portfolioItems.createdAt));
 
   for (const row of rows) {
-    if (heroes.has(row.profileId)) continue;
+    if (!row.profileId || heroes.has(row.profileId)) continue;
     if (isServablePortfolioImageKey(row.blobKey)) {
       heroes.set(row.profileId, row.id);
     }
@@ -395,9 +453,33 @@ export async function listDiscoverableVenues(
     .limit(pageSize)
     .offset(offset);
 
+  const venueIds = items.map((item) => item.id);
+  const openCallRows =
+    venueIds.length > 0
+      ? await db
+          .select({
+            venueId: opportunities.venueId,
+            value: count(),
+          })
+          .from(opportunities)
+          .where(
+            and(
+              inArray(opportunities.venueId, venueIds),
+              eq(opportunities.state, "open"),
+            ),
+          )
+          .groupBy(opportunities.venueId)
+      : [];
+  const openCallByVenue = new Map(
+    openCallRows.map((row) => [row.venueId, Number(row.value)]),
+  );
+
   const total = totalRow?.value ?? 0;
   return {
-    items,
+    items: items.map((item) => ({
+      ...item,
+      openCallCount: openCallByVenue.get(item.id) ?? 0,
+    })),
     total,
     page,
     pageSize,
@@ -552,6 +634,13 @@ export async function getDiscoverableVenueDetail(input: {
   );
   const unlocked = unlockedMethodIds.length > 0;
 
+  const [openCallRow] = await db
+    .select({ value: count() })
+    .from(opportunities)
+    .where(
+      and(eq(opportunities.venueId, venue.id), eq(opportunities.state, "open")),
+    );
+
   return {
     id: venue.id,
     name: venue.name,
@@ -561,6 +650,7 @@ export async function getDiscoverableVenueDetail(input: {
     audienceDescription: venue.audienceDescription,
     capacity: venue.capacity,
     capacityContext: venue.capacityContext,
+    openCallCount: openCallRow?.value ?? 0,
     addressLine1: venue.addressLine1,
     addressLine2: venue.addressLine2,
     postalCode: venue.postalCode,

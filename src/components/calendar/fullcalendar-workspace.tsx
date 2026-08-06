@@ -19,6 +19,8 @@ import "@fullcalendar/react/themes/classic/theme.css";
 
 import styles from "./fullcalendar-workspace.module.css";
 import { CalendarEntryForm } from "@/src/components/calendar-entry-form";
+import { AppModal } from "@/src/components/ui/app-modal";
+import { Button } from "@/src/components/ui/button";
 import { toDateInput, toDatetimeLocal } from "@/src/lib/format";
 import { calendarEventStyle } from "@/src/lib/calendar-event-style";
 import { moveCalendarEntry } from "@/src/actions/calendar";
@@ -57,6 +59,8 @@ type EntryDraft = {
     expectedVersion?: number;
   };
 };
+
+const ENTRY_FORM_ID = "calendar-entry-sheet-form";
 
 function toJsDate(value: unknown): Date | null {
   if (!value) return null;
@@ -113,6 +117,22 @@ function formatEventTimeRange(
   return `${fmt.format(start)}–${fmt.format(end)}`;
 }
 
+function openCreateDraft(start: Date, end: Date, allDay: boolean): EntryDraft {
+  const startYmd = toDateInput(start);
+  let endYmd = toDateInput(end);
+  if (allDay && endYmd > startYmd) {
+    endYmd = addDaysToYMD(endYmd, -1);
+  } else if (!allDay) {
+    endYmd = startYmd;
+  }
+  return {
+    mode: "create",
+    defaultStartsAt: allDay ? startYmd : toDatetimeLocal(start),
+    defaultEndsAt: allDay ? endYmd : toDatetimeLocal(end),
+    defaultAllDay: allDay,
+  };
+}
+
 export function FullCalendarWorkspace({
   locale,
   selectedResourceLabel,
@@ -125,7 +145,9 @@ export function FullCalendarWorkspace({
 }: Props) {
   const router = useRouter();
   const t = useTranslations("calendar");
+  const ui = useTranslations("ui");
   const calendarRef = useRef<{ getApi: () => CalendarApi } | null>(null);
+  const dateClickAtRef = useRef(0);
 
   const [draft, setDraft] = useState<EntryDraft | null>(null);
   const [successFlash, setSuccessFlash] = useState(false);
@@ -182,6 +204,10 @@ export function FullCalendarWorkspace({
         headerToolbar={false}
         fixedWeekCount={false}
         selectable={selectable}
+        // Single tap opens create via dateClick; keep a short delay only as a
+        // fallback for drag-select ranges so scrolling still works.
+        selectLongPressDelay={150}
+        longPressDelay={250}
         editable={editingEnabled}
         eventStartEditable={editingEnabled}
         eventDurationEditable={editingEnabled}
@@ -206,6 +232,21 @@ export function FullCalendarWorkspace({
             return `${style.className} ${styles.timedMonth}`;
           }
           return `${style.className} ${styles.solidEvent}`;
+        }}
+        dateClick={(info) => {
+          if (!resources?.length) return;
+          const start = toJsDate(info.date);
+          if (!start) return;
+          dateClickAtRef.current = Date.now();
+          // Tap a day (or slot) → open create sheet immediately. Month taps are
+          // all-day; week slots still open as all-day drafts matching prior UX.
+          const ymd = toDateInput(start);
+          setDraft({
+            mode: "create",
+            defaultStartsAt: ymd,
+            defaultEndsAt: ymd,
+            defaultAllDay: true,
+          });
         }}
         eventClick={(info) => {
           const bookingId =
@@ -295,27 +336,18 @@ export function FullCalendarWorkspace({
         selectOverlap={false}
         select={(selectionInfo) => {
           if (!resources?.length) return;
+          // dateClick already opened a one-day sheet; skip the duplicate select.
+          if (Date.now() - dateClickAtRef.current < 400) {
+            selectionInfo.view.calendar.unselect();
+            return;
+          }
 
           const start = toJsDate(selectionInfo.start);
           const end = toJsDate(selectionInfo.end);
           if (!start || !end) return;
 
           selectionInfo.view.calendar.unselect();
-
-          const startYmd = toDateInput(start);
-          let endYmd = toDateInput(end);
-          if (selectionInfo.allDay && endYmd > startYmd) {
-            endYmd = addDaysToYMD(endYmd, -1);
-          } else if (!selectionInfo.allDay) {
-            endYmd = startYmd;
-          }
-
-          setDraft({
-            mode: "create",
-            defaultStartsAt: startYmd,
-            defaultEndsAt: endYmd,
-            defaultAllDay: true,
-          });
+          setDraft(openCreateDraft(start, end, Boolean(selectionInfo.allDay)));
         }}
         eventDrop={(dropInfo) => {
           if (!editingEnabled) return;
@@ -387,42 +419,27 @@ export function FullCalendarWorkspace({
         }}
       />
 
-      {draft && resources?.length ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={draft.mode === "edit" ? t("editTitle") : t("addTitle")}
-          onClick={closeDraft}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") closeDraft();
-          }}
+      {resources?.length ? (
+        <AppModal
+          open={Boolean(draft)}
+          onClose={closeDraft}
+          title={draft?.mode === "edit" ? t("editTitle") : t("addTitle")}
+          subtitle={selectedResourceLabel}
+          closeLabel={t("close")}
+          footer={
+            <Button
+              type="submit"
+              form={ENTRY_FORM_ID}
+              className="w-full"
+              pendingLabel={ui("working")}
+            >
+              {draft?.mode === "edit" ? t("saveChanges") : t("add")}
+            </Button>
+          }
         >
-          <div
-            className="panel w-full max-w-lg bg-[var(--surface)] p-6"
-            onClick={(e) => e.stopPropagation()}
-            role="document"
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
-              <div>
-                <h2 className="page-title text-xl">
-                  {draft.mode === "edit" ? t("editTitle") : t("addTitle")}
-                </h2>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
-                  {selectedResourceLabel}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeDraft}
-                className="text-[var(--text-muted)] hover:text-[var(--ink)]"
-                aria-label={t("close")}
-              >
-                ✕
-              </button>
-            </div>
-
+          {draft ? (
             <CalendarEntryForm
+              formId={ENTRY_FORM_ID}
               locale={locale}
               resources={resources}
               defaultResourceKey={safeDefaultResourceKey}
@@ -431,13 +448,14 @@ export function FullCalendarWorkspace({
               defaultEndsAt={draft.defaultEndsAt}
               {...(draft.editEntry ? { editEntry: draft.editEntry } : {})}
               hideHeading
+              hideActions
               onSuccess={() => {
                 closeDraft();
                 setSuccessFlash(true);
               }}
             />
-          </div>
-        </div>
+          ) : null}
+        </AppModal>
       ) : null}
     </section>
   );

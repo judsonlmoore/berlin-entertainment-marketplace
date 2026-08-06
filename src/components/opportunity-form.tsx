@@ -18,6 +18,7 @@ export function OpportunityForm({ locale, venueId }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [kind, setKind] = useState<"dated" | "standing">("dated");
 
   return (
     <form
@@ -38,15 +39,26 @@ export function OpportunityForm({ locale, venueId }: Props) {
           form.get("productionContext") ?? "",
         ).trim();
         const notes = String(form.get("notes") ?? "").trim();
+        const standingSchedule = String(
+          form.get("standingSchedule") ?? "",
+        ).trim();
+        const startsRaw = String(form.get("startsAt") ?? "").trim();
+        const endsRaw = String(form.get("endsAt") ?? "").trim();
 
         startTransition(async () => {
           const result = await createOpportunity({
             venueId,
             title: String(form.get("title") ?? ""),
-            startsAt: new Date(
-              String(form.get("startsAt") ?? ""),
-            ).toISOString(),
-            endsAt: new Date(String(form.get("endsAt") ?? "")).toISOString(),
+            kind,
+            ...(kind === "dated" && startsRaw
+              ? { startsAt: new Date(startsRaw).toISOString() }
+              : {}),
+            ...(kind === "dated" && endsRaw
+              ? { endsAt: new Date(endsRaw).toISOString() }
+              : {}),
+            ...(kind === "standing" && standingSchedule
+              ? { standingSchedule }
+              : {}),
             formatCategory: String(form.get("formatCategory") ?? ""),
             ...(expectedAudience ? { expectedAudience } : {}),
             ...(budgetMin ? { budgetMinEur: Number(budgetMin) } : {}),
@@ -76,30 +88,69 @@ export function OpportunityForm({ locale, venueId }: Props) {
       }}
     >
       <h3 className="text-lg font-medium">{t("createTitle")}</h3>
+      <fieldset className="grid gap-2">
+        <legend className="text-sm font-medium">{t("kindLabel")}</legend>
+        <div className="flex flex-wrap gap-3 text-sm">
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="radio"
+              name="kind"
+              value="dated"
+              checked={kind === "dated"}
+              onChange={() => setKind("dated")}
+            />
+            {t("kindDated")}
+          </label>
+          <label className="inline-flex items-center gap-2">
+            <input
+              type="radio"
+              name="kind"
+              value="standing"
+              checked={kind === "standing"}
+              onChange={() => setKind("standing")}
+            />
+            {t("kindStanding")}
+          </label>
+        </div>
+        <p className="text-xs text-[var(--text-muted)]">
+          {kind === "dated" ? t("kindDatedHint") : t("kindStandingHint")}
+        </p>
+      </fieldset>
       <label className="grid gap-1 text-sm">
         <span>{t("titleLabel")}</span>
         <input name="title" required className="field" />
       </label>
-      <div className="grid gap-3 sm:grid-cols-2">
+      {kind === "dated" ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm">
+            <span>{t("startsAt")}</span>
+            <input
+              name="startsAt"
+              type="datetime-local"
+              required
+              className="field"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            <span>{t("endsAt")}</span>
+            <input
+              name="endsAt"
+              type="datetime-local"
+              required
+              className="field"
+            />
+          </label>
+        </div>
+      ) : (
         <label className="grid gap-1 text-sm">
-          <span>{t("startsAt")}</span>
+          <span>{t("standingSchedule")}</span>
           <input
-            name="startsAt"
-            type="datetime-local"
-            required
+            name="standingSchedule"
             className="field"
+            placeholder={t("standingSchedulePlaceholder")}
           />
         </label>
-        <label className="grid gap-1 text-sm">
-          <span>{t("endsAt")}</span>
-          <input
-            name="endsAt"
-            type="datetime-local"
-            required
-            className="field"
-          />
-        </label>
-      </div>
+      )}
       <label className="grid gap-1 text-sm">
         <span>{t("formatCategory")}</span>
         <input name="formatCategory" required className="field" />

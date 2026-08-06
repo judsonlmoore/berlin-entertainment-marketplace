@@ -26,10 +26,8 @@ type NavItem = {
     | "discover"
     | "discoverActs"
     | "discoverVenues"
-    | "opportunities"
     | "bookings"
-    | "calendar"
-    | "requests";
+    | "calendar";
   match: string;
 };
 
@@ -90,6 +88,9 @@ function RailNav({
   locale,
   navId,
   onNavigate,
+  showBrand = true,
+  showRoleContext = true,
+  showAccountMenu = true,
 }: {
   items: NavItem[];
   accountItems: AccountNavItem[];
@@ -102,19 +103,27 @@ function RailNav({
   locale: "en" | "de";
   navId?: string;
   onNavigate?: () => void;
+  /** Desktop rail shows the brand; mobile drawer puts it beside the close control. */
+  showBrand?: boolean;
+  /** Hide on mobile — the sticky header already exposes act/venue context. */
+  showRoleContext?: boolean;
+  /** Hide on mobile — account menu lives in the sticky header. */
+  showAccountMenu?: boolean;
 }) {
   const t = useTranslations("nav");
 
   return (
     <>
-      <Link
-        href="/marketplace"
-        className="display text-3xl font-medium no-underline"
-        onClick={onNavigate}
-      >
-        Salon
-      </Link>
-      {roleContext ? (
+      {showBrand ? (
+        <Link
+          href="/marketplace"
+          className="display text-3xl font-medium no-underline"
+          onClick={onNavigate}
+        >
+          Salon
+        </Link>
+      ) : null}
+      {showRoleContext && roleContext ? (
         <RailRoleContext
           mode={roleContext.mode}
           label={roleContext.label}
@@ -130,7 +139,7 @@ function RailNav({
       <nav
         id={navId}
         aria-label={t("primary")}
-        className="mt-8 grid flex-1 content-start gap-1 overflow-y-auto"
+        className="mt-6 grid flex-1 content-start gap-1 overflow-y-auto lg:mt-8"
       >
         {items.map((item) => {
           const active = isActive(pathname, item.match);
@@ -150,15 +159,17 @@ function RailNav({
           );
         })}
       </nav>
-      <div className="mt-auto border-t border-white/10 pt-4">
-        <AccountMenu
-          userName={userName}
-          userImage={userImage}
-          accountTypeLabel={accountTypeLabel}
-          items={accountItems}
-          onNavigate={onNavigate}
-        />
-      </div>
+      {showAccountMenu ? (
+        <div className="mt-auto border-t border-white/10 pt-4">
+          <AccountMenu
+            userName={userName}
+            userImage={userImage}
+            accountTypeLabel={accountTypeLabel}
+            items={accountItems}
+            onNavigate={onNavigate}
+          />
+        </div>
+      ) : null}
     </>
   );
 }
@@ -225,11 +236,6 @@ export function AppShell({
     { href: "/marketplace", labelKey: "overview", match: "/marketplace$" },
     ...discoverItems,
     {
-      href: "/marketplace/opportunities",
-      labelKey: "opportunities",
-      match: "/marketplace/opportunities",
-    },
-    {
       href: "/marketplace/bookings",
       labelKey: "bookings",
       match: "/marketplace/bookings",
@@ -239,11 +245,6 @@ export function AppShell({
       labelKey: "calendar",
       match: "/marketplace/calendar",
     },
-    {
-      href: "/marketplace/requests",
-      labelKey: "requests",
-      match: "/marketplace/requests",
-    },
   ];
 
   const items = mainNav.filter(
@@ -252,6 +253,11 @@ export function AppShell({
 
   const accountItems: AccountNavItem[] = [
     { href: "/account", labelKey: "account", match: "/account" },
+    {
+      href: "/marketplace/help",
+      labelKey: "help",
+      match: "/marketplace/help",
+    },
     ...(isStaff
       ? [
           {
@@ -348,10 +354,16 @@ export function AppShell({
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <p id={drawerTitleId} className="sr-only">
-              {t("menu")}
-            </p>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Link
+              href="/marketplace"
+              id={drawerTitleId}
+              className="display min-w-0 truncate text-2xl font-medium no-underline"
+              onClick={closeMenu}
+              tabIndex={menuOpen ? 0 : -1}
+            >
+              Salon
+            </Link>
             <button
               type="button"
               tabIndex={menuOpen ? 0 : -1}
@@ -359,7 +371,7 @@ export function AppShell({
                 closeMenu();
                 menuButtonRef.current?.focus();
               }}
-              className="ml-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-md)] text-white"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-white"
               aria-label={t("closeMenu")}
             >
               <MenuIcon open />
@@ -376,6 +388,9 @@ export function AppShell({
             onboardingChecklist={onboardingChecklist}
             locale={locale}
             onNavigate={closeMenu}
+            showBrand={false}
+            showRoleContext={false}
+            showAccountMenu={false}
           />
         </div>
       </div>

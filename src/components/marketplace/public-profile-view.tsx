@@ -39,6 +39,8 @@ export type PublicProfileViewProps = {
   galleryTitle: string;
   videoTitle: string;
   linksTitle: string;
+  /** Optional action in the title band (e.g. connection request). */
+  headerAction?: ReactNode;
   children?: ReactNode;
 };
 
@@ -61,7 +63,7 @@ export function PublicProfileView({
   websiteLabel,
   contactTitle,
   contactLocked,
-  contactLockedMessage,
+  contactLockedMessage: _contactLockedMessage,
   preferredLabel,
   contacts,
   aboutTitle,
@@ -69,6 +71,7 @@ export function PublicProfileView({
   galleryTitle,
   videoTitle,
   linksTitle,
+  headerAction,
   children,
 }: PublicProfileViewProps) {
   const allLinks = [
@@ -83,6 +86,8 @@ export function PublicProfileView({
         href: item.url!,
       })),
   ];
+
+  const showContact = !contactLocked && contacts && contacts.length > 0;
 
   return (
     <article className="mx-auto max-w-5xl">
@@ -102,15 +107,20 @@ export function PublicProfileView({
           <Monogram name={title} className="aspect-[16/9] w-full" />
         )}
 
-        <div className="grid gap-2 border-t border-[var(--line)] px-5 py-6 sm:px-8 sm:py-8">
-          <p className="eyebrow text-[0.72rem] font-semibold tracking-[0.14em] uppercase">
-            {eyebrow}
-          </p>
-          <h1 className="page-title text-[clamp(1.75rem,2.5vw,2.25rem)]">
-            {title}
-          </h1>
-          {subtitle ? (
-            <p className="text-[var(--text-muted)]">{subtitle}</p>
+        <div className="flex flex-col gap-4 border-t border-[var(--line)] px-5 py-6 sm:flex-row sm:items-end sm:justify-between sm:gap-6 sm:px-8 sm:py-8">
+          <div className="grid min-w-0 gap-2">
+            <p className="eyebrow text-[0.72rem] font-semibold tracking-[0.14em] uppercase">
+              {eyebrow}
+            </p>
+            <h1 className="page-title text-[clamp(1.75rem,2.5vw,2.25rem)]">
+              {title}
+            </h1>
+            {subtitle ? (
+              <p className="text-[var(--text-muted)]">{subtitle}</p>
+            ) : null}
+          </div>
+          {headerAction ? (
+            <div className="shrink-0 sm:pb-0.5">{headerAction}</div>
           ) : null}
         </div>
       </div>
@@ -171,15 +181,19 @@ export function PublicProfileView({
 
         <aside className="grid gap-4">
           {facts.length > 0 ? (
-            <section className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-5">
-              <h2 className="text-[1.05rem] font-semibold">{detailsTitle}</h2>
-              <dl className="mt-4 grid gap-3 text-sm">
+            <section className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
+              <div className="border-b border-[var(--rule)] bg-[var(--canvas)] px-5 py-3">
+                <h2 className="text-[0.72rem] font-semibold tracking-[0.14em] text-[var(--ink)] uppercase">
+                  {detailsTitle}
+                </h2>
+              </div>
+              <dl className="divide-y divide-[var(--rule)]">
                 {facts.map((fact) => (
-                  <div key={fact.label} className="grid gap-1">
-                    <dt className="font-medium text-[var(--text-muted)]">
+                  <div key={fact.label} className="grid gap-1 px-5 py-3.5">
+                    <dt className="text-xs font-semibold tracking-[0.06em] text-[var(--text-muted)] uppercase">
                       {fact.label}
                     </dt>
-                    <dd className="text-[var(--ink)]">
+                    <dd className="text-sm leading-relaxed text-[var(--ink)]">
                       <SafeRichText html={fact.value} />
                     </dd>
                   </div>
@@ -189,16 +203,20 @@ export function PublicProfileView({
           ) : null}
 
           {allLinks.length > 0 ? (
-            <section className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-5">
-              <h2 className="text-[1.05rem] font-semibold">{linksTitle}</h2>
-              <ul className="mt-3 grid gap-2 text-sm">
+            <section className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
+              <div className="border-b border-[var(--rule)] bg-[var(--canvas)] px-5 py-3">
+                <h2 className="text-[0.72rem] font-semibold tracking-[0.14em] text-[var(--ink)] uppercase">
+                  {linksTitle}
+                </h2>
+              </div>
+              <ul className="divide-y divide-[var(--rule)]">
                 {allLinks.map((link) => (
                   <li key={`${link.label}-${link.href}`}>
                     <a
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-medium text-[var(--primary)] underline-offset-2 hover:underline"
+                      className="flex min-h-11 items-center px-5 py-2.5 text-sm font-medium text-[var(--primary)] no-underline hover:bg-[var(--canvas)]"
                     >
                       {link.label}
                     </a>
@@ -208,26 +226,28 @@ export function PublicProfileView({
             </section>
           ) : null}
 
-          <section className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-5">
-            <h2 className="text-[1.05rem] font-semibold">{contactTitle}</h2>
-            {contactLocked || !contacts ? (
-              <p className="mt-2 text-sm text-[var(--text-muted)]">
-                {contactLockedMessage}
-              </p>
-            ) : (
-              <ul className="mt-3 grid gap-2 text-sm">
+          {showContact ? (
+            <section className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
+              <div className="border-b border-[var(--rule)] bg-[var(--canvas)] px-5 py-3">
+                <h2 className="text-[0.72rem] font-semibold tracking-[0.14em] text-[var(--ink)] uppercase">
+                  {contactTitle}
+                </h2>
+              </div>
+              <ul className="divide-y divide-[var(--rule)]">
                 {contacts.map((contact) => (
-                  <li key={contact.id}>
-                    <span className="font-medium text-[var(--text-muted)]">
+                  <li key={contact.id} className="px-5 py-3.5 text-sm">
+                    <p className="text-xs font-semibold tracking-[0.06em] text-[var(--text-muted)] uppercase">
                       {contact.kind}
-                    </span>
-                    : {contact.value}
-                    {contact.isPreferred ? ` (${preferredLabel})` : ""}
+                      {contact.isPreferred ? ` · ${preferredLabel}` : ""}
+                    </p>
+                    <p className="mt-1 font-medium text-[var(--ink)]">
+                      {contact.value}
+                    </p>
                   </li>
                 ))}
               </ul>
-            )}
-          </section>
+            </section>
+          ) : null}
         </aside>
       </div>
     </article>

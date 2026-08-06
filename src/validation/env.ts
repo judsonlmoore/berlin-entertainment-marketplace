@@ -25,6 +25,8 @@ const serverEnvSchema = z.object({
   AUTH_GITHUB_SECRET: optionalNonEmpty,
   AUTH_GOOGLE_ID: optionalNonEmpty,
   AUTH_GOOGLE_SECRET: optionalNonEmpty,
+  /** Server-only Places API (New) key for venue business search / prefill. */
+  GOOGLE_PLACES_API_KEY: optionalNonEmpty,
   EMAIL_SERVER: optionalNonEmpty,
   EMAIL_FROM: optionalNonEmpty,
   BLOB_READ_WRITE_TOKEN: optionalNonEmpty,

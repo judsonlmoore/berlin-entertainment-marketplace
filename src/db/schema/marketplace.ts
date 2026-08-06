@@ -26,13 +26,12 @@ import {
   marketplaceRoleEnum,
   postGigSurveyPartyRoleEnum,
   postGigSurveyStatusEnum,
-  membershipStatusEnum,
+  opportunityKindEnum,
   opportunityStateEnum,
   portfolioItemKindEnum,
   profileDocumentVisibilityEnum,
   profileEnquiryStateEnum,
   profilePublicationStateEnum,
-  venueMembershipRoleEnum,
 } from "./enums";
 
 export const marketplaceAccounts = pgTable(
@@ -137,6 +136,9 @@ export const venues = pgTable(
   "venues",
   {
     id: uuid("id").defaultRandom().primaryKey(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     shortDescription: text("short_description").notNull(),
     addressLine1: text("address_line1").notNull(),
@@ -147,6 +149,8 @@ export const venues = pgTable(
     countryCode: text("country_code").notNull().default("DE"),
     latitude: text("latitude"),
     longitude: text("longitude"),
+    /** Google Places place id when selected; owner edits remain source of truth. */
+    googlePlaceId: text("google_place_id"),
     venueType: text("venue_type").notNull(),
     audienceDescription: text("audience_description").notNull(),
     capacity: integer("capacity").notNull(),
@@ -174,36 +178,9 @@ export const venues = pgTable(
       .defaultNow(),
   },
   (table) => [
+    uniqueIndex("venues_owner_user_uidx").on(table.ownerUserId),
     index("venues_publication_idx").on(table.publicationState),
     index("venues_district_idx").on(table.district),
-  ],
-);
-
-export const venueMemberships = pgTable(
-  "venue_memberships",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    venueId: uuid("venue_id")
-      .notNull()
-      .references(() => venues.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    role: venueMembershipRoleEnum("role").notNull(),
-    status: membershipStatusEnum("status").notNull().default("active"),
-    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("venue_memberships_venue_user_uidx").on(
-      table.venueId,
-      table.userId,
-    ),
-    index("venue_memberships_user_idx").on(table.userId),
   ],
 );
 
@@ -290,14 +267,17 @@ export const opportunities = pgTable(
       .notNull()
       .references(() => users.id),
     title: text("title").notNull(),
+    kind: opportunityKindEnum("kind").notNull().default("dated"),
     startsAt: timestamp("starts_at", {
       withTimezone: true,
       mode: "date",
-    }).notNull(),
+    }),
     endsAt: timestamp("ends_at", {
       withTimezone: true,
       mode: "date",
-    }).notNull(),
+    }),
+    /** Display-only schedule hint for standing calls (e.g. "Thursdays"). */
+    standingSchedule: text("standing_schedule"),
     timezone: text("timezone").notNull().default("Europe/Berlin"),
     formatCategory: text("format_category").notNull(),
     expectedAudience: text("expected_audience"),
@@ -322,7 +302,14 @@ export const opportunities = pgTable(
   },
   (table) => [
     index("opportunities_state_starts_idx").on(table.state, table.startsAt),
-    check("opportunities_window_chk", sql`${table.endsAt} > ${table.startsAt}`),
+    check(
+      "opportunities_kind_window_chk",
+      sql`(
+        (${table.kind} = 'dated' AND ${table.startsAt} IS NOT NULL AND ${table.endsAt} IS NOT NULL AND ${table.endsAt} > ${table.startsAt})
+        OR
+        (${table.kind} = 'standing' AND ${table.startsAt} IS NULL AND ${table.endsAt} IS NULL)
+      )`,
+    ),
   ],
 );
 
@@ -934,7 +921,11 @@ export const riderFiles = pgTable(
       .references(() => users.id),
     entertainerProfileId: uuid("entertainer_profile_id").references(
       () => entertainerProfiles.id,
+      { onDelete: "cascade" },
     ),
+    venueId: uuid("venue_id").references(() => venues.id, {
+      onDelete: "cascade",
+    }),
     blobKey: text("blob_key").notNull(),
     title: text("title").notNull().default("Technical rider"),
     visibility: profileDocumentVisibilityEnum("visibility")
@@ -958,6 +949,14 @@ export const riderFiles = pgTable(
       table.entertainerProfileId,
       table.sortOrder,
     ),
+    index("rider_files_venue_sort_idx").on(table.venueId, table.sortOrder),
+    check(
+      "rider_files_owner_xor_check",
+      sql`(
+        (${table.entertainerProfileId} IS NOT NULL AND ${table.venueId} IS NULL)
+        OR (${table.entertainerProfileId} IS NULL AND ${table.venueId} IS NOT NULL)
+      )`,
+    ),
   ],
 );
 
@@ -965,9 +964,13 @@ export const portfolioItems = pgTable(
   "portfolio_items",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    entertainerProfileId: uuid("entertainer_profile_id")
-      .notNull()
-      .references(() => entertainerProfiles.id, { onDelete: "cascade" }),
+    entertainerProfileId: uuid("entertainer_profile_id").references(
+      () => entertainerProfiles.id,
+      { onDelete: "cascade" },
+    ),
+    venueId: uuid("venue_id").references(() => venues.id, {
+      onDelete: "cascade",
+    }),
     kind: portfolioItemKindEnum("kind").notNull(),
     caption: text("caption"),
     altText: text("alt_text"),
@@ -987,6 +990,14 @@ export const portfolioItems = pgTable(
     index("portfolio_items_profile_sort_idx").on(
       table.entertainerProfileId,
       table.sortOrder,
+    ),
+    index("portfolio_items_venue_sort_idx").on(table.venueId, table.sortOrder),
+    check(
+      "portfolio_items_owner_xor_check",
+      sql`(
+        (${table.entertainerProfileId} IS NOT NULL AND ${table.venueId} IS NULL)
+        OR (${table.entertainerProfileId} IS NULL AND ${table.venueId} IS NOT NULL)
+      )`,
     ),
   ],
 );

@@ -15,6 +15,7 @@ import {
   getProfileEnquiryById,
   listVenueOperatorUserIds,
   respondToProfileEnquiry,
+  sendVenueConnectionRequest,
   submitProfileEnquiry,
   updateProfileEnquiryProposal,
 } from "@/src/db/queries/profile-enquiries";
@@ -122,8 +123,86 @@ export async function submitProfileEnquiryAction(input: {
 
     const locale = parsed.data.locale ?? "en";
     revalidatePath(`/${locale}/marketplace/venues/${parsed.data.venueId}`);
-    revalidatePath(`/${locale}/marketplace/requests`);
-    revalidatePath(`/${locale}/marketplace/leads`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
+    revalidatePath("/", "layout");
+    return {
+      ok: true,
+      enquiryId: result.enquiryId,
+      bookingId: result.bookingId,
+    };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function sendVenueConnectionRequestAction(input: {
+  venueId: string;
+  entertainerProfileId: string;
+  note?: string;
+  locale?: "en" | "de";
+}): Promise<ActionResult & { bookingId?: string; enquiryId?: string }> {
+  try {
+    const { session, actor } = await requireActor();
+    checkRateLimit({
+      key: rateLimitKey("profile_enquiry.connect", session.user.id),
+      limit: 10,
+      windowMs: 60_000,
+    });
+
+    const parsed = z
+      .object({
+        venueId: z.string().uuid(),
+        entertainerProfileId: z.string().uuid(),
+        note: z.string().trim().max(2000).optional(),
+        locale: localeSchema.optional(),
+      })
+      .safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid connection request");
+    }
+    if (!can(actor, "direct_request.send", { venueId: parsed.data.venueId })) {
+      throw new AppError("forbidden", "Published venue required to connect");
+    }
+
+    const result = await sendVenueConnectionRequest({
+      actor,
+      venueId: parsed.data.venueId,
+      entertainerProfileId: parsed.data.entertainerProfileId,
+      ...(parsed.data.note ? { note: parsed.data.note } : {}),
+    });
+
+    const db = getDb();
+    const [profile, venue] = await Promise.all([
+      db.query.entertainerProfiles.findFirst({
+        where: eq(entertainerProfiles.id, parsed.data.entertainerProfileId),
+        columns: { actName: true, userId: true },
+      }),
+      db.query.venues.findFirst({
+        where: eq(venues.id, parsed.data.venueId),
+        columns: { name: true },
+      }),
+    ]);
+
+    if (profile?.userId) {
+      await notifyUser({
+        userId: profile.userId,
+        type: "profile_enquiry_received",
+        subjectId: result.enquiryId,
+        params: {
+          direction: "venue",
+          entertainerName: profile.actName ?? "your act",
+          venueName: venue?.name ?? "A venue",
+          enquiryId: result.enquiryId,
+          bookingId: result.bookingId,
+        },
+      });
+    }
+
+    const locale = parsed.data.locale ?? "en";
+    revalidatePath(
+      `/${locale}/marketplace/entertainers/${parsed.data.entertainerProfileId}`,
+    );
+    revalidatePath(`/${locale}/marketplace/bookings`);
     revalidatePath("/", "layout");
     return {
       ok: true,
@@ -155,7 +234,18 @@ export async function respondToProfileEnquiryAction(input: {
 
     const enquiry = await getProfileEnquiryById(parsed.data.enquiryId);
     if (!enquiry) throw new AppError("not_found", "Enquiry not found");
-    if (!can(actor, "profile_enquiry.respond", { venueId: enquiry.venueId })) {
+
+    const initiatedByAct =
+      enquiry.submittedByUserId === enquiry.entertainerUserId;
+    const canVenueRespond =
+      initiatedByAct &&
+      can(actor, "profile_enquiry.respond", { venueId: enquiry.venueId });
+    const canActRespond =
+      !initiatedByAct &&
+      actor.roles.includes("entertainer") &&
+      actor.userId === enquiry.entertainerUserId &&
+      actor.entertainerVerified;
+    if (!canVenueRespond && !canActRespond) {
       throw new AppError("forbidden", "Cannot respond to this enquiry");
     }
 
@@ -165,26 +255,47 @@ export async function respondToProfileEnquiryAction(input: {
       decision: parsed.data.decision,
     });
 
-    await notifyUser({
-      userId: enquiry.entertainerUserId,
-      type:
-        parsed.data.decision === "interested"
-          ? "profile_enquiry_interested"
-          : "profile_enquiry_passed",
-      subjectId: enquiry.id,
-      params: {
-        venueName: enquiry.venueName,
-        enquiryId: enquiry.id,
-        bookingId: result.bookingId,
-      },
-    });
+    if (initiatedByAct) {
+      await notifyUser({
+        userId: enquiry.entertainerUserId,
+        type:
+          parsed.data.decision === "interested"
+            ? "profile_enquiry_interested"
+            : "profile_enquiry_passed",
+        subjectId: enquiry.id,
+        params: {
+          venueName: enquiry.venueName,
+          enquiryId: enquiry.id,
+          bookingId: result.bookingId,
+        },
+      });
+    } else {
+      const operators = await listVenueOperatorUserIds(enquiry.venueId);
+      await Promise.all(
+        operators.map((userId) =>
+          notifyUser({
+            userId,
+            type:
+              parsed.data.decision === "interested"
+                ? "profile_enquiry_interested"
+                : "profile_enquiry_passed",
+            subjectId: enquiry.id,
+            params: {
+              direction: "act",
+              entertainerName: enquiry.actName,
+              venueName: enquiry.venueName,
+              enquiryId: enquiry.id,
+              bookingId: result.bookingId,
+            },
+          }),
+        ),
+      );
+    }
 
     const locale = parsed.data.locale ?? "en";
-    revalidatePath(`/${locale}/marketplace/requests`);
-    revalidatePath(`/${locale}/marketplace/leads`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     if (result.bookingId) {
       revalidatePath(`/${locale}/marketplace/bookings/${result.bookingId}`);
-      revalidatePath(`/${locale}/marketplace/leads/${result.bookingId}`);
     }
     revalidatePath("/", "layout");
     return { ok: true };
@@ -252,11 +363,9 @@ export async function updateLeadProposalAction(input: {
 
     const locale = parsed.data.locale ?? "en";
     const enquiry = await getProfileEnquiryById(parsed.data.enquiryId);
-    revalidatePath(`/${locale}/marketplace/requests`);
-    revalidatePath(`/${locale}/marketplace/leads`);
+    revalidatePath(`/${locale}/marketplace/bookings`);
     if (enquiry?.bookingId) {
       revalidatePath(`/${locale}/marketplace/bookings/${enquiry.bookingId}`);
-      revalidatePath(`/${locale}/marketplace/leads/${enquiry.bookingId}`);
     }
     return { ok: true };
   } catch (error) {

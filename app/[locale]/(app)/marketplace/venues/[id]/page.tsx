@@ -8,12 +8,16 @@ import {
   requireDiscoveryAccess,
 } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
-import { findActiveProfileEnquiry } from "@/src/db/queries/profile-enquiries";
+import {
+  findActiveProfileEnquiry,
+  findRecentProfileEnquiry,
+} from "@/src/db/queries/profile-enquiries";
 import { listOpenCallsForVenue } from "@/src/db/queries/opportunities";
 import { getDb } from "@/src/db/client";
 import { bookings, entertainerProfiles } from "@/src/db/schema/marketplace";
 import { and, eq } from "drizzle-orm";
 import { can } from "@/src/domain/permissions";
+import { enquiryRequestCooldownDaysRemaining } from "@/src/domain/profile-enquiry-cooldown";
 import {
   getCategoryNode,
   parseSubcategory,
@@ -154,11 +158,18 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
   );
 
   let activeEnquiryBookingId: string | null = null;
+  let enquiryCooldownDaysRemaining: number | null = null;
   if (ownProfile) {
-    const active = await findActiveProfileEnquiry({
-      venueId: id,
-      entertainerProfileId: ownProfile.id,
-    });
+    const [active, recent] = await Promise.all([
+      findActiveProfileEnquiry({
+        venueId: id,
+        entertainerProfileId: ownProfile.id,
+      }),
+      findRecentProfileEnquiry({
+        venueId: id,
+        entertainerProfileId: ownProfile.id,
+      }),
+    ]);
     if (active) {
       const booking = await db.query.bookings.findFirst({
         where: and(
@@ -168,6 +179,10 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
         columns: { id: true },
       });
       activeEnquiryBookingId = booking?.id ?? null;
+    }
+    if (recent) {
+      const days = enquiryRequestCooldownDaysRemaining(recent.createdAt);
+      enquiryCooldownDaysRemaining = days > 0 ? days : null;
     }
   }
 
@@ -214,11 +229,14 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
             canSubmit={canSubmit}
             publishRequired={publishRequired}
             activeEnquiryBookingId={activeEnquiryBookingId}
+            cooldownDaysRemaining={enquiryCooldownDaysRemaining}
             openCalls={openCalls.map((c) => ({
               id: c.id,
               title: c.title,
+              kind: c.kind,
               startsAt: c.startsAt,
               endsAt: c.endsAt,
+              standingSchedule: c.standingSchedule,
               formatCategory: c.formatCategory,
               ownApplicationState: c.ownApplicationState,
             }))}

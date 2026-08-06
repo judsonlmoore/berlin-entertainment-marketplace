@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ActorContext } from "@/src/domain/permissions";
-import { applySupportOverlay } from "@/src/lib/support-overlay";
+import type { ActorContext, MarketplaceRole } from "@/src/domain/permissions";
 import type { SupportSessionPayload } from "@/src/lib/support-session";
+import { applySupportOverlay } from "@/src/lib/support-overlay";
 
 const staff: ActorContext = {
   userId: "staff-1",
@@ -10,7 +10,7 @@ const staff: ActorContext = {
   roles: [],
   entertainerVerified: false,
   venueVerified: false,
-  venueMemberships: [],
+  venueId: null,
 };
 
 const subjectEntertainer: ActorContext = {
@@ -20,7 +20,7 @@ const subjectEntertainer: ActorContext = {
   roles: ["entertainer"],
   entertainerVerified: true,
   venueVerified: false,
-  venueMemberships: [],
+  venueId: null,
 };
 
 const subjectVenue: ActorContext = {
@@ -30,10 +30,7 @@ const subjectVenue: ActorContext = {
   roles: ["venue"],
   entertainerVerified: false,
   venueVerified: true,
-  venueMemberships: [
-    { venueId: "venue-1", role: "owner", status: "active" },
-    { venueId: "venue-2", role: "member", status: "active" },
-  ],
+  venueId: "venue-1",
 };
 
 describe("applySupportOverlay", () => {
@@ -51,10 +48,10 @@ describe("applySupportOverlay", () => {
     expect(overlay.isPlatformStaff).toBe(false);
     expect(overlay.roles).toEqual(["entertainer"]);
     expect(overlay.entertainerVerified).toBe(true);
-    expect(overlay.venueMemberships).toEqual([]);
+    expect(overlay.venueId).toBeNull();
   });
 
-  it("scopes venue memberships to the supported venue", () => {
+  it("scopes venue support to the owned venue id", () => {
     const support: SupportSessionPayload = {
       staffUserId: "staff-1",
       subjectUserId: "venue-user",
@@ -65,9 +62,22 @@ describe("applySupportOverlay", () => {
     };
     const overlay = applySupportOverlay(staff, support, subjectVenue);
     expect(overlay.userId).toBe("venue-user");
-    expect(overlay.roles).toEqual(["venue"]);
-    expect(overlay.venueMemberships).toEqual([
-      { venueId: "venue-1", role: "owner", status: "active" },
-    ]);
+    expect(overlay.roles).toEqual(["venue"] satisfies MarketplaceRole[]);
+    expect(overlay.venueId).toBe("venue-1");
+    expect(overlay.venueVerified).toBe(true);
+  });
+
+  it("clears venueId when subject does not own the supported venue", () => {
+    const support: SupportSessionPayload = {
+      staffUserId: "staff-1",
+      subjectUserId: "venue-user",
+      entityType: "venue",
+      entityId: "venue-other",
+      label: "Other",
+      exp: Date.now() + 60_000,
+    };
+    const overlay = applySupportOverlay(staff, support, subjectVenue);
+    expect(overlay.venueId).toBeNull();
+    expect(overlay.venueVerified).toBe(false);
   });
 });

@@ -10,8 +10,10 @@ import { Button } from "@/src/components/ui/button";
 type OpenCall = {
   id: string;
   title: string;
-  startsAt: Date;
-  endsAt: Date;
+  kind: "dated" | "standing";
+  startsAt: Date | null;
+  endsAt: Date | null;
+  standingSchedule: string | null;
   formatCategory: string;
   ownApplicationState: string | null;
 };
@@ -22,6 +24,7 @@ type Props = {
   canSubmit: boolean;
   publishRequired: boolean;
   activeEnquiryBookingId?: string | null;
+  cooldownDaysRemaining?: number | null;
   openCalls: OpenCall[];
   defaultQuoteMinEur?: number;
   defaultQuoteMaxEur?: number;
@@ -33,6 +36,7 @@ export function VenueProfileContactPanel({
   canSubmit,
   publishRequired,
   activeEnquiryBookingId,
+  cooldownDaysRemaining,
   openCalls,
   defaultQuoteMinEur = 0,
   defaultQuoteMaxEur = 0,
@@ -118,11 +122,31 @@ export function VenueProfileContactPanel({
               {t("goToProfile")}
             </Link>
           </p>
+        ) : cooldownDaysRemaining != null && cooldownDaysRemaining > 0 ? (
+          <div className="mt-4 grid gap-3">
+            <Button type="button" disabled className="justify-self-start">
+              {t("submitProfileCta")}
+            </Button>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t("enquiryCooldown", { days: cooldownDaysRemaining })}
+              {activeEnquiryBookingId ? (
+                <>
+                  {" "}
+                  <Link
+                    href={`/marketplace/bookings/${activeEnquiryBookingId}`}
+                    className="font-medium underline"
+                  >
+                    {t("viewLead")}
+                  </Link>
+                </>
+              ) : null}
+            </p>
+          </div>
         ) : activeEnquiryBookingId ? (
           <p className="mt-4 text-sm text-[var(--ink)]">
             {t("enquiryAlreadyActive")}{" "}
             <Link
-              href={`/marketplace/leads/${activeEnquiryBookingId}`}
+              href={`/marketplace/bookings/${activeEnquiryBookingId}`}
               className="font-medium underline"
             >
               {t("viewLead")}
@@ -170,7 +194,12 @@ export function VenueProfileContactPanel({
                 <div>
                   <p className="font-medium text-[var(--ink)]">{call.title}</p>
                   <p className="text-sm text-[var(--text-muted)]">
-                    {call.formatCategory} · {dateFmt.format(call.startsAt)}
+                    {call.formatCategory}
+                    {call.kind === "standing"
+                      ? ` · ${call.standingSchedule?.trim() || t("standingOpenCall")}`
+                      : call.startsAt
+                        ? ` · ${dateFmt.format(call.startsAt)}`
+                        : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

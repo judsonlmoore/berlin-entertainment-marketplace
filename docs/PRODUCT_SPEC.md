@@ -20,9 +20,9 @@ User-facing language uses **Talent**, **Buyer**, and (later) **Agency**. Persist
 | Term | Meaning | Marketplace side | MVP status |
 |---|---|---|---|
 | **Talent** | Solo performer or small act seeking paid bookings (profile = act listing) | Supply | Live — free for 1 talent listing |
-| **Buyer** | Venue operator or booker who searches talent and sends performance requests (listing = location / venue org) | Demand | Live — free for 1 location |
+| **Buyer** | Venue operator or booker who searches talent and sends performance requests (listing = one venue / location) | Demand | Live — free for 1 location |
 | **Agency** | Org that manages a multi-talent roster on the supply side | Supply (multi-listing) | Coming soon — shown inactive on signup as a demand probe; no selectable role or backend yet |
-| **Location** | A buyer-owned place (venue org). Distinct from **spaces** (rooms inside one location) | Demand listing | Live |
+| **Location** | A buyer-owned place (exactly one per buyer account). Exactly one **room** for calendar ownership in MVP | Demand listing | Live |
 | **Platform staff** | Verifies profiles, suspends accounts, moderates | Ops | Live |
 
 **Monetization direction (not implemented):** free forever for 1 talent listing and 1 buyer location; paid plans later for multi-location buyer orgs and multi-talent agencies. Early-access paid tiers may show €0 to frame future pricing.
@@ -32,8 +32,7 @@ User-facing language uses **Talent**, **Buyer**, and (later) **Agency**. Persist
 ### Personas (operational)
 
 - **Talent:** act seeking appropriate paid bookings, with clear pricing, availability, production needs, and portfolio evidence.
-- **Buyer owner:** accountable operator who creates a location organization, manages members, publishes opportunities, requests acts, and signs agreements.
-- **Buyer member:** staff member authorized by an owner to operate a location within assigned permissions.
+- **Buyer:** accountable operator who owns exactly one venue profile, publishes open calls, requests acts, and signs agreements.
 - **Platform staff:** suspends abusive accounts/publication, handles moderation, and monitors booking operations.
 
 ## 3. Roles, account status, and permissions
@@ -61,10 +60,7 @@ Published profiles stay published across edits. Owners may **unpublish** (back t
 
 - A person has one account and exactly one selectable marketplace role: talent (**`entertainer`**) **or** buyer (**`venue`**) (XOR). Dual-role accounts are out of scope.
 - Agency is not a selectable role in MVP. Signup may show it as **Coming soon** (disabled) to test inbound interest; do not persist an agency role or build roster APIs until specified.
-- A buyer location is an organization, not a person.
-- Location membership is many-to-many and has `owner` or `member` role.
-- Owners manage organization profile, membership, opportunities, requests, bookings, and signatures.
-- Members may manage buyer workflows granted by the permission set, but cannot remove the last owner or change platform account status.
+- A buyer account owns **exactly one venue** (`venues.owner_user_id`, unique). Team membership / multi-user venue orgs are out of scope.
 - Every authorization decision is server-enforced; hidden UI is not authorization.
 - Future agency support should be modeled as a **supply-side org with multiple talent listings** (membership + plan limits), not a third XOR signup role.
 
@@ -74,20 +70,23 @@ Published profiles stay published across edits. Owners may **unpublish** (back t
 
 After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider. Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Agency may appear on the role picker as a non-selectable coming-soon option.
 
-### 4.2 Venue organization profile
+Buyer onboarding may search Google Places (New) to prefill venue name/address/coords/website; all prefilled fields remain editable. Places is optional — manual entry always works.
+
+### 4.2 Buyer venue profile
+
+One account → one venue → one room (calendar resource). Profile builder matches talent parity (sticky Publish/Unpublish, sectioned autosave form).
 
 Required before self-serve publication:
 
 - Public-to-members venue name and short description
-- Structured Berlin address, district, and map coordinates
+- Structured Berlin address, district, and map coordinates (Places prefill or manual)
 - Venue type and audience description
-- Capacity, including seated/standing context where relevant
+- Capacity (and optional seated/standing context)
 - Production resources: PA, mixer, microphones, backline, lighting, stage dimensions, power, accessibility/load-in notes
-- At least one contact method, stored privately
-- Native availability calendar
-- Owner membership
+- Contact via account email (optional phone); stored privately for unlocks
+- Native availability calendar (backed by the single room)
 
-Optional: website/social links, house rules, venue images, multiple spaces with distinct capacity/resources. A venue profile is discoverable only to **entertainers** (and staff) after publication.
+Optional: website/social links, house rules, venue images, Google Place id for re-link. A venue profile is discoverable only to **entertainers** (and staff) after publication.
 
 ### 4.3 Entertainer profile
 
@@ -110,70 +109,77 @@ Members save drafts and publish when the checklist passes. Publishing sets `appr
 
 ## 5. Private discovery and contact privacy
 
-- Public visitors see only the landing, sign-in, privacy, and terms surfaces (apply redirects into self-serve signup).
-- Active (non-suspended) accounts access private marketplace surfaces for search and explore.
+- Public visitors see the landing, sign-in, help FAQ (`/help`), contact form (`/contact`), privacy, terms, and cookies surfaces (apply redirects into self-serve signup). Public help stays thin (what Salon is, how access works, contact privacy pointers) and must not publish booking/ops playbooks.
+- Active (non-suspended) accounts access private marketplace surfaces for search and explore, plus an in-product help hub (`/marketplace/help`) with member workflow guides. Member-only help articles are not readable while signed out.
+- Contact form posts to Spamblock (client pixel + fetch); signed-in users may have name/email prefilled. Formal GDPR requests still follow the privacy page; the form supplements support intake.
 - **Role segregation (server-enforced):**
-  - Entertainers may search published venues, venue spaces, and open opportunities only. They must not browse, search, or open other entertainers’ profiles (except their own).
+  - Entertainers may search published venues and venue spaces only. They must not browse, search, or open other entertainers’ profiles (except their own). Open calls appear on venue profiles (and as result badges), not as a separate top-level browse.
   - Venues may search published entertainer profiles only. They must not browse, search, or open other venues’ private profiles, except where already a party to a shared booking involving that venue.
   - Staff may access both for moderation.
 - Unpublished members can search but cannot initiate contact workflows until their own profile is published.
-- Search/filter entertainers by category, group size, price range, location, date availability, and production fit.
-- Search/filter venues/opportunities by location, date, budget, venue type, audience, capacity, and production resources.
+- Search/filter entertainers by category, group size, price range, location, **date availability** (free = no blocking calendar entry that Berlin local day), and production fit.
+- Search/filter venues by location, venue type, audience, capacity, and production resources. Open-call badges may surface on venue cards.
+- Member IA is three ops rails plus overview/profile: **Marketplace** (directory), **Bookings** (match pipeline), **Calendar** (time). There is no separate Leads or Opportunities top-level browse.
 - Store contact methods separately from discoverable profile data.
 - Reveal the selected external contact method only after mutual opt-in: direct-request acceptance, application shortlist, or profile-enquiry interest. Until then contacts stay locked.
 - Log contact-unlock reason, parties, and timestamp.
-- Do not build in-platform chat. After unlock, the product clearly hands off to email/phone/other chosen external channel while preserving lead/booking status in Salon.
+- Do not build in-platform chat. After unlock, the product clearly hands off to email/phone/other chosen external channel while preserving booking pipeline status in Salon.
 
 ## 6. Matching paths
 
-Matching produces a shared **lead** both parties can track. UI copy uses **open call** for venue-published dated postings (schema table may still be named `opportunities`).
+Matching produces a shared **booking** both parties track in one inbox. Internal CRM projection may still say “lead.” UI copy uses **open call** for venue-published needs (schema table may still be named `opportunities`).
 
 ### 6.1 Open calls and applications
 
-An approved venue operator creates a draft open call with venue/space, date and times, format/category, expected audience, budget or range, act-size constraints, production context, application deadline, and notes. Publishing makes it visible to approved entertainers. Entertainers may save application drafts, submit one application per act/open call, or use a one-click apply from the venue profile when an open call is listed. Venues may reject, shortlist, or request clarification without revealing private contacts. Shortlisting unlocks the chosen contact method and opens the shared lead (booking record).
+An approved venue operator creates open calls on the venue profile:
+
+- **Dated:** required performance window (start/end), format/category, audience, budget, constraints, deadline, notes.
+- **Standing:** undated “looking for X” need (format/category required; optional schedule text e.g. “Thursdays”). No calendar holds until a date is agreed later.
+
+Publishing makes the call visible on that venue’s marketplace profile (and as a badge in venue search). There is no top-level Opportunities browse. Entertainers may apply from the venue profile (one-click when possible) or the open-call detail. Venues may reject, shortlist, or request clarification without revealing private contacts. Shortlisting unlocks the chosen contact method and opens the shared booking record.
 
 ### 6.2 Direct requests
 
-An approved venue operator sends a request to an approved entertainer for a venue, date/time, proposed fee, format, notes, and optional response deadline. The entertainer declines, accepts, or proposes changes; unanswered requests may expire. Acceptance unlocks the chosen contact method and opens the same lead/booking engine used by shortlisted applications.
+An approved venue operator sends a request to an approved entertainer for a venue, date/time, proposed fee, format, notes, and optional response deadline. The entertainer declines, accepts, or proposes changes; unanswered requests may expire. Acceptance unlocks the chosen contact method and opens the same booking engine used by shortlisted applications.
 
 ### 6.3 Profile enquiries
 
-An approved entertainer may submit their act profile to an approved venue from the venue discovery page (optional short note; no date required). This creates a pending lead. The venue may mark **Interested** or **Pass**. Interest unlocks preferred contacts both ways and opens the lead without requiring dates, fees, or terms yet. Pass closes the lead as lost without unlocking contacts. One active pending/open undated profile enquiry is allowed per act↔venue pair; after Pass, further undated enquiries to that venue are blocked for a cooldown unless the venue re-opens.
+An approved entertainer may submit their act profile to an approved venue from the venue discovery page (optional short note; no date required). An approved venue may likewise send a one-click connection request from an act profile. Either creates a pending booking. The receiving party may mark **Interested** or **Pass**. Interest unlocks preferred contacts both ways and opens the booking without requiring dates, fees, or terms yet. Pass closes it as lost without unlocking contacts. One active pending/open undated profile enquiry is allowed per act↔venue pair. After any contact request for a pair, a new request is blocked for **7 days** (inactive CTA + message). After Pass, further undated enquiries are also blocked for a **30-day** cooldown unless the venue re-opens.
 
-### 6.4 One booking engine (lead underneath)
+### 6.4 One booking engine
 
-Every lead/booking records its origin (`application`, `direct_request`, or `profile_enquiry`) but uses the same terms, agreement, signature, confirmation, deposit, calendar, audit, and cancellation behavior once enough structure exists. Performance dates may be null until agreed; calendar conflict checks and holds run only when a start/end window is known.
+Every booking records its origin (`application`, `direct_request`, or `profile_enquiry`) but uses the same terms, agreement, signature, confirmation, deposit, calendar, audit, and cancellation behavior once enough structure exists. Performance dates may be null until agreed (standing open-call applies and profile enquiries); calendar conflict checks and holds run only when a start/end window is known.
 
-### 6.5 Lead pipeline (member-facing)
+### 6.5 Bookings inbox (member-facing)
 
-Members track leads with CRM statuses projected from booking state:
+Members track matches in **Bookings** with pipeline statuses projected from booking state:
 
-| Lead status | Meaning |
-|-------------|---------|
-| Pending | One-sided outreach; awaiting opt-in |
-| Open | Mutual interest; contacts unlocked; negotiate and fill terms |
-| Won | Booking confirmed (agreement signed) |
-| Lost | Passed, declined, rejected, withdrawn, expired, or cancelled before win |
-| Completed | Won, and the performance window has ended |
+| Status | Meaning |
+|--------|---------|
+| Needs you / Pending | One-sided outreach; awaiting opt-in |
+| In progress / Open | Mutual interest; contacts unlocked; negotiate and fill terms |
+| Confirmed / Won | Booking confirmed (agreement signed) |
+| Lost | Passed, declined, rejected, withdrawn, expired, or cancelled before confirm |
+| Done / Completed | Confirmed, and the performance window has ended |
 
-Contact unlock fires once on transition into Open (shortlist / accept / enquiry interest).
+Contact unlock fires once on transition into Open (shortlist / accept / enquiry interest). The former separate “Leads” inbox and the old bookings-only list are one surface.
 
 ## 7. Booking lifecycle
 
 Canonical lifecycle:
 
-1. `requested` or `applied` (lead: Pending)
-2. `shortlisted` (application / profile enquiry interest) or `accepted` (direct request) (lead: Open)
+1. `requested` or `applied` (booking inbox: Pending)
+2. `shortlisted` (application / profile enquiry interest) or `accepted` (direct request) (Open)
 3. `terms_agreed`
 4. `agreement_generated`
 5. `partially_signed`
-6. `confirmed` when both required parties have signed (lead: Won)
+6. `confirmed` when both required parties have signed (Confirmed / Won)
 
-Terminal/exception states: `declined`, `rejected`, `withdrawn`, `expired`, `cancelled` (lead: Lost). After Won, when the performance end time has passed, the lead projects as Completed.
+Terminal/exception states: `declined`, `rejected`, `withdrawn`, `expired`, `cancelled` (Lost). After Confirmed, when the performance end time has passed, the inbox projects as Done / Completed.
 
 State changes must be validated, idempotent, authorized, and audited.
 
-Agreed terms snapshot venue, act, service date/times/time zone (when known), fee/currency, performance format, cancellation terms, production obligations, and optional deposit terms. Later profile edits do not alter this snapshot. Undated open leads may add or edit date/fee/format progressively before terms agreement.
+Agreed terms snapshot venue, act, service date/times/time zone (when known), fee/currency, performance format, cancellation terms, production obligations, and optional deposit terms. Later profile edits do not alter this snapshot. Undated open bookings may add or edit date/fee/format progressively before terms agreement.
 
 ## 8. Agreement, signatures, and deposits
 

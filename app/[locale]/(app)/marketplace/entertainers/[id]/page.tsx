@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { DirectRequestForm } from "@/src/components/direct-request-form";
+import { ConnectionRequestButton } from "@/src/components/connection-request-button";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
 import { ProfileDocumentList } from "@/src/components/profile-document-list";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
@@ -8,6 +8,8 @@ import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
 import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
+import { listVenueActConnectionStatuses } from "@/src/db/queries/profile-enquiries";
+import { formatLanguageList } from "@/src/domain/languages";
 import {
   ENTERTAINER_CATEGORIES,
   getCategoryNode,
@@ -15,7 +17,6 @@ import {
   taxonomyLabel,
 } from "@/src/domain/profile-taxonomy";
 import { can } from "@/src/domain/permissions";
-import { Link } from "@/src/i18n/navigation";
 import { formatEur } from "@/src/lib/format";
 import {
   socialLinksToList,
@@ -94,13 +95,30 @@ export default async function EntertainerDetailPage({ params }: Props) {
   }
 
   const operableVenues = (await listVenuesForUser(access.actor.userId)).filter(
-    (venue) => can(access.actor, "direct_request.send", { venueId: venue.id }),
+    (venue) =>
+      venue.id === access.actor.venueId &&
+      venue.publicationState === "approved" &&
+      can(access.actor, "direct_request.send", { venueId: venue.id }),
   );
-  const showRequestLocked =
+  // Any venue booker viewing another act should always see a CTA: either
+  // Request connection, or a publish-gate message. Never hide both (e.g. when
+  // venueVerified is stale/true but no owned venue is currently operable).
+  const isVenueBooker =
     !isOwnProfile &&
     canBrowseActs &&
-    access.actor.roles.includes("venue") &&
-    !access.actor.venueVerified;
+    (access.actor.roles.includes("venue") || Boolean(access.actor.venueId));
+  const showRequestLocked = isVenueBooker && operableVenues.length === 0;
+
+  const connectionStatuses =
+    operableVenues.length > 0
+      ? await listVenueActConnectionStatuses({
+          entertainerProfileId: profile.id,
+          venueIds: operableVenues.map((venue) => venue.id),
+        })
+      : [];
+  const statusByVenueId = new Map(
+    connectionStatuses.map((status) => [status.venueId, status]),
+  );
 
   const media = splitPortfolioMedia(profile.portfolio);
   const sub = subcategoryLabel(profile.genres, profile.category, appLocale);
@@ -119,7 +137,12 @@ export default async function EntertainerDetailPage({ params }: Props) {
     },
     {
       label: t("travelRadius"),
-      value: `${profile.travelRadiusKm} km`,
+      value: profile.berlinBase?.trim()
+        ? t("travelRadiusFrom", {
+            km: profile.travelRadiusKm,
+            location: profile.berlinBase.trim(),
+          })
+        : `${profile.travelRadiusKm} km`,
     },
   ];
   if (profile.performanceFormats?.trim()) {
@@ -129,7 +152,10 @@ export default async function EntertainerDetailPage({ params }: Props) {
     });
   }
   if (profile.languages?.trim()) {
-    facts.push({ label: t("languages"), value: profile.languages });
+    facts.push({
+      label: t("languages"),
+      value: formatLanguageList(profile.languages, appLocale),
+    });
   }
   if (profile.technicalRequirements?.trim()) {
     facts.push({
@@ -157,6 +183,23 @@ export default async function EntertainerDetailPage({ params }: Props) {
     ownerUserId: profile.userId,
     publicationState: "approved",
   });
+
+  const headerAction = isVenueBooker ? (
+    <ConnectionRequestButton
+      locale={appLocale}
+      entertainerProfileId={profile.id}
+      venues={operableVenues.map((venue) => {
+        const status = statusByVenueId.get(venue.id);
+        return {
+          id: venue.id,
+          name: venue.name,
+          activeBookingId: status?.activeBookingId ?? null,
+          cooldownDaysRemaining: status?.cooldownDaysRemaining ?? null,
+        };
+      })}
+      locked={showRequestLocked}
+    />
+  ) : null;
 
   return (
     <>
@@ -186,6 +229,7 @@ export default async function EntertainerDetailPage({ params }: Props) {
         galleryTitle={t("galleryTitle")}
         videoTitle={t("videoTitle")}
         linksTitle={t("linksTitle")}
+        {...(headerAction ? { headerAction } : {})}
       >
         <ProfileDocumentList
           locale={locale}
@@ -196,28 +240,6 @@ export default async function EntertainerDetailPage({ params }: Props) {
             sizeBytes: doc.sizeBytes,
           }))}
         />
-
-        {!isOwnProfile && operableVenues.length > 0 ? (
-          <div id="direct-request" className="scroll-mt-24">
-            <DirectRequestForm
-              locale={appLocale}
-              entertainerProfileId={profile.id}
-              venues={operableVenues.map((venue) => ({
-                id: venue.id,
-                name: venue.name,
-              }))}
-            />
-          </div>
-        ) : null}
-
-        {showRequestLocked ? (
-          <p className="rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)] p-5 text-sm text-[var(--text-muted)]">
-            {t("requestActLocked")}{" "}
-            <Link href="/profile" className="font-medium underline">
-              {t("viewProfile")}
-            </Link>
-          </p>
-        ) : null}
       </PublicProfileView>
     </>
   );

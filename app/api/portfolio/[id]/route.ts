@@ -5,6 +5,7 @@ import { getDb } from "@/src/db/client";
 import {
   entertainerProfiles,
   portfolioItems,
+  venues,
 } from "@/src/db/schema/marketplace";
 import { can } from "@/src/domain/permissions";
 import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
@@ -48,30 +49,73 @@ export async function GET(request: Request, { params }: Props) {
     );
   }
 
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.id, item.entertainerProfileId),
-  });
-  if (!profile) {
-    return NextResponse.json(
-      { ok: false, error: "not_found" },
-      { status: 404 },
-    );
-  }
+  let isOwner = false;
+  let isPublished = false;
 
-  const isOwner = profile.userId === actor.userId;
-  if (!isOwner) {
-    if (!can(actor, "discover.entertainers")) {
-      return NextResponse.json(
-        { ok: false, error: "forbidden" },
-        { status: 403 },
-      );
-    }
-    if (profile.publicationState !== "approved") {
+  if (item.entertainerProfileId) {
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, item.entertainerProfileId),
+    });
+    if (!profile) {
       return NextResponse.json(
         { ok: false, error: "not_found" },
         { status: 404 },
       );
     }
+    isOwner = profile.userId === actor.userId;
+    isPublished = profile.publicationState === "approved";
+    if (!isOwner) {
+      if (!can(actor, "discover.entertainers")) {
+        return NextResponse.json(
+          { ok: false, error: "forbidden" },
+          { status: 403 },
+        );
+      }
+      if (!isPublished) {
+        return NextResponse.json(
+          { ok: false, error: "not_found" },
+          { status: 404 },
+        );
+      }
+    }
+  } else if (item.venueId) {
+    const venue = await db.query.venues.findFirst({
+      where: eq(venues.id, item.venueId),
+      columns: {
+        id: true,
+        ownerUserId: true,
+        publicationState: true,
+      },
+    });
+    if (!venue) {
+      return NextResponse.json(
+        { ok: false, error: "not_found" },
+        { status: 404 },
+      );
+    }
+    isOwner =
+      venue.ownerUserId === actor.userId ||
+      can(actor, "venue.manage", { venueId: venue.id });
+    isPublished = venue.publicationState === "approved";
+    if (!isOwner) {
+      if (!can(actor, "discover.venues")) {
+        return NextResponse.json(
+          { ok: false, error: "forbidden" },
+          { status: 403 },
+        );
+      }
+      if (!isPublished) {
+        return NextResponse.json(
+          { ok: false, error: "not_found" },
+          { status: 404 },
+        );
+      }
+    }
+  } else {
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      { status: 404 },
+    );
   }
 
   const key = wantThumb && item.thumbBlobKey ? item.thumbBlobKey : item.blobKey;

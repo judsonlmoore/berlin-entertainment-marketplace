@@ -37,7 +37,7 @@ import {
   reorderPortfolioItems,
 } from "@/src/actions/portfolio";
 import { YouTubeEmbed } from "@/src/components/youtube-embed";
-import { useRouter } from "@/src/i18n/navigation";
+import { AppModal } from "@/src/components/ui/app-modal";
 import { PORTFOLIO_MAX_IMAGES } from "@/src/domain/portfolio";
 import { validateYouTubeUrl } from "@/src/domain/youtube";
 import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
@@ -54,9 +54,24 @@ export type PortfolioItemRow = {
 
 type Props = {
   locale: "en" | "de";
-  entertainerProfileId: string;
+  /** Exactly one of entertainerProfileId or venueId is required. */
+  entertainerProfileId?: string;
+  venueId?: string;
   items: PortfolioItemRow[];
 };
+
+function portfolioOwnerFields(
+  entertainerProfileId: string | undefined,
+  venueId: string | undefined,
+): { entertainerProfileId: string } | { venueId: string } | null {
+  if (entertainerProfileId && !venueId) {
+    return { entertainerProfileId };
+  }
+  if (venueId && !entertainerProfileId) {
+    return { venueId };
+  }
+  return null;
+}
 
 type PendingUpload = {
   localId: string;
@@ -365,13 +380,14 @@ function EmptyHeroDropzone({
 export function PortfolioEditor({
   locale,
   entertainerProfileId,
+  venueId,
   items,
 }: Props) {
   const t = useTranslations("profile");
-  const router = useRouter();
   const reactId = useId();
   const uploadSeq = useRef(0);
   const [, startTransition] = useTransition();
+  const owner = portfolioOwnerFields(entertainerProfileId, venueId);
   const [mediaError, setMediaError] = useState<string | null>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [draggingOver, setDraggingOver] = useState(false);
@@ -388,11 +404,21 @@ export function PortfolioEditor({
   const [images, setImages] = useState<PortfolioItemRow[]>(() =>
     serverImageList(items),
   );
+  const [youtube, setYoutube] = useState<PortfolioItemRow | null>(
+    () => items.find((item) => item.kind === "youtube") ?? null,
+  );
   const [syncedKey, setSyncedKey] = useState(() => imageSignature(items));
+  const [youtubeSyncedId, setYoutubeSyncedId] = useState(
+    () => items.find((item) => item.kind === "youtube")?.id ?? null,
+  );
   const persistGeneration = useRef(0);
 
   const serverImages = useMemo(() => serverImageList(items), [items]);
   const serverImageKey = useMemo(() => imageSignature(items), [items]);
+  const serverYoutube = useMemo(
+    () => items.find((item) => item.kind === "youtube") ?? null,
+    [items],
+  );
 
   // Drop optimistic-remove markers once the server no longer has those rows.
   if (removedIds.length > 0) {
@@ -410,7 +436,12 @@ export function PortfolioEditor({
     setImages(serverImages);
   }
 
-  const youtube = items.find((item) => item.kind === "youtube") ?? null;
+  const serverYoutubeId = serverYoutube?.id ?? null;
+  if (youtubeSyncedId !== serverYoutubeId) {
+    setYoutubeSyncedId(serverYoutubeId);
+    setYoutube(serverYoutube);
+  }
+
   const imageIds = images.map((item) => item.id);
   const emptySlots = Math.max(
     0,
@@ -452,6 +483,12 @@ export function PortfolioEditor({
   }, []);
 
   function persistOrder(nextImages: PortfolioItemRow[]) {
+    if (!owner) {
+      setMediaError(
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
+      );
+      return;
+    }
     const generation = ++persistGeneration.current;
     const orderedIds = [
       ...nextImages.map((item) => item.id),
@@ -462,7 +499,7 @@ export function PortfolioEditor({
     ];
     startTransition(async () => {
       const result = await reorderPortfolioItems({
-        entertainerProfileId,
+        ...owner,
         orderedIds,
         locale,
       });
@@ -472,7 +509,6 @@ export function PortfolioEditor({
         setImages(serverImages.filter((item) => !removedIds.includes(item.id)));
         return;
       }
-      router.refresh();
     });
   }
 
@@ -536,6 +572,13 @@ export function PortfolioEditor({
     const files = Array.from(fileList).filter((file) => file.size > 0);
     if (files.length === 0) return;
 
+    if (!owner) {
+      setMediaError(
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
+      );
+      return;
+    }
+
     const remaining =
       PORTFOLIO_MAX_IMAGES - images.length - pendingUploads.length;
     if (remaining <= 0) {
@@ -566,7 +609,11 @@ export function PortfolioEditor({
       const file = toUpload[index]!;
       const pending = batch[index]!;
       const body = new FormData();
-      body.set("entertainerProfileId", entertainerProfileId);
+      if ("entertainerProfileId" in owner) {
+        body.set("entertainerProfileId", owner.entertainerProfileId);
+      } else {
+        body.set("venueId", owner.venueId);
+      }
       body.set("file", file);
       body.set("altText", file.name.replace(/\.[^.]+$/, ""));
 
@@ -622,8 +669,6 @@ export function PortfolioEditor({
         setMediaError(t("portfolioUploadFailed"));
       }
     }
-
-    router.refresh();
   }
 
   function saveYouTube(url: string) {
@@ -633,10 +678,16 @@ export function PortfolioEditor({
       setVideoError(parsed.reason);
       return;
     }
+    if (!owner) {
+      setVideoError(
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
+      );
+      return;
+    }
     setVideoError(null);
     startTransition(async () => {
       const result = await addPortfolioYouTube({
-        entertainerProfileId,
+        ...owner,
         url: parsed.canonicalUrl,
         locale,
       });
@@ -644,13 +695,30 @@ export function PortfolioEditor({
         setVideoError(result.message);
         return;
       }
+      if (result.id) {
+        setYoutube({
+          id: result.id,
+          kind: "youtube",
+          caption: null,
+          altText: null,
+          url: parsed.canonicalUrl,
+          blobKey: null,
+          sortOrder: images.length,
+        });
+        setYoutubeSyncedId(result.id);
+      }
       setYoutubeDraft("");
       setYoutubeStatus("idle");
-      router.refresh();
     });
   }
 
   function removeImage(itemId: string) {
+    if (!owner) {
+      setMediaError(
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
+      );
+      return;
+    }
     setMediaError(null);
     const removed = images.find((item) => item.id === itemId) ?? null;
     setImages((current) => current.filter((item) => item.id !== itemId));
@@ -660,7 +728,7 @@ export function PortfolioEditor({
 
     startTransition(async () => {
       const result = await removePortfolioItem({
-        entertainerProfileId,
+        ...owner,
         itemId,
         locale,
       });
@@ -677,7 +745,6 @@ export function PortfolioEditor({
         setRemovedIds((current) => current.filter((id) => id !== itemId));
         return;
       }
-      router.refresh();
     });
   }
 
@@ -846,9 +913,17 @@ export function PortfolioEditor({
               <button
                 type="button"
                 onClick={() => {
+                  if (!owner) {
+                    setVideoError(
+                      venueId
+                        ? t("portfolioNeedVenue")
+                        : t("portfolioNeedProfile"),
+                    );
+                    return;
+                  }
                   startTransition(async () => {
                     const result = await removePortfolioItem({
-                      entertainerProfileId,
+                      ...owner,
                       itemId: youtube.id,
                       locale,
                     });
@@ -856,7 +931,8 @@ export function PortfolioEditor({
                       setVideoError(result.message);
                       return;
                     }
-                    router.refresh();
+                    setYoutube(null);
+                    setYoutubeSyncedId(null);
                   });
                 }}
                 className="mt-2 text-xs font-medium text-[var(--danger)]"
@@ -919,35 +995,19 @@ export function PortfolioEditor({
       </div>
 
       {videoOpen && youtube?.url ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-[rgba(20,24,22,0.55)] p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("portfolioYouTubeTitle")}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) setVideoOpen(false);
-          }}
+        <AppModal
+          open={videoOpen}
+          onClose={() => setVideoOpen(false)}
+          title={youtube.caption || t("portfolioYouTubeTitle")}
+          closeLabel={t("portfolioCloseVideo")}
+          size="lg"
         >
-          <div className="w-full max-w-3xl overflow-hidden rounded-[12px] border border-[var(--rule)] bg-[var(--surface)]">
-            <div className="flex items-center justify-between gap-3 border-b border-[var(--rule)] px-4 py-3">
-              <strong className="text-sm font-semibold">
-                {youtube.caption || t("portfolioYouTubeTitle")}
-              </strong>
-              <button
-                type="button"
-                className="rounded-[var(--radius-sm)] border border-[var(--rule)] px-3 py-2 text-sm font-semibold"
-                onClick={() => setVideoOpen(false)}
-              >
-                {t("portfolioCloseVideo")}
-              </button>
-            </div>
-            <YouTubeEmbed
-              url={youtube.url}
-              className="aspect-video w-full bg-black"
-              {...(youtube.caption ? { title: youtube.caption } : {})}
-            />
-          </div>
-        </div>
+          <YouTubeEmbed
+            url={youtube.url}
+            className="aspect-video w-full bg-black"
+            {...(youtube.caption ? { title: youtube.caption } : {})}
+          />
+        </AppModal>
       ) : null}
     </div>
   );

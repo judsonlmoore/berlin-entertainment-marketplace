@@ -64,7 +64,7 @@ export async function runHoldExpiry(
 
     revalidatePath(`/${parsed.data.locale}/admin`);
     revalidatePath(`/${parsed.data.locale}/marketplace/calendar`);
-    revalidatePath(`/${parsed.data.locale}/marketplace/requests`);
+    revalidatePath(`/${parsed.data.locale}/marketplace/bookings`);
     return {
       ok: true,
       expired,

@@ -26,6 +26,7 @@ Required for a working local app:
 - `DATABASE_URL` from Neon via Vercel Marketplace
 - `AUTH_SECRET` (generate with `openssl rand -base64 32`)
 - OAuth credentials (`AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` and/or GitHub)
+- Optional Places API (New) key (`GOOGLE_PLACES_API_KEY`) for buyer venue business search / prefill
 - Google redirect URI: `http://localhost:3000/api/session/callback/google`
   (production: `https://<your-domain>/api/session/callback/google`)
 - Keep `AUTH_URL` set to the public site origin (e.g. `https://entertainment-marketplace.jlm.me`)

@@ -17,7 +17,7 @@ describe("notification templates", () => {
     expect(content.actionLabel).toBe("Give feedback");
   });
 
-  it("links profile enquiry notifications to the lead", () => {
+  it("links profile enquiry notifications to the booking", () => {
     const received = generateNotificationContent({
       type: "profile_enquiry_received",
       locale: "en",
@@ -28,9 +28,9 @@ describe("notification templates", () => {
       },
     });
     expect(received.actionUrl).toBe(
-      "/marketplace/leads/b34ef01f-0000-0000-0000-b34ef01f0000",
+      "/marketplace/bookings/b34ef01f-0000-0000-0000-b34ef01f0000",
     );
-    expect(received.actionLabel).toBe("View lead");
+    expect(received.actionLabel).toBe("View booking");
 
     const interested = generateNotificationContent({
       type: "profile_enquiry_interested",
@@ -42,6 +42,6 @@ describe("notification templates", () => {
       },
     });
     expect(interested.body).toContain("Salon Mitte");
-    expect(interested.actionLabel).toBe("Lead ansehen");
+    expect(interested.actionLabel).toBe("Booking ansehen");
   });
 });

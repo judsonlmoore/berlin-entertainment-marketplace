@@ -8,10 +8,7 @@ export type RailRoleContextData = {
 };
 
 function hasVenueCapability(actor: ActorContext): boolean {
-  return (
-    actor.roles.includes("venue") ||
-    actor.venueMemberships.some((membership) => membership.status === "active")
-  );
+  return actor.roles.includes("venue") || Boolean(actor.venueId);
 }
 
 /** Resolve the single marketplace role for the rail badge. */

@@ -27,12 +27,7 @@ export async function loadBookingAccess(
   }
 
   const isEntertainer = profile.userId === actor.userId;
-  const isVenue = actor.venueMemberships.some(
-    (m) =>
-      m.venueId === booking.venueId &&
-      m.status === "active" &&
-      (m.role === "owner" || m.role === "member"),
-  );
+  const isVenue = actor.venueId === booking.venueId;
 
   let party: BookingParty | null = null;
   if (actor.isPlatformStaff) party = "staff";

@@ -56,21 +56,20 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 
 ### Venue and entertainer
 
-- `venues`: organization profile, address/location, type, audience, capacity, approval/publication state
-- `venue_memberships`: venue ID, user ID, `owner`/`member`, status; prevent removal of last active owner
-- `venue_spaces`: capacity and production-resource fields where a venue has multiple rooms
+- `venues`: buyer-owned profile (`owner_user_id` unique — 1 account → 1 venue), address/location, optional `google_place_id`, type, audience, capacity, publication state
+- `venue_spaces`: exactly one room per venue for calendar ownership (MVP); capacity/stage fields synced from the buyer profile
 - `entertainer_profiles`: act identity, category, description, group size, price range, duration, travel/production data
 - `portfolio_items`: metadata and restricted/public-to-members Blob key, not a public URL
-- `rider_files`: Blob key, owner, MIME type, size, checksum, scan status, uploader
+- `rider_files` / profile documents: Blob key, owner, MIME type, size, checksum, scan status, uploader
 
 ### Matching and booking
 
-- `opportunities`: venue/space, window, budget, constraints, deadline, draft/open/closed/cancelled state (member UI: **open call**)
+- `opportunities`: venue/space, **kind** `dated` | `standing`, window (required for dated; null for standing), optional standing schedule text, budget, constraints, deadline, draft/open/closed/cancelled state (member UI: **open call**)
 - `applications`: opportunity + entertainer, message/quote, lifecycle; unique pair
 - `direct_requests`: venue + entertainer, proposed terms, lifecycle
-- `profile_enquiries`: act→venue undated (or optionally dated) profile submission; pending/interested/passed/withdrawn; one active pending/interested pair per act↔venue (partial unique index); 30-day pass cooldown before re-submit
-- `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI projects these as **leads** (Pending/Open/Won/Lost/Completed) via `projectLeadStatus`
-- `booking_terms`: immutable versioned snapshots with currency amounts in integer cents (required once formal terms exist; open profile-enquiry leads may negotiate dates/fees on the enquiry row first)
+- `profile_enquiries`: act↔venue undated (or optionally dated) profile / connection request; pending/interested/passed/withdrawn; one active pending/interested pair per act↔venue (partial unique index); 7-day re-request cooldown after any request; 30-day pass cooldown before re-submit
+- `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI is the **Bookings** inbox (Pending/Open/Confirmed/Lost/Done)
+- `booking_terms`: immutable versioned snapshots with currency amounts in integer cents (required once formal terms exist; open undated bookings may negotiate dates/fees on the origin row first)
 - `contact_unlocks`: booking/application/request/profile_enquiry, parties, reason, timestamp; unlock on mutual opt-in (shortlist / accept / enquiry interested). Undated opens skip calendar holds until a performance window exists; adding dates later places requested holds.
 - `agreement_templates`: locale, version, legal review status
 - `agreements`: booking terms version, German/English rendered artifact references, provider/status
@@ -89,10 +88,11 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 
 ## 4. Database access and migrations
 
-- Use `@neondatabase/serverless` with Drizzle's Neon HTTP driver for standard serverless queries; initialize lazily so builds do not require `DATABASE_URL`.
+- Use `@neondatabase/serverless` with Drizzle's Neon HTTP/WebSocket driver for standard serverless queries; initialize lazily so builds do not require `DATABASE_URL`.
 - Keep all database access server-only. Export narrow query/service functions, not a client to UI code.
 - Commit generated SQL under `drizzle/`; never edit a migration already applied to shared environments.
 - Migration workflow: change schema → generate SQL → inspect constraints/destructive changes → test against disposable/local branch → migrate → seed → run verification.
+- `drizzle-kit` scripts pass `--config=drizzle.config.ts`. Kit prefers `DATABASE_URL_UNPOOLED` (then `DATABASE_URL`) and the `pg` driver so migrate/studio use TCP instead of Neon websockets. App runtime stays on `@neondatabase/serverless`.
 - Seed only synthetic Berlin demo data. Make seeding idempotent and require an explicit non-production guard.
 - Use database transactions for booking transitions, signatures-to-confirmation, contact unlock, and calendar blocking.
 
@@ -101,7 +101,7 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 - Configure Auth.js in `src/auth.ts` with `@auth/drizzle-adapter` and the shared Drizzle client.
 - Persist sessions in the database. Use secure, HTTP-only, same-site cookies and trusted host/origin configuration.
 - Provider credentials remain environment configuration. A development-only demo bypass, if retained, must be explicit, impossible in production, visibly labeled, and never share production data.
-- Central permission functions evaluate authenticated user, account status, profile publication verification for contact, platform staff role, requested capability, organization membership, and record ownership.
+- Central permission functions evaluate authenticated user, account status, profile publication verification for contact, platform staff role, requested capability, and venue ownership (`venues.owner_user_id`).
 - Suspended users lose private reads/writes immediately; preserve bookings/audit history for staff handling.
 - Protect at data access and mutation boundaries. A route proxy may redirect early but is not sufficient authorization.
 - Prevent open redirects and account-linking ambiguity; normalize and verify provider email behavior.
@@ -113,15 +113,15 @@ Representative pages:
 - Public: `/[locale]`, `/[locale]/apply`, `/[locale]/privacy`, `/[locale]/terms`
 - Auth: `/[locale]/sign-in`, `/api/session/[...nextauth]` (Auth.js `basePath`; legacy `/api/auth/*` redirects to sign-in)
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
-- Marketplace: `/[locale]/marketplace` (role-segregated entertainer vs venue discovery), `/opportunities`, `/opportunities/[id]`, `/requests` (Leads inbox), `/leads/[id]`, `/bookings/[id]`, `/calendar`, `/profile`
+- Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (pipeline + terms/agreement), `/calendar`, `/profile` (incl. open-call manage). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
 - Admin: `/[locale]/admin/reviews`, `/accounts/[id]`, `/operations`
-- Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, authorized download route
+- Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, `/api/places/autocomplete`, `/api/places/details`, authorized download route
 
 Discovery authorization is role-scoped: `discover.entertainers` for venue operators/staff; `discover.venues` for entertainers/staff. Dual-role actors may hold both. Queries and pages must enforce this; navigation alone is insufficient.
 
 Use Server Components for initial reads. Use Server Actions for same-origin form mutations where progressive enhancement helps; use Route Handlers for Auth.js, webhooks, uploads/downloads, and external APIs. Every mutation validates Zod input, authorizes, uses an idempotency/concurrency strategy, writes audit events, and returns typed expected errors. Revalidate affected paths/tags after commit.
 
-Key actions include: submit onboarding/profile; invite/manage venue member; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); submit/respond profile enquiry (Interested/Pass); update open-lead proposal fields; shortlist/reject; send/accept/decline request; propose/accept terms; generate agreement; process signature event; cancel booking; set availability/hold; expire holds; record deposit status; staff suspend/reactivate.
+Key actions include: submit onboarding/profile; Google Places autocomplete/details prefill for buyer venues; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); submit/respond profile enquiry (Interested/Pass); update open-lead proposal fields; shortlist/reject; send/accept/decline request; propose/accept terms; generate agreement; process signature event; cancel booking; set availability/hold; expire holds; record deposit status; staff suspend/reactivate.
 
 ## 7. Booking and calendar concurrency
 
@@ -160,6 +160,7 @@ Define an `ESignProvider` interface for creating an envelope, retrieving status,
 - Validate all untrusted input and output projections; parameterize queries through Drizzle.
 - Apply CSRF protections provided by Auth.js and same-origin Server Actions; verify webhook signatures against raw bodies.
 - Rate limit sign-in, application, invitation, upload, profile enquiry, and webhook surfaces.
+- Entertainer discovery may filter `availableOn` (ISO date): exclude acts with a blocking calendar entry that Berlin local day (reuse overlap + RRULE expansion). Apply text/category/price filters before busy checks; candidate set capped at 120 profiles per query (`AVAILABLE_ON_CANDIDATE_CAP`).
 - Set CSP/security headers, production HTTPS, secure cookies, and least-privilege integration tokens.
 - Prevent IDOR with resource-scoped authorization, not opaque IDs alone.
 - Audit privileged reads/mutations and approval/contact/signature/calendar changes.
