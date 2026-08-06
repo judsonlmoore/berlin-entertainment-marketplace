@@ -44,7 +44,9 @@ export function canOwnerTransitionProfile(
   return OWNER_TRANSITIONS[from].includes(to);
 }
 
-export function canOwnerPublishProfile(state: ProfilePublicationState): boolean {
+export function canOwnerPublishProfile(
+  state: ProfilePublicationState,
+): boolean {
   return canOwnerTransitionProfile(state, "approved");
 }
 

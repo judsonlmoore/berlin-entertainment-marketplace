@@ -27,8 +27,7 @@ export type EntertainerPublishSnapshot = {
 };
 
 export type PublishReadinessResult =
-  | { ok: true }
-  | { ok: false; reasons: string[] };
+  { ok: true } | { ok: false; reasons: string[] };
 
 function hasPublicUrl(snapshot: EntertainerPublishSnapshot): boolean {
   if (snapshot.websiteUrl?.trim()) return true;

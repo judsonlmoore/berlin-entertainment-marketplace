@@ -489,7 +489,6 @@ export function EntertainerProfileForm({
             max={NOTES_MAX}
             size="short"
           />
-
         </Section>
 
         <Section title={t("sectionLinks")} hint={t("linksHint")}>

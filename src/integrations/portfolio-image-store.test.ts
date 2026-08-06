@@ -55,9 +55,9 @@ describe("portfolio-image-store", () => {
       filenameSuffix: "-thumb",
     });
     expect(blobKey).toContain("-thumb.webp");
-    expect(Array.from((await loadPortfolioImage(blobKey))?.bytes ?? [])).toEqual(
-      [9, 8, 7],
-    );
+    expect(
+      Array.from((await loadPortfolioImage(blobKey))?.bytes ?? []),
+    ).toEqual([9, 8, 7]);
     await deletePortfolioImage(blobKey);
   });
 

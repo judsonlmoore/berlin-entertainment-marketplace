@@ -14,7 +14,11 @@ export function SafeRichText({ html, className }: Props) {
 
   if (!/<[a-z][\s\S]*>/i.test(clean)) {
     return (
-      <div className={className ? `${className} whitespace-pre-wrap` : "whitespace-pre-wrap"}>
+      <div
+        className={
+          className ? `${className} whitespace-pre-wrap` : "whitespace-pre-wrap"
+        }
+      >
         {clean}
       </div>
     );
@@ -24,8 +28,8 @@ export function SafeRichText({ html, className }: Props) {
     <div
       className={
         className
-          ? `${className} [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_p+p]:mt-2`
-          : "[&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_p+p]:mt-2"
+          ? `${className} [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-2 [&_ul]:list-disc [&_ul]:pl-5`
+          : "[&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p+p]:mt-2 [&_ul]:list-disc [&_ul]:pl-5"
       }
       dangerouslySetInnerHTML={{ __html: clean }}
     />

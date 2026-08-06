@@ -460,12 +460,16 @@ export async function publishEntertainerProfile(
       priceMinCents: profile.priceMinCents,
       priceMaxCents: profile.priceMaxCents,
       websiteUrl: profile.websiteUrl,
-      socialLinks: (profile.socialLinks as Record<string, string> | null) ?? null,
+      socialLinks:
+        (profile.socialLinks as Record<string, string> | null) ?? null,
       imageCount: imageRow?.value ?? 0,
       hasExternalOrVideoLink,
     });
     if (!readiness.ok) {
-      throw new AppError("validation", readiness.reasons[0] ?? "Profile incomplete");
+      throw new AppError(
+        "validation",
+        readiness.reasons[0] ?? "Profile incomplete",
+      );
     }
 
     const from = profile.publicationState as ProfilePublicationState;

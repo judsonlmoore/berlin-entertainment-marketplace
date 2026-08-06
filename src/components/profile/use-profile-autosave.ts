@@ -108,8 +108,7 @@ export function useProfileAutosave<T>({
 
   useEffect(() => {
     if (!enabled) return;
-    const dirty =
-      phase === "dirty" || phase === "saving" || phase === "error";
+    const dirty = phase === "dirty" || phase === "saving" || phase === "error";
     if (!dirty) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       event.preventDefault();
@@ -124,7 +123,6 @@ export function useProfileAutosave<T>({
     errorMessage,
     savedAt,
     saveNow: flush,
-    isDirty:
-      phase === "dirty" || phase === "saving" || phase === "error",
+    isDirty: phase === "dirty" || phase === "saving" || phase === "error",
   };
 }

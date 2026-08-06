@@ -19,8 +19,7 @@ type Props = { params: Promise<{ id: string }> };
 
 export async function GET(request: Request, { params }: Props) {
   const { id } = await params;
-  const wantThumb =
-    new URL(request.url).searchParams.get("v") === "thumb";
+  const wantThumb = new URL(request.url).searchParams.get("v") === "thumb";
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -75,8 +74,7 @@ export async function GET(request: Request, { params }: Props) {
     }
   }
 
-  const key =
-    wantThumb && item.thumbBlobKey ? item.thumbBlobKey : item.blobKey;
+  const key = wantThumb && item.thumbBlobKey ? item.thumbBlobKey : item.blobKey;
 
   // Local disk + Vercel Blob keys are both served through our auth proxy.
   if (isLocalPortfolioKey(key) || isBlobPortfolioKey(key)) {

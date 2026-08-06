@@ -125,7 +125,7 @@ export function RoleSelectionForm({ locale }: Props) {
               </span>
               <span
                 id="agency-coming-soon"
-                className="rounded-sm bg-[var(--rule)] px-1.5 py-0.5 text-[0.6875rem] font-medium uppercase tracking-wide text-[var(--text-muted)]"
+                className="rounded-sm bg-[var(--rule)] px-1.5 py-0.5 text-[0.6875rem] font-medium tracking-wide text-[var(--text-muted)] uppercase"
               >
                 {t("comingSoon")}
               </span>

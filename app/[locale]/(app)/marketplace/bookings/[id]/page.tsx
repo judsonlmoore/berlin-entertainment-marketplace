@@ -246,10 +246,7 @@ export default async function BookingDetailPage({ params }: Props) {
         locale={locale}
         documents={bookingDocuments.map((doc) => ({
           id: doc.id,
-          title:
-            doc.title.trim() ||
-            doc.originalFilename?.trim() ||
-            "PDF",
+          title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
           visibility: doc.visibility,
           sizeBytes: doc.sizeBytes,
         }))}

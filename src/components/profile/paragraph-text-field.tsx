@@ -4,7 +4,13 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useRef, useState, useEffect, type ReactNode, type SVGProps } from "react";
+import {
+  useRef,
+  useState,
+  useEffect,
+  type ReactNode,
+  type SVGProps,
+} from "react";
 import { useTranslations } from "next-intl";
 import {
   richTextPlainLength,
@@ -242,10 +248,7 @@ export function ParagraphTextField({
           >
             <IconUnderline />
           </ToolbarButton>
-          <span
-            aria-hidden
-            className="mx-1 h-5 w-px bg-[var(--rule)]"
-          />
+          <span aria-hidden className="mx-1 h-5 w-px bg-[var(--rule)]" />
           <ToolbarButton
             label={t("editorNumberedList")}
             active={Boolean(editor?.isActive("orderedList"))}
@@ -264,10 +267,7 @@ export function ParagraphTextField({
           >
             <IconBulletList />
           </ToolbarButton>
-          <span
-            aria-hidden
-            className="mx-1 h-5 w-px bg-[var(--rule)]"
-          />
+          <span aria-hidden className="mx-1 h-5 w-px bg-[var(--rule)]" />
           <ToolbarButton
             label={t("editorQuote")}
             active={Boolean(editor?.isActive("blockquote"))}
