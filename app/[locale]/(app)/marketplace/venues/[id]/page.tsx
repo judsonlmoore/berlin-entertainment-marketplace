@@ -1,11 +1,19 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
+import { VenueProfileContactPanel } from "@/src/components/venue-profile-contact-panel";
 import { getDiscoverableVenueDetail } from "@/src/db/queries/discovery";
 import {
   canViewVenueDiscoveryDetail,
   requireDiscoveryAccess,
 } from "@/src/db/queries/discovery-access";
+import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
+import { findActiveProfileEnquiry } from "@/src/db/queries/profile-enquiries";
+import { listOpenCallsForVenue } from "@/src/db/queries/opportunities";
+import { getDb } from "@/src/db/client";
+import { bookings, entertainerProfiles } from "@/src/db/schema/marketplace";
+import { and, eq } from "drizzle-orm";
+import { can } from "@/src/domain/permissions";
 import {
   getCategoryNode,
   parseSubcategory,
@@ -126,32 +134,99 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
     });
   }
 
+  const isEntertainer = access.actor.roles.includes("entertainer");
+  const db = getDb();
+  const ownProfile = isEntertainer
+    ? await db.query.entertainerProfiles.findFirst({
+        where: eq(entertainerProfiles.userId, access.actor.userId),
+        columns: {
+          id: true,
+          publicationState: true,
+          priceMinCents: true,
+          priceMaxCents: true,
+        },
+      })
+    : null;
+
+  const canSubmit = can(access.actor, "profile_enquiry.send");
+  const publishRequired = Boolean(
+    isEntertainer && ownProfile && ownProfile.publicationState !== "approved",
+  );
+
+  let activeEnquiryBookingId: string | null = null;
+  if (ownProfile) {
+    const active = await findActiveProfileEnquiry({
+      venueId: id,
+      entertainerProfileId: ownProfile.id,
+    });
+    if (active) {
+      const booking = await db.query.bookings.findFirst({
+        where: and(
+          eq(bookings.originType, "profile_enquiry"),
+          eq(bookings.originId, active.id),
+        ),
+        columns: { id: true },
+      });
+      activeEnquiryBookingId = booking?.id ?? null;
+    }
+  }
+
+  const openCalls = isEntertainer
+    ? await listOpenCallsForVenue({
+        venueId: id,
+        entertainerProfileId: ownProfile?.id ?? null,
+      })
+    : [];
+
   return (
-    <PublicProfileView
-      backHref="/marketplace/venues"
-      backLabel={t("backToVenues")}
-      eyebrow={t("venueEyebrow")}
-      title={venue.name}
-      subtitle={`${venue.district} · ${venueTypeLabel(venue.venueType, appLocale)}`}
-      description={venue.shortDescription}
-      media={splitPortfolioMedia(null)}
-      facts={facts}
-      links={socialLinksToList(
-        venue.socialLinks,
-        (key) => SOCIAL_LABELS[key] ?? key,
-      )}
-      websiteUrl={venue.websiteUrl}
-      websiteLabel={t("website")}
-      contactTitle={t("contactTitle")}
-      contactLocked={venue.contactLocked}
-      contactLockedMessage={t("contactLocked")}
-      preferredLabel={t("preferred")}
-      contacts={venue.contacts}
-      aboutTitle={t("aboutTitle")}
-      detailsTitle={t("detailsTitle")}
-      galleryTitle={t("galleryTitle")}
-      videoTitle={t("videoTitle")}
-      linksTitle={t("linksTitle")}
-    />
+    <>
+      <OnboardingChecklistTracker step="openedResult" />
+      <PublicProfileView
+        backHref="/marketplace/venues"
+        backLabel={t("backToVenues")}
+        eyebrow={t("venueEyebrow")}
+        title={venue.name}
+        subtitle={`${venue.district} · ${venueTypeLabel(venue.venueType, appLocale)}`}
+        description={venue.shortDescription}
+        media={splitPortfolioMedia(null)}
+        facts={facts}
+        links={socialLinksToList(
+          venue.socialLinks,
+          (key) => SOCIAL_LABELS[key] ?? key,
+        )}
+        websiteUrl={venue.websiteUrl}
+        websiteLabel={t("website")}
+        contactTitle={t("contactTitle")}
+        contactLocked={venue.contactLocked}
+        contactLockedMessage={t("contactLocked")}
+        preferredLabel={t("preferred")}
+        contacts={venue.contacts}
+        aboutTitle={t("aboutTitle")}
+        detailsTitle={t("detailsTitle")}
+        galleryTitle={t("galleryTitle")}
+        videoTitle={t("videoTitle")}
+        linksTitle={t("linksTitle")}
+      >
+        {isEntertainer ? (
+          <VenueProfileContactPanel
+            locale={appLocale}
+            venueId={id}
+            canSubmit={canSubmit}
+            publishRequired={publishRequired}
+            activeEnquiryBookingId={activeEnquiryBookingId}
+            openCalls={openCalls.map((c) => ({
+              id: c.id,
+              title: c.title,
+              startsAt: c.startsAt,
+              endsAt: c.endsAt,
+              formatCategory: c.formatCategory,
+              ownApplicationState: c.ownApplicationState,
+            }))}
+            defaultQuoteMinEur={ownProfile ? ownProfile.priceMinCents / 100 : 0}
+            defaultQuoteMaxEur={ownProfile ? ownProfile.priceMaxCents / 100 : 0}
+          />
+        ) : null}
+      </PublicProfileView>
+    </>
   );
 }

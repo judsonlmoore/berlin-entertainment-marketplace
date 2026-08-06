@@ -89,6 +89,14 @@ export const bookingStateEnum = pgEnum("booking_state", [
 export const bookingOriginEnum = pgEnum("booking_origin", [
   "application",
   "direct_request",
+  "profile_enquiry",
+]);
+
+export const profileEnquiryStateEnum = pgEnum("profile_enquiry_state", [
+  "pending",
+  "interested",
+  "passed",
+  "withdrawn",
 ]);
 
 export const postGigSurveyPartyRoleEnum = pgEnum("post_gig_survey_party_role", [
@@ -148,6 +156,9 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "direct_request_received",
   "direct_request_accepted",
   "direct_request_declined",
+  "profile_enquiry_received",
+  "profile_enquiry_interested",
+  "profile_enquiry_passed",
   "opportunity_published",
   "calendar_conflict_detected",
   "hold_expiring_soon",

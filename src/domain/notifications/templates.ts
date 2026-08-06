@@ -277,6 +277,51 @@ const templates: Record<
       locale === "de" ? "Details ansehen" : "View details",
   },
 
+  profile_enquiry_received: {
+    getTitle: (locale) =>
+      locale === "de" ? `Neues Profil-Interesse` : `New profile enquiry`,
+    getBody: (locale, params) => {
+      return locale === "de"
+        ? `${params.entertainerName} hat das Profil an ${params.venueName} gesendet.`
+        : `${params.entertainerName} submitted their profile to ${params.venueName}.`;
+    },
+    getActionUrl: (params) =>
+      params.bookingId
+        ? `/marketplace/leads/${params.bookingId}`
+        : `/marketplace/requests`,
+    getActionLabel: (locale) =>
+      locale === "de" ? "Lead ansehen" : "View lead",
+  },
+
+  profile_enquiry_interested: {
+    getTitle: (locale) =>
+      locale === "de" ? `Venue interessiert` : `Venue is interested`,
+    getBody: (locale, params) => {
+      return locale === "de"
+        ? `${params.venueName} möchte mit Ihnen sprechen. Kontakte sind freigeschaltet.`
+        : `${params.venueName} wants to talk. Contacts are unlocked.`;
+    },
+    getActionUrl: (params) =>
+      params.bookingId
+        ? `/marketplace/leads/${params.bookingId}`
+        : `/marketplace/requests`,
+    getActionLabel: (locale) =>
+      locale === "de" ? "Lead ansehen" : "View lead",
+  },
+
+  profile_enquiry_passed: {
+    getTitle: (locale) =>
+      locale === "de" ? `Kein Interesse` : `Not a fit right now`,
+    getBody: (locale, params) => {
+      return locale === "de"
+        ? `${params.venueName} hat Ihr Profil-Interesse abgelehnt.`
+        : `${params.venueName} passed on your profile enquiry.`;
+    },
+    getActionUrl: () => `/marketplace/requests`,
+    getActionLabel: (locale) =>
+      locale === "de" ? "Leads ansehen" : "View leads",
+  },
+
   opportunity_published: {
     getTitle: (locale) =>
       locale === "de"

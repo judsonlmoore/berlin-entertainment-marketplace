@@ -50,6 +50,8 @@ type Props = {
   accountEmail: string;
   entertainerDraft: EntertainerDraft;
   venueDraft: VenueDraft;
+  /** After basics save + RSC refresh, server re-mounts with the completion step. */
+  initialPhase?: "basics" | "done";
 };
 
 function StepDots({
@@ -98,6 +100,7 @@ export function OnboardingSetupWizard({
   accountEmail,
   entertainerDraft,
   venueDraft,
+  initialPhase = "basics",
 }: Props) {
   const t = useTranslations("onboardingFlow");
   const tProfile = useTranslations("profile");
@@ -107,7 +110,7 @@ export function OnboardingSetupWizard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [celebrate, setCelebrate] = useState(false);
-  const [phase, setPhase] = useState<"basics" | "done">("basics");
+  const [phase, setPhase] = useState<"basics" | "done">(initialPhase);
   const [entertainer, setEntertainer] =
     useState<EntertainerDraft>(entertainerDraft);
   const [venue, setVenue] = useState<VenueDraft>(venueDraft);

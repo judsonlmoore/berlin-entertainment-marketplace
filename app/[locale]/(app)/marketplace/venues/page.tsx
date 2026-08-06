@@ -8,6 +8,7 @@ import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { listDiscoverableVenues } from "@/src/db/queries/discovery";
 import { requireVenueDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
 import { richTextToPlain } from "@/src/domain/sanitize-input";
 import { Link } from "@/src/i18n/navigation";
 
@@ -71,8 +72,13 @@ export default async function VenuesDiscoveryPage({
     { page, pageSize: 12 },
   );
 
+  const hasPerformedSearch = Boolean(values.q);
+
   return (
     <section className="grid gap-8">
+      {hasPerformedSearch ? (
+        <OnboardingChecklistTracker step="searched" />
+      ) : null}
       <PageHeader
         eyebrow={t("privacyEyebrow")}
         title={t("venuesTitle")}

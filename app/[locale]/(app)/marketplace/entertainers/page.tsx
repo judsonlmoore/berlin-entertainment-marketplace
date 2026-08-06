@@ -12,6 +12,7 @@ import {
   listEntertainerCategoryFacets,
 } from "@/src/db/queries/discovery";
 import { requireEntertainerDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
@@ -95,8 +96,13 @@ export default async function EntertainersDiscoveryPage({
       can(access.actor, "direct_request.send", { venueId: m.venueId }),
   );
 
+  const hasPerformedSearch = Boolean(values.q);
+
   return (
     <section className="grid gap-8">
+      {hasPerformedSearch ? (
+        <OnboardingChecklistTracker step="searched" />
+      ) : null}
       <PageHeader
         eyebrow={t("privacyEyebrow")}
         title={t("entertainersTitle")}

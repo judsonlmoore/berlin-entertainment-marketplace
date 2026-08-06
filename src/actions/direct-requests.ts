@@ -153,6 +153,7 @@ export async function sendDirectRequest(
     revalidatePath(
       `/${parsed.data.locale}/marketplace/entertainers/${profile.id}`,
     );
+    revalidatePath("/", "layout");
     return { ok: true, ...(requestId ? { id: requestId } : {}) };
   } catch (error) {
     return toActionError(error);

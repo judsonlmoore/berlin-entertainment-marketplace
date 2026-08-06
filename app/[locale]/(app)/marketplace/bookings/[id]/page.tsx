@@ -24,6 +24,7 @@ import {
   applications,
   directRequests,
   opportunities,
+  profileEnquiries,
 } from "@/src/db/schema/marketplace";
 import {
   canCancelBooking,
@@ -151,6 +152,26 @@ export default async function BookingDetailPage({ params }: Props) {
         endsAtLocal: toDatetimeLocal(request.endsAt),
         feeEur: request.proposedFeeCents / 100,
         performanceFormat: request.formatCategory,
+      };
+    }
+  } else if (booking.originType === "profile_enquiry") {
+    const enquiry = await db.query.profileEnquiries.findFirst({
+      where: eq(profileEnquiries.id, booking.originId),
+    });
+    if (enquiry) {
+      defaults = {
+        startsAtLocal: enquiry.proposedStartsAt
+          ? toDatetimeLocal(enquiry.proposedStartsAt)
+          : defaults.startsAtLocal,
+        endsAtLocal: enquiry.proposedEndsAt
+          ? toDatetimeLocal(enquiry.proposedEndsAt)
+          : defaults.endsAtLocal,
+        feeEur:
+          enquiry.proposedFeeCents != null
+            ? enquiry.proposedFeeCents / 100
+            : defaults.feeEur,
+        performanceFormat:
+          enquiry.proposedFormat?.trim() || defaults.performanceFormat,
       };
     }
   } else {

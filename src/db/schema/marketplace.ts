@@ -30,6 +30,7 @@ import {
   opportunityStateEnum,
   portfolioItemKindEnum,
   profileDocumentVisibilityEnum,
+  profileEnquiryStateEnum,
   profilePublicationStateEnum,
   venueMembershipRoleEnum,
 } from "./enums";
@@ -372,6 +373,51 @@ export const applicationClarificationNotes = pgTable(
   },
 );
 
+export const profileEnquiries = pgTable(
+  "profile_enquiries",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    venueId: uuid("venue_id")
+      .notNull()
+      .references(() => venues.id, { onDelete: "cascade" }),
+    entertainerProfileId: uuid("entertainer_profile_id")
+      .notNull()
+      .references(() => entertainerProfiles.id, { onDelete: "cascade" }),
+    submittedByUserId: text("submitted_by_user_id")
+      .notNull()
+      .references(() => users.id),
+    note: text("note"),
+    /** Draft negotiation fields while the lead is open (before formal terms). */
+    proposedStartsAt: timestamp("proposed_starts_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    proposedEndsAt: timestamp("proposed_ends_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    proposedFeeCents: integer("proposed_fee_cents"),
+    proposedFormat: text("proposed_format"),
+    state: profileEnquiryStateEnum("state").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("profile_enquiries_venue_state_idx").on(table.venueId, table.state),
+    index("profile_enquiries_act_state_idx").on(
+      table.entertainerProfileId,
+      table.state,
+    ),
+    uniqueIndex("profile_enquiries_active_pair_uidx")
+      .on(table.venueId, table.entertainerProfileId)
+      .where(sql`${table.state} IN ('pending', 'interested')`),
+  ],
+);
+
 export const directRequests = pgTable("direct_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
   venueId: uuid("venue_id")
@@ -498,6 +544,9 @@ export const contactUnlocks = pgTable("contact_unlocks", {
   applicationId: uuid("application_id").references(() => applications.id),
   directRequestId: uuid("direct_request_id").references(
     () => directRequests.id,
+  ),
+  profileEnquiryId: uuid("profile_enquiry_id").references(
+    () => profileEnquiries.id,
   ),
   unlockedForUserId: text("unlocked_for_user_id")
     .notNull()
@@ -941,3 +990,25 @@ export const portfolioItems = pgTable(
     ),
   ],
 );
+
+/**
+ * Persistent getting-started rail checklist progress.
+ * Publish + enquiry are derived from domain tables; search/open/dismiss live here.
+ */
+export const onboardingChecklistState = pgTable("onboarding_checklist_state", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  searchedAt: timestamp("searched_at", { withTimezone: true, mode: "date" }),
+  openedResultAt: timestamp("opened_result_at", {
+    withTimezone: true,
+    mode: "date",
+  }),
+  dismissedAt: timestamp("dismissed_at", { withTimezone: true, mode: "date" }),
+  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+    .notNull()
+    .defaultNow(),
+});

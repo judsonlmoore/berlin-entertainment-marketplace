@@ -4,18 +4,12 @@ import { Avatar } from "@/src/components/ui/monogram";
 import { BookingLifecycleTrack } from "@/src/components/booking-lifecycle-track";
 import { Eyebrow } from "@/src/components/ui/eyebrow";
 import { StatusLabel } from "@/src/components/ui/status-label";
-import { VerificationBanner } from "@/src/components/verification-banner";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import {
   getNextActiveBooking,
   getOverviewMetrics,
   listRecentApplicationsForVenues,
 } from "@/src/db/queries/overview";
-import {
-  listDiscoverableEntertainers,
-  listDiscoverableVenues,
-} from "@/src/db/queries/discovery";
-import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
@@ -54,9 +48,6 @@ export default async function MarketplacePage({ params }: Props) {
     );
   }
 
-  const canDiscoverEntertainers = can(access.actor, "discover.entertainers");
-  const canDiscoverVenues = can(access.actor, "discover.venues");
-
   const venueIds = access.actor.venueMemberships
     .filter((m) => m.status === "active")
     .map((m) => m.venueId);
@@ -66,13 +57,6 @@ export default async function MarketplacePage({ params }: Props) {
     venueIds,
     entertainerProfileId: metrics.entertainerProfileId,
   });
-
-  const recommendedActs = canDiscoverEntertainers
-    ? (await listDiscoverableEntertainers({}, { pageSize: 3 })).items
-    : [];
-  const recommendedVenues = canDiscoverVenues
-    ? (await listDiscoverableVenues({}, { pageSize: 3 })).items
-    : [];
 
   const now = new Date();
   const dateEyebrow = new Intl.DateTimeFormat(
@@ -100,11 +84,6 @@ export default async function MarketplacePage({ params }: Props) {
 
   return (
     <section className="grid gap-8">
-      {((access.actor.roles.includes("entertainer") &&
-        !access.actor.entertainerVerified) ||
-        (access.actor.roles.includes("venue") &&
-          !access.actor.venueVerified)) && <VerificationBanner />}
-
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <Eyebrow>{dateEyebrow}</Eyebrow>
@@ -227,87 +206,6 @@ export default async function MarketplacePage({ params }: Props) {
           )}
         </div>
       </div>
-
-      {canDiscoverEntertainers ? (
-        <div>
-          <div className="flex items-end justify-between gap-3">
-            <h2 className="page-title text-xl">{t("exploreActs")}</h2>
-            <Link
-              href="/marketplace/entertainers"
-              className="text-sm text-[var(--primary)]"
-            >
-              {t("open")} →
-            </Link>
-          </div>
-          {recommendedActs.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
-              {t("empty")}
-            </p>
-          ) : (
-            <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {recommendedActs.map((act) => (
-                <li key={act.id}>
-                  <Link
-                    href={`/marketplace/entertainers/${act.id}`}
-                    className="panel block overflow-hidden no-underline"
-                  >
-                    <div className="flex h-28 items-center justify-center bg-[var(--blue-soft)]">
-                      <Avatar name={act.actName} size={56} />
-                    </div>
-                    <div className="p-4">
-                      <p className="page-title text-lg">{act.actName}</p>
-                      <p className="mt-1 text-sm font-medium text-[var(--text-muted)]">
-                        {act.category} · {act.berlinBase}
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : null}
-
-      {canDiscoverVenues ? (
-        <div>
-          <div className="flex items-end justify-between gap-3">
-            <h2 className="page-title text-xl">{t("exploreVenues")}</h2>
-            <Link
-              href="/marketplace/venues"
-              className="text-sm text-[var(--primary)]"
-            >
-              {t("open")} →
-            </Link>
-          </div>
-          {recommendedVenues.length === 0 ? (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
-              {t("empty")}
-            </p>
-          ) : (
-            <ul className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {recommendedVenues.map((venue) => (
-                <li key={venue.id}>
-                  <Link
-                    href={`/marketplace/venues/${venue.id}`}
-                    className="panel block overflow-hidden no-underline"
-                  >
-                    <div className="flex h-28 items-center justify-center bg-[var(--blue-soft)]">
-                      <Avatar name={venue.name} size={56} />
-                    </div>
-                    <div className="p-4">
-                      <p className="page-title text-lg">{venue.name}</p>
-                      <p className="mt-1 text-sm font-medium text-[var(--text-muted)]">
-                        {venue.district}
-                        {venue.capacity ? ` · ${venue.capacity}` : ""}
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : null}
     </section>
   );
 }

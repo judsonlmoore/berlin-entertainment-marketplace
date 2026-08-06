@@ -12,11 +12,12 @@ type MatchOrigin = {
   bookingId?: string;
   applicationId?: string;
   directRequestId?: string;
+  profileEnquiryId?: string;
 };
 
 /**
- * Shared shortlist/accept settlement: unlock preferred contacts both ways and
- * place requested calendar blocks for both bookable resources.
+ * Shared shortlist/accept/interest settlement: unlock preferred contacts both
+ * ways. Calendar holds only when a performance window is known.
  */
 export async function settleMatchAcceptance(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,13 +26,26 @@ export async function settleMatchAcceptance(
     entertainerProfileId: string;
     entertainerUserId: string;
     venueId: string;
-    startsAt: Date;
-    endsAt: Date;
+    startsAt?: Date | null;
+    endsAt?: Date | null;
     reason: string;
     origin: MatchOrigin;
     excludeBookingId?: string;
   },
 ) {
+  const originRefs = {
+    ...(input.origin.bookingId ? { bookingId: input.origin.bookingId } : {}),
+    ...(input.origin.applicationId
+      ? { applicationId: input.origin.applicationId }
+      : {}),
+    ...(input.origin.directRequestId
+      ? { directRequestId: input.origin.directRequestId }
+      : {}),
+    ...(input.origin.profileEnquiryId
+      ? { profileEnquiryId: input.origin.profileEnquiryId }
+      : {}),
+  };
+
   const entertainerContacts = await tx
     .select()
     .from(contactMethods)
@@ -70,15 +84,7 @@ export async function settleMatchAcceptance(
   if (preferredEntertainer) {
     for (const operator of venueOperators) {
       await tx.insert(contactUnlocks).values({
-        ...(input.origin.bookingId
-          ? { bookingId: input.origin.bookingId }
-          : {}),
-        ...(input.origin.applicationId
-          ? { applicationId: input.origin.applicationId }
-          : {}),
-        ...(input.origin.directRequestId
-          ? { directRequestId: input.origin.directRequestId }
-          : {}),
+        ...originRefs,
         unlockedForUserId: operator.userId,
         contactMethodId: preferredEntertainer.id,
         reason: input.reason,
@@ -112,20 +118,14 @@ export async function settleMatchAcceptance(
   );
   if (preferredVenue) {
     await tx.insert(contactUnlocks).values({
-      ...(input.origin.bookingId ? { bookingId: input.origin.bookingId } : {}),
-      ...(input.origin.applicationId
-        ? { applicationId: input.origin.applicationId }
-        : {}),
-      ...(input.origin.directRequestId
-        ? { directRequestId: input.origin.directRequestId }
-        : {}),
+      ...originRefs,
       unlockedForUserId: input.entertainerUserId,
       contactMethodId: preferredVenue.id,
       reason: input.reason,
     });
   }
 
-  if (!input.origin.bookingId) {
+  if (!input.origin.bookingId || !input.startsAt || !input.endsAt) {
     return;
   }
 

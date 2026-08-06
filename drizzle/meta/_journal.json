@@ -85,6 +85,27 @@
       "when": 1786200000000,
       "tag": "0011_profile_document_library",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786300000000,
+      "tag": "0012_onboarding_checklist_state",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786400000000,
+      "tag": "0013_profile_enquiries_leads",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1786500000000,
+      "tag": "0014_profile_enquiry_active_uidx",
+      "breakpoints": true
     }
   ]
 }

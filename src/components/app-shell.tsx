@@ -14,7 +14,9 @@ import {
   AccountMenu,
   type AccountNavItem,
 } from "@/src/components/account-menu";
+import { OnboardingChecklistRail } from "@/src/components/onboarding-checklist-rail";
 import { RailRoleContext } from "@/src/components/rail-role-context";
+import type { OnboardingChecklistView } from "@/src/domain/onboarding-checklist";
 import type { RailRoleContextData } from "@/src/lib/rail-role-context";
 
 type NavItem = {
@@ -45,6 +47,7 @@ type Props = {
   canDiscoverEntertainers: boolean;
   canDiscoverVenues: boolean;
   roleContext?: RailRoleContextData | null;
+  onboardingChecklist?: OnboardingChecklistView | null;
   supportBanner?: ReactNode;
 };
 
@@ -83,6 +86,7 @@ function RailNav({
   userImage,
   accountTypeLabel,
   roleContext,
+  onboardingChecklist,
   locale,
   navId,
   onNavigate,
@@ -94,6 +98,7 @@ function RailNav({
   userImage?: string | null | undefined;
   accountTypeLabel: string;
   roleContext?: RailRoleContextData | null;
+  onboardingChecklist?: OnboardingChecklistView | null;
   locale: "en" | "de";
   navId?: string;
   onNavigate?: () => void;
@@ -118,6 +123,9 @@ function RailNav({
           locale={locale}
           onNavigate={onNavigate}
         />
+      ) : null}
+      {onboardingChecklist ? (
+        <OnboardingChecklistRail checklist={onboardingChecklist} />
       ) : null}
       <nav
         id={navId}
@@ -165,6 +173,7 @@ export function AppShell({
   canDiscoverEntertainers,
   canDiscoverVenues,
   roleContext = null,
+  onboardingChecklist = null,
   supportBanner = null,
 }: Props) {
   const t = useTranslations("nav");
@@ -242,7 +251,6 @@ export function AppShell({
   );
 
   const accountItems: AccountNavItem[] = [
-    { href: "/profile", labelKey: "profile", match: "/profile" },
     { href: "/account", labelKey: "account", match: "/account" },
     ...(isStaff
       ? [
@@ -306,6 +314,7 @@ export function AppShell({
           userImage={userImage}
           accountTypeLabel={accountTypeLabel}
           roleContext={roleContext}
+          onboardingChecklist={onboardingChecklist}
           locale={locale}
         />
       </aside>
@@ -364,6 +373,7 @@ export function AppShell({
             userImage={userImage}
             accountTypeLabel={accountTypeLabel}
             roleContext={roleContext}
+            onboardingChecklist={onboardingChecklist}
             locale={locale}
             onNavigate={closeMenu}
           />
@@ -386,7 +396,13 @@ export function AppShell({
             <MenuIcon open={menuOpen} />
           </button>
           {roleContext && mobileContextLabel ? (
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <Link
+              href="/profile"
+              className="flex min-w-0 flex-1 items-center gap-2 no-underline"
+              aria-label={tRole("editProfileAria", {
+                name: mobileContextLabel,
+              })}
+            >
               <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--surface)] px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-[0.1em] text-[var(--ink)] uppercase">
                 {roleContext.mode === "entertainer"
                   ? tRole("actBadge")
@@ -395,7 +411,10 @@ export function AppShell({
               <span className="min-w-0 truncate text-sm font-medium text-[var(--ink)]">
                 {mobileContextLabel}
               </span>
-            </div>
+              <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
+                {t("editProfile")}
+              </span>
+            </Link>
           ) : (
             <div className="flex-1" />
           )}

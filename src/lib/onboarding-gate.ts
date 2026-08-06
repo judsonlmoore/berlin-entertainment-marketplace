@@ -41,8 +41,10 @@ async function hasOwnedVenueProfile(userId: string): Promise<boolean> {
 /**
  * Decide where a signed-in member belongs in the XOR onboarding flow.
  * Staff skip onboarding. Members need a role, then a created profile/venue
- * (draft is enough). Publication/verification is independent and lives on
- * `/profile` — never bounce autosaves back into onboarding.
+ * (draft is enough). Publication is independent and lives on `/profile`.
+ * `/onboarding/setup` may still render the completion step after profile
+ * creation until the user clicks Continue — do not treat `none` as “force
+ * leave setup immediately” on that page.
  */
 export async function resolveOnboardingDestination(input: {
   userId: string;
