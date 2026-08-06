@@ -19,4 +19,3 @@ export function normalizePostGigSurveyResponse(
     wouldBookAgain: response.wouldBookAgain === "yes",
   };
 }
-

@@ -77,7 +77,10 @@ describe("splitPortfolioMedia", () => {
 describe("socialLinksToList", () => {
   it("orders known networks and skips empties", () => {
     const list = socialLinksToList(
-      { youtube: "https://youtube.com/@x", instagram: "https://instagram.com/x" },
+      {
+        youtube: "https://youtube.com/@x",
+        instagram: "https://instagram.com/x",
+      },
       (key) => key,
     );
     expect(list.map((l) => l.label)).toEqual(["instagram", "youtube"]);

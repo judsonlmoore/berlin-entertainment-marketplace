@@ -25,7 +25,9 @@ export function PostGigSurveyForm({
   if (status === "submitted") {
     return (
       <div className="grid gap-2">
-        <h3 className="text-lg font-medium">{t("postGigSurveySubmittedTitle")}</h3>
+        <h3 className="text-lg font-medium">
+          {t("postGigSurveySubmittedTitle")}
+        </h3>
         <p className="text-sm text-[var(--text-muted)]">
           {t("postGigSurveySubmittedBody")}
         </p>
@@ -67,7 +69,9 @@ export function PostGigSurveyForm({
       }}
     >
       <h3 className="text-lg font-medium">{t("postGigSurveyTitle")}</h3>
-      <p className="text-sm text-[var(--text-muted)]">{t("postGigSurveyBody")}</p>
+      <p className="text-sm text-[var(--text-muted)]">
+        {t("postGigSurveyBody")}
+      </p>
 
       <label className="grid gap-1 text-sm">
         <span>{t("postGigSurveyQ1Label")}</span>
@@ -118,4 +122,3 @@ export function PostGigSurveyForm({
     </form>
   );
 }
-

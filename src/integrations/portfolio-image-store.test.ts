@@ -23,11 +23,8 @@ describe("portfolio-image-store", () => {
 
   it("round-trips image bytes on disk in development", async () => {
     vi.stubEnv("NODE_ENV", "development");
-    const {
-      deletePortfolioImage,
-      loadPortfolioImage,
-      savePortfolioImage,
-    } = await import("@/src/integrations/portfolio-image-store");
+    const { deletePortfolioImage, loadPortfolioImage, savePortfolioImage } =
+      await import("@/src/integrations/portfolio-image-store");
 
     const bytes = new Uint8Array([1, 2, 3, 4, 5]);
     const { blobKey } = await savePortfolioImage({
@@ -48,9 +45,8 @@ describe("portfolio-image-store", () => {
   it("refuses local disk in production without Blob token", async () => {
     vi.stubEnv("NODE_ENV", "production");
     delete process.env.BLOB_READ_WRITE_TOKEN;
-    const { savePortfolioImage } = await import(
-      "@/src/integrations/portfolio-image-store"
-    );
+    const { savePortfolioImage } =
+      await import("@/src/integrations/portfolio-image-store");
 
     await expect(
       savePortfolioImage({
@@ -66,18 +62,16 @@ describe("portfolio-image-store", () => {
   it("reports durable store unavailable in production without token", async () => {
     vi.stubEnv("NODE_ENV", "production");
     delete process.env.BLOB_READ_WRITE_TOKEN;
-    const { isPortfolioDurableStoreAvailable } = await import(
-      "@/src/integrations/portfolio-image-store"
-    );
+    const { isPortfolioDurableStoreAvailable } =
+      await import("@/src/integrations/portfolio-image-store");
     expect(isPortfolioDurableStoreAvailable()).toBe(false);
   });
 
   it("reports durable store available when Blob token is set", async () => {
     vi.stubEnv("NODE_ENV", "production");
     process.env.BLOB_READ_WRITE_TOKEN = "vercel_blob_rw_test";
-    const { isPortfolioDurableStoreAvailable } = await import(
-      "@/src/integrations/portfolio-image-store"
-    );
+    const { isPortfolioDurableStoreAvailable } =
+      await import("@/src/integrations/portfolio-image-store");
     expect(isPortfolioDurableStoreAvailable()).toBe(true);
   });
 });

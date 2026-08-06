@@ -60,7 +60,12 @@ export async function submitPostGigSurveyResponse(input: unknown) {
     const [acceptedTerms] = await db
       .select()
       .from(bookingTerms)
-      .where(and(eq(bookingTerms.bookingId, bookingId), isNotNull(bookingTerms.acceptedAt)))
+      .where(
+        and(
+          eq(bookingTerms.bookingId, bookingId),
+          isNotNull(bookingTerms.acceptedAt),
+        ),
+      )
       .orderBy(desc(bookingTerms.version))
       .limit(1);
 
@@ -75,7 +80,10 @@ export async function submitPostGigSurveyResponse(input: unknown) {
       .limit(1);
 
     if (!booking || booking.state !== "confirmed") {
-      throw new AppError("validation", "Survey can only be submitted for confirmed bookings");
+      throw new AppError(
+        "validation",
+        "Survey can only be submitted for confirmed bookings",
+      );
     }
 
     if (acceptedTerms.endsAt > now) {
@@ -125,4 +133,3 @@ export async function submitPostGigSurveyResponse(input: unknown) {
     return toActionError(error);
   }
 }
-

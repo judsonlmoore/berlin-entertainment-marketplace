@@ -47,4 +47,3 @@ describe("postGigSurveyResponseSchema", () => {
     expect(parsed.success).toBe(false);
   });
 });
-

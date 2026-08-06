@@ -17,4 +17,3 @@ describe("notification templates", () => {
     expect(content.actionLabel).toBe("Give feedback");
   });
 });
-

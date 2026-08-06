@@ -170,7 +170,8 @@ export async function searchAdminAccounts(
       name: user.name,
       email: user.email,
       accountStatus: accountByUser.get(userId) ?? null,
-      role: (roleByUser.get(userId) as "entertainer" | "venue" | undefined) ?? null,
+      role:
+        (roleByUser.get(userId) as "entertainer" | "venue" | undefined) ?? null,
       isPlatformStaff: user.isPlatformStaff,
       entertainer: entertainer
         ? {

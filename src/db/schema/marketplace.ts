@@ -836,9 +836,7 @@ export const postGigSurveys = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     partyRole: postGigSurveyPartyRoleEnum("party_role").notNull(),
-    status: postGigSurveyStatusEnum("status")
-      .notNull()
-      .default("invited"),
+    status: postGigSurveyStatusEnum("status").notNull().default("invited"),
     invitedAt: timestamp("invited_at", {
       withTimezone: true,
       mode: "date",
