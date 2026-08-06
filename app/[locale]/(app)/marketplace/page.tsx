@@ -111,25 +111,35 @@ export default async function MarketplacePage({ params }: Props) {
               t("metricOpenOps"),
               metrics.openOpportunities,
               t("metricOpenOpsHint", { count: metrics.pendingApplications }),
+              metrics.canPostOpportunity && metrics.firstVenueId
+                ? `/profile/venues/${metrics.firstVenueId}`
+                : "/marketplace/bookings",
             ],
             [
               t("metricRequests"),
               metrics.pendingRequests,
               t("metricRequestsHint"),
+              "/marketplace/bookings?status=pending",
             ],
             [
               t("metricActiveBookings"),
               metrics.activeBookings,
               t("metricActiveBookingsHint"),
+              "/marketplace/bookings?status=open",
             ],
             [
               t("metricConfirmed"),
               metrics.confirmedBookings,
               t("metricConfirmedHint"),
+              "/marketplace/bookings?status=won",
             ],
           ] as const
-        ).map(([label, value, hint]) => (
-          <div key={label} className="panel p-4">
+        ).map(([label, value, hint, href]) => (
+          <Link
+            key={label}
+            href={href}
+            className="panel block p-4 no-underline"
+          >
             <p className="text-xs font-medium tracking-[0.12em] text-[var(--text-muted)] uppercase">
               {label}
             </p>
@@ -137,7 +147,7 @@ export default async function MarketplacePage({ params }: Props) {
               {value}
             </p>
             <p className="mt-2 text-sm text-[var(--text-muted)]">{hint}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

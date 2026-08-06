@@ -100,7 +100,7 @@ export async function createOpportunity(
         endsAt,
         standingSchedule:
           kind === "standing"
-            ? (parsed.data.standingSchedule?.trim() || null)
+            ? parsed.data.standingSchedule?.trim() || null
             : null,
         formatCategory: parsed.data.formatCategory,
         expectedAudience: parsed.data.expectedAudience ?? null,

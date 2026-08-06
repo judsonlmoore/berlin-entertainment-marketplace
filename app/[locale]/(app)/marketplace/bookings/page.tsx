@@ -53,9 +53,7 @@ export default async function BookingsInboxPage({
   const query = await searchParams;
   const statusRaw = first(query.status) ?? "all";
   const statusFilter = (
-    STATUS_FILTERS.includes(statusRaw as LeadStatus | "all")
-      ? statusRaw
-      : "all"
+    STATUS_FILTERS.includes(statusRaw as LeadStatus | "all") ? statusRaw : "all"
   ) as LeadStatus | "all";
 
   if (!access.ok || !can(access.actor, "booking.view")) {

@@ -331,7 +331,9 @@ export async function listDiscoverableEntertainers(
     });
     const free = candidates.filter((row) => !busy.has(row.id));
     const pageItems = free.slice(offset, offset + pageSize);
-    const heroByProfile = await loadHeroImageIds(pageItems.map((row) => row.id));
+    const heroByProfile = await loadHeroImageIds(
+      pageItems.map((row) => row.id),
+    );
     const total = free.length;
     return {
       items: pageItems.map((row) => ({
@@ -636,10 +638,7 @@ export async function getDiscoverableVenueDetail(input: {
     .select({ value: count() })
     .from(opportunities)
     .where(
-      and(
-        eq(opportunities.venueId, venue.id),
-        eq(opportunities.state, "open"),
-      ),
+      and(eq(opportunities.venueId, venue.id), eq(opportunities.state, "open")),
     );
 
   return {

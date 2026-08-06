@@ -236,9 +236,7 @@ export default async function BookingDetailPage({ params }: Props) {
     lead != null &&
     (lead.leadStatus === "open" || lead.leadStatus === "pending");
 
-  const contactsUnlocked = lead
-    ? leadContactsUnlocked(lead.leadStatus)
-    : false;
+  const contactsUnlocked = lead ? leadContactsUnlocked(lead.leadStatus) : false;
 
   return (
     <section className="mx-auto grid max-w-2xl gap-6">
@@ -258,9 +256,7 @@ export default async function BookingDetailPage({ params }: Props) {
             ["application", "direct_request", "profile_enquiry"] as const
           ).includes(
             booking.originType as
-              | "application"
-              | "direct_request"
-              | "profile_enquiry",
+              "application" | "direct_request" | "profile_enquiry",
           )
             ? leadsT(
                 `channel.${booking.originType as "application" | "direct_request" | "profile_enquiry"}`,
