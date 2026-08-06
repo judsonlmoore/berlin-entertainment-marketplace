@@ -23,7 +23,6 @@ type NavItem = {
   href: string;
   labelKey:
     | "overview"
-    | "profile"
     | "discover"
     | "discoverActs"
     | "discoverVenues"
@@ -224,7 +223,6 @@ export function AppShell({
 
   const mainNav: NavItem[] = [
     { href: "/marketplace", labelKey: "overview", match: "/marketplace$" },
-    { href: "/profile", labelKey: "profile", match: "/profile" },
     ...discoverItems,
     {
       href: "/marketplace/opportunities",
@@ -249,11 +247,7 @@ export function AppShell({
   ];
 
   const items = mainNav.filter(
-    (item) =>
-      isApproved ||
-      isStaff ||
-      item.labelKey === "overview" ||
-      item.labelKey === "profile",
+    (item) => isApproved || isStaff || item.labelKey === "overview",
   );
 
   const accountItems: AccountNavItem[] = [
