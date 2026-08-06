@@ -10,7 +10,7 @@ import {
   WithdrawButton,
 } from "@/src/components/application-actions";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
-import { formatEur } from "@/src/lib/format";
+import { formatEur, toDateInput } from "@/src/lib/format";
 import {
   getApplicationForEntertainer,
   getOpportunityDetail,
@@ -189,6 +189,21 @@ export default async function OpportunityDetailPage({ params }: Props) {
           </p>
         ) : null}
       </div>
+
+      {canManage ? (
+        <p className="text-sm">
+          <Link
+            href={
+              opportunity.kind === "dated" && opportunity.startsAt
+                ? `/marketplace/entertainers?availableOn=${toDateInput(opportunity.startsAt)}&category=${encodeURIComponent(opportunity.formatCategory)}`
+                : `/marketplace/entertainers?category=${encodeURIComponent(opportunity.formatCategory)}`
+            }
+            className="font-medium underline"
+          >
+            {t("findAvailableActs")}
+          </Link>
+        </p>
+      ) : null}
 
       {canManage ? (
         <div className="panel grid gap-4 p-6">

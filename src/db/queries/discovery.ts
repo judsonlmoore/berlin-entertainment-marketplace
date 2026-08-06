@@ -11,6 +11,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
+import { listBusyEntertainerProfileIds } from "@/src/db/queries/calendar";
 import {
   contactMethods,
   contactUnlocks,
@@ -24,6 +25,7 @@ import {
   type RevealedContact,
   type StoredContactMethod,
 } from "@/src/domain/contact-projection";
+import { berlinCivilDayWindow } from "@/src/lib/format";
 
 /** True when an image row can be served via /api/portfolio/[id]. */
 export function isServablePortfolioImageKey(
@@ -116,7 +118,12 @@ export type EntertainerFilters = {
   groupSizeMax?: number;
   priceMinCents?: number;
   priceMaxCents?: number;
+  /** ISO date (YYYY-MM-DD): free that Berlin civil day (no blocking calendar). */
+  availableOn?: string;
 };
+
+/** Cap for availableOn busy-check candidate set (SQL filters first). */
+export const AVAILABLE_ON_CANDIDATE_CAP = 120;
 
 export type VenueFilters = {
   q?: string;
@@ -290,6 +297,53 @@ export async function listDiscoverableEntertainers(
     options.page,
     options.pageSize ?? 12,
   );
+
+  const availableOn =
+    filters.availableOn && /^\d{4}-\d{2}-\d{2}$/.test(filters.availableOn)
+      ? filters.availableOn
+      : null;
+
+  if (availableOn) {
+    const { startsAt, endsAt } = berlinCivilDayWindow(availableOn);
+    const candidates = await db
+      .select({
+        id: entertainerProfiles.id,
+        actName: entertainerProfiles.actName,
+        category: entertainerProfiles.category,
+        description: entertainerProfiles.description,
+        groupSize: entertainerProfiles.groupSize,
+        berlinBase: entertainerProfiles.berlinBase,
+        travelRadiusKm: entertainerProfiles.travelRadiusKm,
+        priceMinCents: entertainerProfiles.priceMinCents,
+        priceMaxCents: entertainerProfiles.priceMaxCents,
+        currency: entertainerProfiles.currency,
+        durationMinutes: entertainerProfiles.durationMinutes,
+      })
+      .from(entertainerProfiles)
+      .where(where)
+      .orderBy(entertainerProfiles.actName)
+      .limit(AVAILABLE_ON_CANDIDATE_CAP);
+
+    const busy = await listBusyEntertainerProfileIds({
+      profileIds: candidates.map((row) => row.id),
+      startsAt,
+      endsAt,
+    });
+    const free = candidates.filter((row) => !busy.has(row.id));
+    const pageItems = free.slice(offset, offset + pageSize);
+    const heroByProfile = await loadHeroImageIds(pageItems.map((row) => row.id));
+    const total = free.length;
+    return {
+      items: pageItems.map((row) => ({
+        ...row,
+        heroImageId: heroByProfile.get(row.id) ?? null,
+      })),
+      total,
+      page,
+      pageSize,
+      pageCount: Math.max(1, Math.ceil(total / pageSize)),
+    };
+  }
 
   const [totalRow] = await db
     .select({ value: count() })

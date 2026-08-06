@@ -149,3 +149,21 @@ export function parseDateInTimeZone(
     timeZone,
   );
 }
+
+/** Half-open Berlin civil day window [day 00:00, next day 00:00). */
+export function berlinCivilDayWindow(isoDate: string): {
+  startsAt: Date;
+  endsAt: Date;
+} {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) throw new Error("Invalid date format");
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const next = new Date(Date.UTC(year, month - 1, day + 1));
+  const nextIso = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(next.getUTCDate()).padStart(2, "0")}`;
+  return {
+    startsAt: parseDateInTimeZone(isoDate, BERLIN_TZ),
+    endsAt: parseDateInTimeZone(nextIso, BERLIN_TZ),
+  };
+}

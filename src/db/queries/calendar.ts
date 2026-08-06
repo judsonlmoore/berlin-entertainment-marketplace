@@ -241,6 +241,64 @@ export async function findOverlappingBlockingEntries(input: {
   return candidates;
 }
 
+/**
+ * Batch busy check for entertainer profiles over a window.
+ * Returns profile ids that have at least one blocking overlap (incl. RRULE).
+ */
+export async function listBusyEntertainerProfileIds(input: {
+  profileIds: string[];
+  startsAt: Date;
+  endsAt: Date;
+  now?: Date;
+}): Promise<Set<string>> {
+  const busy = new Set<string>();
+  if (input.profileIds.length === 0) return busy;
+
+  const now = input.now ?? new Date();
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(calendarEntries)
+    .where(
+      and(
+        eq(calendarEntries.ownerType, "entertainer"),
+        inArray(calendarEntries.ownerId, input.profileIds),
+        or(
+          eq(calendarEntries.state, "confirmed"),
+          eq(calendarEntries.state, "requested"),
+          eq(calendarEntries.state, "unavailable"),
+          eq(calendarEntries.state, "tentative_hold"),
+        ),
+      ),
+    );
+
+  for (const row of rows) {
+    if (busy.has(row.ownerId)) continue;
+    if (!isBlockingCalendarState(row.state, row.holdExpiresAt, now)) continue;
+
+    if (row.recurrenceRule) {
+      const occurrences = expandRecurringOccurrences({
+        startsAt: row.startsAt,
+        endsAt: row.endsAt,
+        recurrenceRule: row.recurrenceRule,
+        rangeStart: input.startsAt,
+        rangeEnd: input.endsAt,
+      });
+      if (occurrences.length > 0) busy.add(row.ownerId);
+      continue;
+    }
+
+    if (
+      row.startsAt.getTime() < input.endsAt.getTime() &&
+      row.endsAt.getTime() > input.startsAt.getTime()
+    ) {
+      busy.add(row.ownerId);
+    }
+  }
+
+  return busy;
+}
+
 /** Used inside booking transactions — pass drizzle tx client. */
 export async function upsertBookingCalendarEntry(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -160,7 +160,7 @@ Define an `ESignProvider` interface for creating an envelope, retrieving status,
 - Validate all untrusted input and output projections; parameterize queries through Drizzle.
 - Apply CSRF protections provided by Auth.js and same-origin Server Actions; verify webhook signatures against raw bodies.
 - Rate limit sign-in, application, invitation, upload, profile enquiry, and webhook surfaces.
-- Entertainer discovery may filter `availableOn` (ISO date): exclude acts with a blocking calendar entry that Berlin local day (reuse overlap + RRULE expansion). Apply text/category/price filters before busy checks; document candidate-set limits.
+- Entertainer discovery may filter `availableOn` (ISO date): exclude acts with a blocking calendar entry that Berlin local day (reuse overlap + RRULE expansion). Apply text/category/price filters before busy checks; candidate set capped at 120 profiles per query (`AVAILABLE_ON_CANDIDATE_CAP`).
 - Set CSP/security headers, production HTTPS, secure cookies, and least-privilege integration tokens.
 - Prevent IDOR with resource-scoped authorization, not opaque IDs alone.
 - Audit privileged reads/mutations and approval/contact/signature/calendar changes.
