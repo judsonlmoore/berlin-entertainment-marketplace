@@ -85,6 +85,16 @@ export const bookingOriginEnum = pgEnum("booking_origin", [
   "direct_request",
 ]);
 
+export const postGigSurveyPartyRoleEnum = pgEnum("post_gig_survey_party_role", [
+  "venue",
+  "entertainer",
+]);
+
+export const postGigSurveyStatusEnum = pgEnum("post_gig_survey_status", [
+  "invited",
+  "submitted",
+]);
+
 export const depositStatusEnum = pgEnum("deposit_status", [
   "not_required",
   "pending",
@@ -120,6 +130,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "booking_declined",
   "booking_confirmed",
   "booking_cancelled",
+  "booking_post_gig_survey_ready",
   "application_submitted",
   "application_shortlisted",
   "application_rejected",

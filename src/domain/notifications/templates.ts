@@ -117,6 +117,21 @@ const templates: Record<
       locale === "de" ? "Details ansehen" : "View details",
   },
 
+  booking_post_gig_survey_ready: {
+    getTitle: (locale) =>
+      locale === "de"
+        ? `Feedback-Umfrage ist bereit`
+        : `Post-gig survey is ready`,
+    getBody: (locale, params) => {
+      return locale === "de"
+        ? `Dein Auftritt ist vorbei. Bitte fülle die private Feedback-Umfrage für die Buchung (${params.bookingId}) aus.`
+        : `Your gig is over. Please fill out the private post-gig feedback survey for booking (${params.bookingId}).`;
+    },
+    getActionUrl: (params) => `/marketplace/bookings/${params.bookingId}`,
+    getActionLabel: (locale) =>
+      locale === "de" ? "Feedback geben" : "Give feedback",
+  },
+
   application_submitted: {
     getTitle: (locale) =>
       locale === "de"

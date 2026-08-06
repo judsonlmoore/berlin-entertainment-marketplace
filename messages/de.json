@@ -590,7 +590,26 @@
     "agreementNoticeTitle": "Vereinbarungssprache",
     "agreementNoticeBody": "Der deutsche Vereinbarungstext ist maßgeblich. Englisch ist eine gekennzeichnete Convenience-Übersetzung derselben versionierten Konditionen.",
     "agreementNoticeEnLabel": "Englische Convenience-Übersetzung",
-    "agreementNoticeDeLabel": "Maßgeblicher deutscher Text"
+    "agreementNoticeDeLabel": "Maßgeblicher deutscher Text",
+
+    "postGigSurveyPendingTitle": "Post-gig Feedback-Umfrage",
+    "postGigSurveyPendingBody": "Die private Feedback-Umfrage wird kurz nach Ende des Auftritts bereitgestellt.",
+
+    "postGigSurveySubmittedTitle": "Feedback erhalten",
+    "postGigSurveySubmittedBody": "Danke für dein Feedback. Deine Antwort wird für Ops-Lernzwecke gespeichert.",
+
+    "postGigSurveyTitle": "Private Post-gig Feedback-Umfrage",
+    "postGigSurveyBody": "Wie ist es gelaufen? Dies ist eine private Umfrage, keine öffentlichen Bewertungen.",
+    "postGigSurveyQ1Label": "Gesamteindruck",
+    "postGigSurveyQ1Great": "Sehr gut",
+    "postGigSurveyQ1Okay": "Okay",
+    "postGigSurveyQ1Bad": "Verbesserungswürdig",
+    "postGigSurveyQ2Label": "Was sollten wir verbessern?",
+    "postGigSurveyQ2Placeholder": "Teile konkrete Vorschläge für die nächste Buchung (optional).",
+    "postGigSurveyQ3Label": "Würdest du wieder buchen?",
+    "postGigSurveyQ3Yes": "Ja",
+    "postGigSurveyQ3No": "Nein",
+    "postGigSurveySubmit": "Feedback senden"
   },
   "calendar": {
     "title": "Kalender",
@@ -898,6 +917,7 @@
     "booking_declined": "Buchungsanfrage abgelehnt",
     "booking_confirmed": "Buchung bestätigt",
     "booking_cancelled": "Buchung storniert",
+    "booking_post_gig_survey_ready": "Feedback-Umfrage nach dem Auftritt bereit",
     "applicationNotifications": "Bewerbungsbenachrichtigungen",
     "application_submitted": "Neue Bewerbung eingereicht",
     "application_shortlisted": "Bewerbung in Vorauswahl",

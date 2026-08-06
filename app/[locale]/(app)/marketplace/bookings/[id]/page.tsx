@@ -13,9 +13,11 @@ import { formatEur, toDatetimeLocal } from "@/src/lib/format";
 import { BookingTermsForm } from "@/src/components/booking-terms-form";
 import { Avatar } from "@/src/components/ui/monogram";
 import { StatusLabel } from "@/src/components/ui/status-label";
+import { PostGigSurveyForm } from "@/src/components/post-gig-survey-form";
 import { getDb } from "@/src/db/client";
 import { getBookingDetail } from "@/src/db/queries/bookings";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { getPostGigSurveyInvitationForActor } from "@/src/db/queries/post-gig-surveys";
 import {
   applications,
   directRequests,
@@ -103,6 +105,19 @@ export default async function BookingDetailPage({ params }: Props) {
     (booking.state === "agreement_generated" ||
       booking.state === "partially_signed") &&
     agreement?.provider === "sandbox";
+
+  const gigIsPast =
+    Boolean(agreedTerms) &&
+    booking.state === "confirmed" &&
+    Boolean(agreedTerms?.endsAt) &&
+    agreedTerms!.endsAt <= new Date();
+
+  const myPostGigSurvey = gigIsPast
+    ? await getPostGigSurveyInvitationForActor({
+        bookingId: booking.id,
+        signerUserId: access.actor.userId,
+      })
+    : null;
 
   const db = getDb();
   const fallbackStart = new Date(booking.createdAt);
@@ -374,6 +389,27 @@ export default async function BookingDetailPage({ params }: Props) {
             bookingId={booking.id}
             expectedVersion={booking.version}
           />
+        </div>
+      ) : null}
+
+      {gigIsPast ? (
+        <div className="panel p-6">
+          {myPostGigSurvey ? (
+            <PostGigSurveyForm
+              locale={locale as "en" | "de"}
+              bookingId={booking.id}
+              status={myPostGigSurvey.status as "invited" | "submitted"}
+            />
+          ) : (
+            <div className="grid gap-2">
+              <h3 className="text-lg font-medium">
+                {t("postGigSurveyPendingTitle")}
+              </h3>
+              <p className="text-sm text-[var(--text-muted)]">
+                {t("postGigSurveyPendingBody")}
+              </p>
+            </div>
+          )}
         </div>
       ) : null}
     </section>
