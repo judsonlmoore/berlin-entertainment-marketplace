@@ -202,7 +202,8 @@ export function PortfolioEditor({
   );
 
   useEffect(() => {
-    setMounted(true);
+    const timeoutId = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {
