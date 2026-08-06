@@ -41,14 +41,14 @@ export function useProfileAutosave<T>({
     readRef.current = readPayload;
   }, [save, readPayload]);
 
-  const flush = useCallback(async () => {
+  const flush = useCallback(async (): Promise<ActionResult | null> => {
     const form = formRef.current;
-    if (!form || !enabled) return;
+    if (!form || !enabled) return null;
 
     const payload = readRef.current(new FormData(form));
     if (!payload) {
       setPhase("blocked");
-      return;
+      return null;
     }
 
     const requestId = ++requestIdRef.current;
@@ -56,16 +56,17 @@ export function useProfileAutosave<T>({
     setErrorMessage(null);
 
     const result = await saveRef.current(payload);
-    if (requestId !== requestIdRef.current) return;
+    if (requestId !== requestIdRef.current) return result;
 
     if (!result.ok) {
       setPhase("error");
       setErrorMessage(result.message);
-      return;
+      return result;
     }
 
     setSavedAt(new Date());
     setPhase("saved");
+    return result;
   }, [enabled, formRef]);
 
   const schedule = useCallback(() => {

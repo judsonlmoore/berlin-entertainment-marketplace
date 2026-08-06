@@ -90,11 +90,11 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 
 ### Layout
 - **Onboarding:** Narrow focused steps (shell without app rail). Short path. Final “you’re in / pending verification” screen stays until the user clicks Continue (no auto-redirect).
-- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top. Section hairline rules. Media high; logistics later. Account language/deletion live under `/account`, not profile.
+- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later. Account language/deletion live under `/account`, not profile.
 
 ### Autosave & publication status
 - Autosave while editing. Status copy is only **Saving…** and **Saved.** (no clock time).
-- Display-name strip hosts publication actions on the right: **Publish** when the profile is draft (or changes requested), otherwise a soft status tag (**Under review** / **Verified**). Autosave status sits beside the action, vertically centered.
+- Display-name strip hosts publication actions on the right: **Publish** when the profile is draft (or changes requested), otherwise a soft status tag (**Under review** / **Verified**). Autosave status sits beside the action, vertically centered. The strip is sticky on scroll so the action and status remain reachable at the bottom of the form.
 - **Publish** submits for staff verification (`draft` → `submitted`). Staff still approve before discovery. Editing a submitted/approved profile returns it to draft and requires Publish again.
 - Soft status tags: **Under review** (warning soft `#F3E8CF`, ink-readable) and **Verified** (success soft `#E3EEE5`, primary-tint text).
 
@@ -106,7 +106,9 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 - Featured YouTube: URL field + thumbnail; **clicking the thumbnail opens a modal with the embedded video**.
 
 ### Description
-- Rich text (bold / italic / underline / lists / quote). Character counter with min/max (40–2000). No links in description. Same control on onboarding basics and profile.
+- Shared **ParagraphTextField** for all multi-line prose (talent description/technical/accessibility/equipment; buyer short description/audience/house rules/load-in/production notes/accessibility; same on onboarding).
+- Rich text (bold / italic / underline / lists / quote) with Gmail-style toolbar icons. Character counter with field-specific min/max. No links.
+- Same control on onboarding basics and profile builders — do not invent per-field textarea chrome.
 
 ### Website & social links
 - Plain full-URL text inputs with platform-specific **placeholders** (e.g. `https://www.instagram.com/yourhandle`).

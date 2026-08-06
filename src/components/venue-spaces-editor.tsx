@@ -3,8 +3,13 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { upsertVenueSpace } from "@/src/actions/profiles";
+import {
+  ParagraphTextField,
+  toParagraphEditorHtml,
+} from "@/src/components/profile/paragraph-text-field";
 import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
+import { NOTES_MAX } from "@/src/domain/sanitize-input";
 
 export type VenueSpaceRow = {
   id: string;
@@ -126,12 +131,15 @@ export function VenueSpacesEditor({ locale, venueId, spaces }: Props) {
           placeholder={t("venueSpaceStageDimensions")}
           className="field text-sm"
         />
-        <textarea
+        <ParagraphTextField
           name="accessibilityNotes"
-          rows={2}
-          defaultValue={editing?.accessibilityNotes ?? ""}
-          placeholder={t("accessibilityNotes")}
-          className="field text-sm"
+          label={t("accessibilityNotes")}
+          defaultValue={toParagraphEditorHtml(
+            editing?.accessibilityNotes ?? "",
+          )}
+          min={0}
+          max={NOTES_MAX}
+          size="short"
         />
         <div className="flex flex-wrap gap-2">
           <Button

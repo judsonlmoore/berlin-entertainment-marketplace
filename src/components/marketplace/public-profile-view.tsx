@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { YouTubeEmbed } from "@/src/components/youtube-embed";
 import { Monogram } from "@/src/components/ui/monogram";
+import { SafeRichText } from "@/src/components/ui/safe-rich-text";
 import { Link } from "@/src/i18n/navigation";
 import type {
   PublicProfileFact,
@@ -119,9 +120,10 @@ export function PublicProfileView({
           {description.trim() ? (
             <section className="grid gap-3">
               <h2 className="text-[1.15rem] font-semibold">{aboutTitle}</h2>
-              <div className="text-[1rem] leading-relaxed whitespace-pre-wrap text-[var(--ink)]">
-                {description}
-              </div>
+              <SafeRichText
+                html={description}
+                className="text-[1rem] leading-relaxed text-[var(--ink)]"
+              />
             </section>
           ) : null}
 
@@ -177,8 +179,8 @@ export function PublicProfileView({
                     <dt className="font-medium text-[var(--text-muted)]">
                       {fact.label}
                     </dt>
-                    <dd className="whitespace-pre-wrap text-[var(--ink)]">
-                      {fact.value}
+                    <dd className="text-[var(--ink)]">
+                      <SafeRichText html={fact.value} />
                     </dd>
                   </div>
                 ))}

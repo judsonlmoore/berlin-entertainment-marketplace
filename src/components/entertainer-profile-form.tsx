@@ -13,9 +13,9 @@ import { LocationAutocomplete } from "@/src/components/profile/location-autocomp
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
 import { PublicationStatusTag } from "@/src/components/profile/publication-status-tag";
 import {
-  CharacterCountedTextarea,
-  RichTextField,
-} from "@/src/components/profile/rich-text-field";
+  ParagraphTextField,
+  toParagraphEditorHtml,
+} from "@/src/components/profile/paragraph-text-field";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
 import {
   ENTERTAINER_SOCIAL_ORDER,
@@ -24,8 +24,10 @@ import {
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  NOTES_MAX,
   TECHNICAL_MAX,
   TECHNICAL_MIN,
+  stripHtmlToPlain,
 } from "@/src/domain/sanitize-input";
 import { useRouter } from "@/src/i18n/navigation";
 
@@ -93,17 +95,6 @@ function Section({
       {children}
     </section>
   );
-}
-
-function toEditorHtml(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "<p></p>";
-  if (/<[a-z][\s\S]*>/i.test(trimmed)) return trimmed;
-  const escaped = trimmed
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return `<p>${escaped}</p>`;
 }
 
 function socialFieldName(platform: SocialPlatform): string {
@@ -225,8 +216,12 @@ export function EntertainerProfileForm({
   function publishProfile() {
     setPublishError(null);
     startPublish(async () => {
-      // Flush pending edits so submit validates the latest draft.
-      await autosave.saveNow();
+      // Flush pending edits; never submit for review if the draft cannot save.
+      const saved = await autosave.saveNow();
+      if (!saved?.ok) {
+        setPublishError(saved?.message || t("publishProfileFailed"));
+        return;
+      }
       const result = await submitEntertainerProfile(locale);
       if (!result.ok) {
         setPublishError(result.message || t("publishProfileFailed"));
@@ -240,50 +235,52 @@ export function EntertainerProfileForm({
 
   return (
     <div className="grid gap-5">
-      <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-5 py-4">
-        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
-          <div className="min-w-0">
-            <p className="eyebrow text-[var(--accent)]">
-              {t("displayNameEyebrow")}
-            </p>
-            <h2 className="page-title mt-1 text-[clamp(1.5rem,2vw,2rem)]">
-              {actName.trim() || t("previewNameFallback")}
-            </h2>
-          </div>
+      <div className="sticky top-14 z-10 bg-[var(--canvas)] py-3 lg:top-0">
+        <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-5 py-4">
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+            <div className="min-w-0">
+              <p className="eyebrow text-[var(--accent)]">
+                {t("displayNameEyebrow")}
+              </p>
+              <h2 className="page-title mt-1 text-[clamp(1.5rem,2vw,2rem)]">
+                {actName.trim() || t("previewNameFallback")}
+              </h2>
+            </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <AutosaveStatus
-              phase={autosave.phase}
-              errorMessage={autosave.errorMessage}
-            />
-            {showPublish ? (
-              <button
-                type="button"
-                disabled={isPublishing || autosave.phase === "saving"}
-                onClick={publishProfile}
-                className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
-              >
-                {isPublishing ? t("publishingProfile") : t("publishProfile")}
-              </button>
-            ) : (
-              <PublicationStatusTag
-                state={pubState}
-                draftLabel={t("statusDraft")}
-                underReviewLabel={t("statusUnderReview")}
-                verifiedLabel={t("statusVerified")}
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <AutosaveStatus
+                phase={autosave.phase}
+                errorMessage={autosave.errorMessage}
               />
-            )}
+              {showPublish ? (
+                <button
+                  type="button"
+                  disabled={isPublishing || autosave.phase === "saving"}
+                  onClick={publishProfile}
+                  className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
+                >
+                  {isPublishing ? t("publishingProfile") : t("publishProfile")}
+                </button>
+              ) : (
+                <PublicationStatusTag
+                  state={pubState}
+                  draftLabel={t("statusDraft")}
+                  underReviewLabel={t("statusUnderReview")}
+                  verifiedLabel={t("statusVerified")}
+                />
+              )}
+            </div>
           </div>
+          {publishError ? (
+            <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
+              {publishError}
+            </p>
+          ) : showPublish ? (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {t("publishProfileHint")}
+            </p>
+          ) : null}
         </div>
-        {publishError ? (
-          <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
-            {publishError}
-          </p>
-        ) : showPublish ? (
-          <p className="mt-3 text-sm text-[var(--text-muted)]">
-            {t("publishProfileHint")}
-          </p>
-        ) : null}
       </div>
 
       <form ref={formRef} className="panel grid gap-6 p-6">
@@ -306,6 +303,20 @@ export function EntertainerProfileForm({
               className="field"
               value={actName}
               onChange={(event) => setActName(event.target.value)}
+              onPaste={(event) => {
+                const html = event.clipboardData.getData("text/html");
+                if (!html) return;
+                event.preventDefault();
+                const plain = stripHtmlToPlain(
+                  html || event.clipboardData.getData("text/plain"),
+                );
+                const input = event.currentTarget;
+                const start = input.selectionStart ?? actName.length;
+                const end = input.selectionEnd ?? actName.length;
+                const next =
+                  actName.slice(0, start) + plain + actName.slice(end);
+                setActName(next);
+              }}
             />
           </label>
 
@@ -321,13 +332,16 @@ export function EntertainerProfileForm({
             otherLabel={t("subcategoryOther")}
           />
 
-          <RichTextField
+          <ParagraphTextField
             name="description"
             label={t("description")}
-            defaultValue={toEditorHtml(defaultValues?.description ?? "")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.description ?? "",
+            )}
             min={DESCRIPTION_MIN}
             max={DESCRIPTION_MAX}
             placeholder={t("descriptionPlaceholder")}
+            size="tall"
           />
         </Section>
 
@@ -422,39 +436,44 @@ export function EntertainerProfileForm({
             </label>
           </div>
 
-          <CharacterCountedTextarea
-            name="technicalRequirements"
-            label={t("technicalRequirements")}
-            defaultValue={defaultValues?.technicalRequirements ?? ""}
-            min={TECHNICAL_MIN}
-            max={TECHNICAL_MAX}
-            rows={4}
-          />
-
           <LanguageMultiSelect
             name="languages"
             defaultValue={defaultValues?.languages}
             label={t("languages")}
             hint={t("languagesHint")}
           />
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">{t("accessibilityNotes")}</span>
-            <textarea
-              name="accessibilityNotes"
-              rows={2}
-              defaultValue={defaultValues?.accessibilityNotes ?? ""}
-              className="field"
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">{t("equipmentSupplied")}</span>
-            <textarea
-              name="equipmentSupplied"
-              rows={2}
-              defaultValue={defaultValues?.equipmentSupplied ?? ""}
-              className="field"
-            />
-          </label>
+
+          <ParagraphTextField
+            name="technicalRequirements"
+            label={t("technicalRequirements")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.technicalRequirements ?? "",
+            )}
+            min={TECHNICAL_MIN}
+            max={TECHNICAL_MAX}
+            size="medium"
+          />
+
+          <ParagraphTextField
+            name="accessibilityNotes"
+            label={t("accessibilityNotes")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.accessibilityNotes ?? "",
+            )}
+            min={0}
+            max={NOTES_MAX}
+            size="short"
+          />
+          <ParagraphTextField
+            name="equipmentSupplied"
+            label={t("equipmentSupplied")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.equipmentSupplied ?? "",
+            )}
+            min={0}
+            max={NOTES_MAX}
+            size="short"
+          />
         </Section>
 
         <Section title={t("sectionLinks")} hint={t("linksHint")}>

@@ -28,6 +28,9 @@ import {
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  LONG_NOTES_MAX,
+  NOTES_MAX,
+  SHORT_DESCRIPTION_MAX,
   TECHNICAL_MAX,
   TECHNICAL_MIN,
   sanitizePlainText,
@@ -98,12 +101,12 @@ const entertainerSchema = z.object({
     .min(1)
     .max(24 * 60)
     .default(60),
-  technicalRequirements: z.string().max(4000).optional().or(z.literal("")),
+  technicalRequirements: z.string().max(8000).optional().or(z.literal("")),
   genres: optionalText(500),
   performanceFormats: optionalText(500),
   languages: optionalText(500),
-  accessibilityNotes: optionalText(2000),
-  equipmentSupplied: optionalText(2000),
+  accessibilityNotes: optionalText(8000),
+  equipmentSupplied: optionalText(8000),
   websiteUrl: softUrlField.optional().default(""),
   socialLinks: socialLinksSchema,
   contactEmail: z.string().trim().email().max(320),
@@ -115,7 +118,7 @@ const venueProductionField = optionalText(500);
 
 const venueSchema = z.object({
   name: z.string().trim().min(1).max(160),
-  shortDescription: z.string().trim().max(500).optional().or(z.literal("")),
+  shortDescription: z.string().trim().max(8000).optional().or(z.literal("")),
   addressLine1: z.string().trim().max(200).optional().or(z.literal("")),
   addressLine2: z.string().trim().max(200).optional(),
   district: z.string().trim().max(120).optional().or(z.literal("")),
@@ -123,10 +126,10 @@ const venueSchema = z.object({
   latitude: z.string().trim().max(32).optional(),
   longitude: z.string().trim().max(32).optional(),
   venueType: z.string().trim().max(120).optional().or(z.literal("")),
-  audienceDescription: z.string().trim().max(2000).optional().or(z.literal("")),
+  audienceDescription: z.string().trim().max(8000).optional().or(z.literal("")),
   capacity: z.coerce.number().int().min(1).max(100000).default(50),
   capacityContext: z.string().trim().max(500).optional(),
-  productionNotes: z.string().trim().max(4000).optional(),
+  productionNotes: z.string().trim().max(8000).optional(),
   productionPa: venueProductionField,
   productionMixer: venueProductionField,
   productionMics: venueProductionField,
@@ -134,9 +137,9 @@ const venueSchema = z.object({
   productionBackline: venueProductionField,
   productionPower: venueProductionField,
   productionStage: venueProductionField,
-  houseRules: optionalText(4000),
-  loadInNotes: optionalText(4000),
-  accessibilityNotes: optionalText(2000),
+  houseRules: optionalText(8000),
+  loadInNotes: optionalText(8000),
+  accessibilityNotes: optionalText(8000),
   socialLinks: socialLinksSchema,
   websiteUrl: softUrlField.optional().default(""),
   contactEmail: z.string().trim().email().max(320),
@@ -147,8 +150,9 @@ const venueSchema = z.object({
 function buildVenueProductionResources(
   data: z.infer<typeof venueSchema>,
 ): Record<string, string> {
+  const notes = optionalNullableRichText(data.productionNotes, LONG_NOTES_MAX);
   const resources: Record<string, string> = {
-    notes: data.productionNotes?.trim() ?? "",
+    notes: notes ?? "",
   };
   const structured: Record<string, string | undefined> = {
     pa: data.productionPa,
@@ -169,6 +173,51 @@ function buildVenueProductionResources(
 function optionalNullableText(value?: string) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+function optionalNullableRichText(
+  value: string | undefined,
+  max: number,
+): string | null {
+  const check = validateRichTextField(value ?? "", {
+    min: 0,
+    max,
+    allowEmpty: true,
+  });
+  if (!check.ok) {
+    throw new AppError("validation", check.reason);
+  }
+  return check.value ? check.value : null;
+}
+
+function requireRichText(
+  value: string | undefined,
+  options: { min: number; max: number },
+): string {
+  const check = validateRichTextField(value ?? "", options);
+  if (!check.ok) {
+    throw new AppError("validation", check.reason);
+  }
+  return check.value;
+}
+
+function sanitizeVenueProse(data: z.infer<typeof venueSchema>) {
+  return {
+    shortDescription: requireRichText(data.shortDescription, {
+      min: 0,
+      max: SHORT_DESCRIPTION_MAX,
+    }),
+    audienceDescription: requireRichText(data.audienceDescription, {
+      min: 0,
+      max: NOTES_MAX,
+    }),
+    houseRules: optionalNullableRichText(data.houseRules, LONG_NOTES_MAX),
+    loadInNotes: optionalNullableRichText(data.loadInNotes, LONG_NOTES_MAX),
+    accessibilityNotes: optionalNullableRichText(
+      data.accessibilityNotes,
+      NOTES_MAX,
+    ),
+  };
 }
 
 function assertEntertainerReadyForSubmit(profile: {
@@ -202,7 +251,7 @@ function assertEntertainerReadyForSubmit(profile: {
       "Select a base location before submitting",
     );
   }
-  const technicalCheck = sanitizePlainText(profile.technicalRequirements, {
+  const technicalCheck = validateRichTextField(profile.technicalRequirements, {
     min: TECHNICAL_MIN,
     max: TECHNICAL_MAX,
   });
@@ -223,8 +272,12 @@ function assertVenueReadyForSubmit(venue: {
   if (!venue.name.trim()) {
     throw new AppError("validation", "Venue name is required");
   }
-  if (!venue.shortDescription.trim()) {
-    throw new AppError("validation", "Short description is required");
+  const shortDescriptionCheck = validateRichTextField(venue.shortDescription, {
+    min: DESCRIPTION_MIN,
+    max: SHORT_DESCRIPTION_MAX,
+  });
+  if (!shortDescriptionCheck.ok) {
+    throw new AppError("validation", shortDescriptionCheck.reason);
   }
   if (!venue.addressLine1.trim()) {
     throw new AppError("validation", "Address is required");
@@ -238,8 +291,12 @@ function assertVenueReadyForSubmit(venue: {
   if (!venue.venueType.trim()) {
     throw new AppError("validation", "Venue type is required");
   }
-  if (!venue.audienceDescription.trim()) {
-    throw new AppError("validation", "Audience description is required");
+  const audienceCheck = validateRichTextField(venue.audienceDescription, {
+    min: DESCRIPTION_MIN,
+    max: NOTES_MAX,
+  });
+  if (!audienceCheck.ok) {
+    throw new AppError("validation", audienceCheck.reason);
   }
 }
 
@@ -270,14 +327,15 @@ export async function upsertEntertainerProfile(
       {
         min: 0,
         max: DESCRIPTION_MAX,
+        allowEmpty: true,
       },
     );
     if (!descriptionCheck.ok) {
       throw new AppError("validation", descriptionCheck.reason);
     }
-    const technicalCheck = sanitizePlainText(
+    const technicalCheck = validateRichTextField(
       parsed.data.technicalRequirements ?? "",
-      { allowEmpty: true, max: TECHNICAL_MAX },
+      { min: 0, max: TECHNICAL_MAX, allowEmpty: true },
     );
     if (!technicalCheck.ok) {
       throw new AppError("validation", technicalCheck.reason);
@@ -295,6 +353,15 @@ export async function upsertEntertainerProfile(
     ) {
       throw new AppError("validation", "Price max must be >= min");
     }
+
+    const accessibilityNotes = optionalNullableRichText(
+      parsed.data.accessibilityNotes,
+      NOTES_MAX,
+    );
+    const equipmentSupplied = optionalNullableRichText(
+      parsed.data.equipmentSupplied,
+      NOTES_MAX,
+    );
 
     const db = getDb();
     const existing = await db.query.entertainerProfiles.findFirst({
@@ -318,8 +385,8 @@ export async function upsertEntertainerProfile(
       genres: optionalNullableText(parsed.data.genres),
       performanceFormats: optionalNullableText(parsed.data.performanceFormats),
       languages: optionalNullableText(parsed.data.languages),
-      accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
-      equipmentSupplied: optionalNullableText(parsed.data.equipmentSupplied),
+      accessibilityNotes,
+      equipmentSupplied,
       websiteUrl: optionalNullableText(parsed.data.websiteUrl),
       socialLinks: compactSocialLinks(parsed.data.socialLinks),
       publicationState:
@@ -448,6 +515,7 @@ export async function createVenue(
       throw new AppError("validation", "Invalid venue profile");
     }
 
+    const prose = sanitizeVenueProse(parsed.data);
     const db = getDb();
     const now = new Date();
     let venueId: string | undefined;
@@ -457,7 +525,7 @@ export async function createVenue(
         .insert(venues)
         .values({
           name: parsed.data.name,
-          shortDescription: parsed.data.shortDescription ?? "",
+          shortDescription: prose.shortDescription,
           addressLine1: parsed.data.addressLine1 ?? "",
           ...(parsed.data.addressLine2
             ? { addressLine2: parsed.data.addressLine2 }
@@ -469,17 +537,15 @@ export async function createVenue(
             ? { longitude: parsed.data.longitude }
             : {}),
           venueType: parsed.data.venueType ?? "",
-          audienceDescription: parsed.data.audienceDescription ?? "",
+          audienceDescription: prose.audienceDescription,
           capacity: parsed.data.capacity,
           ...(parsed.data.capacityContext
             ? { capacityContext: parsed.data.capacityContext }
             : {}),
           productionResources: buildVenueProductionResources(parsed.data),
-          houseRules: optionalNullableText(parsed.data.houseRules),
-          loadInNotes: optionalNullableText(parsed.data.loadInNotes),
-          accessibilityNotes: optionalNullableText(
-            parsed.data.accessibilityNotes,
-          ),
+          houseRules: prose.houseRules,
+          loadInNotes: prose.loadInNotes,
+          accessibilityNotes: prose.accessibilityNotes,
           socialLinks: compactSocialLinks(parsed.data.socialLinks),
           ...(parsed.data.websiteUrl
             ? { websiteUrl: parsed.data.websiteUrl }
@@ -557,6 +623,7 @@ export async function updateVenue(
       throw new AppError("validation", "Invalid venue profile");
     }
 
+    const prose = sanitizeVenueProse(parsed.data);
     const db = getDb();
     const existing = await db.query.venues.findFirst({
       where: eq(venues.id, venueId),
@@ -576,7 +643,7 @@ export async function updateVenue(
         .update(venues)
         .set({
           name: parsed.data.name,
-          shortDescription: parsed.data.shortDescription ?? "",
+          shortDescription: prose.shortDescription,
           addressLine1: parsed.data.addressLine1 ?? "",
           addressLine2: parsed.data.addressLine2 ?? null,
           district: parsed.data.district ?? "",
@@ -584,15 +651,13 @@ export async function updateVenue(
           latitude: parsed.data.latitude ?? null,
           longitude: parsed.data.longitude ?? null,
           venueType: parsed.data.venueType ?? "",
-          audienceDescription: parsed.data.audienceDescription ?? "",
+          audienceDescription: prose.audienceDescription,
           capacity: parsed.data.capacity,
           capacityContext: parsed.data.capacityContext ?? null,
           productionResources: buildVenueProductionResources(parsed.data),
-          houseRules: optionalNullableText(parsed.data.houseRules),
-          loadInNotes: optionalNullableText(parsed.data.loadInNotes),
-          accessibilityNotes: optionalNullableText(
-            parsed.data.accessibilityNotes,
-          ),
+          houseRules: prose.houseRules,
+          loadInNotes: prose.loadInNotes,
+          accessibilityNotes: prose.accessibilityNotes,
           socialLinks: compactSocialLinks(parsed.data.socialLinks),
           websiteUrl: parsed.data.websiteUrl || null,
           publicationState: nextState,
@@ -805,7 +870,7 @@ const venueSpaceSchema = z.object({
   name: z.string().trim().min(1).max(160),
   capacity: z.coerce.number().int().min(1).max(100000),
   stageDimensions: optionalText(200),
-  accessibilityNotes: optionalText(2000),
+  accessibilityNotes: optionalText(8000),
   locale: localeSchema,
 });
 
@@ -829,7 +894,10 @@ export async function upsertVenueSpace(
       name: parsed.data.name,
       capacity: parsed.data.capacity,
       stageDimensions: optionalNullableText(parsed.data.stageDimensions),
-      accessibilityNotes: optionalNullableText(parsed.data.accessibilityNotes),
+      accessibilityNotes: optionalNullableRichText(
+        parsed.data.accessibilityNotes,
+        NOTES_MAX,
+      ),
       updatedAt: now,
     };
 

@@ -166,7 +166,7 @@ function PortfolioImageTile({
         draggable={false}
       />
       {isHero ? (
-        <span className="absolute top-2 left-2 z-10 rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
+        <span className="absolute top-2 left-2 z-[1] rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
           {t("portfolioHero")}
         </span>
       ) : null}
@@ -177,7 +177,7 @@ function PortfolioImageTile({
           aria-label={t("portfolioRemove")}
           onClick={onRemove}
           onPointerDown={(event) => event.stopPropagation()}
-          className="absolute top-2 right-2 z-10 inline-flex size-7 items-center justify-center rounded-full bg-[rgba(20,24,22,0.82)] text-base leading-none text-white"
+          className="absolute top-2 right-2 z-[1] inline-flex size-7 items-center justify-center rounded-full bg-[rgba(20,24,22,0.82)] text-base leading-none text-white"
         >
           ×
         </button>
@@ -244,11 +244,11 @@ function PendingUploadTile({
       />
       <span className="absolute inset-0 bg-[rgba(20,24,22,0.45)]" />
       {isHero ? (
-        <span className="absolute top-2 left-2 z-10 rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
+        <span className="absolute top-2 left-2 z-[1] rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
           {t("portfolioHero")}
         </span>
       ) : null}
-      <span className="absolute inset-x-3 bottom-3 z-10">
+      <span className="absolute inset-x-3 bottom-3 z-[1]">
         <span className="mb-1.5 block h-1.5 overflow-hidden rounded-full bg-white/30">
           <span
             className="block h-full rounded-full bg-white transition-[width] duration-150"
@@ -718,7 +718,7 @@ export function PortfolioEditor({
                 className="h-full w-full object-cover"
               />
               {index === 0 ? (
-                <span className="absolute top-2 left-2 z-10 rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
+                <span className="absolute top-2 left-2 z-[1] rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
                   {t("portfolioHero")}
                 </span>
               ) : null}
