@@ -89,6 +89,59 @@ export async function listVenueOpportunities(venueId: string) {
     .orderBy(desc(opportunities.createdAt));
 }
 
+/** Open calls for a venue (talent-facing venue profile). */
+export async function listOpenCallsForVenue(input: {
+  venueId: string;
+  entertainerProfileId?: string | null;
+}) {
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: opportunities.id,
+      title: opportunities.title,
+      startsAt: opportunities.startsAt,
+      endsAt: opportunities.endsAt,
+      formatCategory: opportunities.formatCategory,
+      budgetMinCents: opportunities.budgetMinCents,
+      budgetMaxCents: opportunities.budgetMaxCents,
+      currency: opportunities.currency,
+      applicationDeadline: opportunities.applicationDeadline,
+    })
+    .from(opportunities)
+    .where(
+      and(
+        eq(opportunities.venueId, input.venueId),
+        eq(opportunities.state, "open"),
+      ),
+    )
+    .orderBy(opportunities.startsAt);
+
+  if (!input.entertainerProfileId || rows.length === 0) {
+    return rows.map((row) => ({ ...row, ownApplicationState: null as string | null }));
+  }
+
+  const ownApps = await db
+    .select({
+      opportunityId: applications.opportunityId,
+      state: applications.state,
+    })
+    .from(applications)
+    .where(
+      and(
+        eq(applications.entertainerProfileId, input.entertainerProfileId),
+        inArray(
+          applications.opportunityId,
+          rows.map((r) => r.id),
+        ),
+      ),
+    );
+  const byOpp = new Map(ownApps.map((a) => [a.opportunityId, a.state]));
+  return rows.map((row) => ({
+    ...row,
+    ownApplicationState: byOpp.get(row.id) ?? null,
+  }));
+}
+
 export async function getOpportunityDetail(opportunityId: string) {
   const db = getDb();
   const [row] = await db

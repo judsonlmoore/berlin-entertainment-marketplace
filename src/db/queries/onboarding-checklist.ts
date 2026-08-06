@@ -5,6 +5,7 @@ import {
   directRequests,
   entertainerProfiles,
   onboardingChecklistState,
+  profileEnquiries,
   venues,
 } from "@/src/db/schema/marketplace";
 import {
@@ -57,7 +58,7 @@ async function hasSubmittedEnquiry(actor: ActorContext): Promise<boolean> {
       columns: { id: true },
     });
     if (!profile) return false;
-    const [row] = await db
+    const [appRow] = await db
       .select({ id: applications.id })
       .from(applications)
       .where(
@@ -74,7 +75,14 @@ async function hasSubmittedEnquiry(actor: ActorContext): Promise<boolean> {
         ),
       )
       .limit(1);
-    return Boolean(row);
+    if (appRow) return true;
+
+    const [enquiryRow] = await db
+      .select({ id: profileEnquiries.id })
+      .from(profileEnquiries)
+      .where(eq(profileEnquiries.entertainerProfileId, profile.id))
+      .limit(1);
+    return Boolean(enquiryRow);
   }
 
   if (actor.roles.includes("venue")) {

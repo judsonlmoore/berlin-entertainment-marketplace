@@ -55,6 +55,9 @@ const notificationGroups = {
     "direct_request_received",
     "direct_request_accepted",
     "direct_request_declined",
+    "profile_enquiry_received",
+    "profile_enquiry_interested",
+    "profile_enquiry_passed",
   ],
   agreement: ["agreement_ready", "agreement_signed"],
   approval: [

@@ -46,6 +46,8 @@ export type Permission =
   | "application.review"
   | "direct_request.send"
   | "direct_request.respond"
+  | "profile_enquiry.send"
+  | "profile_enquiry.respond"
   | "booking.view"
   | "booking.propose_terms"
   | "booking.accept_terms"
@@ -144,10 +146,19 @@ export function can(
 
     case "opportunity.apply":
     case "direct_request.respond":
+    case "profile_enquiry.send":
       return (
         actor.roles.includes("entertainer") &&
         hasPrivateAccess(actor) &&
         actor.entertainerVerified
+      );
+
+    case "profile_enquiry.respond":
+      return (
+        Boolean(resource?.venueId) &&
+        isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
+        hasPrivateAccess(actor) &&
+        actor.venueVerified
       );
 
     case "booking.view":
