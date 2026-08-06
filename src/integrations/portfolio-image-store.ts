@@ -163,8 +163,7 @@ export async function loadPortfolioImage(
     try {
       const result = await get(urlOrPath, { access: "private", token });
       if (!result) return null;
-      const mimeType =
-        result.blob.contentType ?? "application/octet-stream";
+      const mimeType = result.blob.contentType ?? "application/octet-stream";
       const buffer = await new Response(result.stream).arrayBuffer();
       const bytes = new Uint8Array(buffer);
       putPortfolioImageBytes(blobKey, mimeType, bytes);
@@ -176,8 +175,7 @@ export async function loadPortfolioImage(
         if (!pathname.startsWith("portfolio/")) return null;
         const result = await get(pathname, { access: "private", token });
         if (!result) return null;
-        const mimeType =
-          result.blob.contentType ?? "application/octet-stream";
+        const mimeType = result.blob.contentType ?? "application/octet-stream";
         const buffer = await new Response(result.stream).arrayBuffer();
         const bytes = new Uint8Array(buffer);
         putPortfolioImageBytes(blobKey, mimeType, bytes);
@@ -239,16 +237,11 @@ export async function deletePortfolioImage(blobKey: string): Promise<void> {
   }
   const filePath = safeKeyToPath(blobKey);
   if (!filePath) return;
-  await Promise.allSettled([
-    unlink(filePath),
-    unlink(`${filePath}.meta.json`),
-  ]);
+  await Promise.allSettled([unlink(filePath), unlink(`${filePath}.meta.json`)]);
 }
 
 export function isLocalPortfolioKey(blobKey: string): boolean {
-  return (
-    blobKey.startsWith(LOCAL_PREFIX) || blobKey.startsWith(MEMORY_PREFIX)
-  );
+  return blobKey.startsWith(LOCAL_PREFIX) || blobKey.startsWith(MEMORY_PREFIX);
 }
 
 export function isBlobPortfolioKey(blobKey: string): boolean {

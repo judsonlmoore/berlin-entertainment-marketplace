@@ -590,7 +590,26 @@
     "agreementNoticeTitle": "Agreement language",
     "agreementNoticeBody": "German agreement text is controlling. English is a labeled convenience translation of the same versioned terms.",
     "agreementNoticeEnLabel": "English convenience translation",
-    "agreementNoticeDeLabel": "German controlling text"
+    "agreementNoticeDeLabel": "German controlling text",
+
+    "postGigSurveyPendingTitle": "Post-gig feedback survey",
+    "postGigSurveyPendingBody": "The private feedback survey is delivered shortly after the gig ends.",
+
+    "postGigSurveySubmittedTitle": "Feedback received",
+    "postGigSurveySubmittedBody": "Thanks for the private feedback. Your response is stored for ops learning.",
+
+    "postGigSurveyTitle": "Private post-gig feedback",
+    "postGigSurveyBody": "How did the gig go? This is a private survey, not public ratings.",
+    "postGigSurveyQ1Label": "Overall experience",
+    "postGigSurveyQ1Great": "Great",
+    "postGigSurveyQ1Okay": "Okay",
+    "postGigSurveyQ1Bad": "Needs improvement",
+    "postGigSurveyQ2Label": "What should we improve?",
+    "postGigSurveyQ2Placeholder": "Share concrete suggestions for the next booking (optional).",
+    "postGigSurveyQ3Label": "Would you book again?",
+    "postGigSurveyQ3Yes": "Yes",
+    "postGigSurveyQ3No": "No",
+    "postGigSurveySubmit": "Send feedback"
   },
   "calendar": {
     "title": "Calendar",
@@ -898,6 +917,7 @@
     "booking_declined": "Booking request declined",
     "booking_confirmed": "Booking confirmed",
     "booking_cancelled": "Booking cancelled",
+    "booking_post_gig_survey_ready": "Post-gig survey ready",
     "applicationNotifications": "Application notifications",
     "application_submitted": "New application submitted",
     "application_shortlisted": "Application shortlisted",

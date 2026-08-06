@@ -24,6 +24,8 @@ import {
   depositStatusEnum,
   directRequestStateEnum,
   marketplaceRoleEnum,
+  postGigSurveyPartyRoleEnum,
+  postGigSurveyStatusEnum,
   membershipStatusEnum,
   opportunityStateEnum,
   portfolioItemKindEnum,
@@ -822,6 +824,56 @@ export const depositStatusEvents = pgTable("deposit_status_events", {
     .notNull()
     .defaultNow(),
 });
+
+export const postGigSurveys = pgTable(
+  "post_gig_surveys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    signerUserId: text("signer_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    partyRole: postGigSurveyPartyRoleEnum("party_role").notNull(),
+    status: postGigSurveyStatusEnum("status").notNull().default("invited"),
+    invitedAt: timestamp("invited_at", {
+      withTimezone: true,
+      mode: "date",
+    })
+      .notNull()
+      .defaultNow(),
+    submittedAt: timestamp("submitted_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    /**
+     * Validated shape lives in the server action layer.
+     * Store it as jsonb for MVP flexibility.
+     */
+    response: jsonb("response")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    notificationSentAt: timestamp("notification_sent_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("post_gig_surveys_booking_signer_uidx").on(
+      table.bookingId,
+      table.signerUserId,
+    ),
+    index("post_gig_surveys_signer_idx").on(table.signerUserId),
+  ],
+);
 
 export const riderFiles = pgTable("rider_files", {
   id: uuid("id").defaultRandom().primaryKey(),

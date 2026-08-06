@@ -44,6 +44,7 @@ const notificationGroups = {
     "booking_declined",
     "booking_confirmed",
     "booking_cancelled",
+    "booking_post_gig_survey_ready",
   ],
   application: [
     "application_submitted",

@@ -118,7 +118,7 @@ export function PublicProfileView({
           {description.trim() ? (
             <section className="grid gap-3">
               <h2 className="text-[1.15rem] font-semibold">{aboutTitle}</h2>
-              <div className="whitespace-pre-wrap text-[1rem] leading-relaxed text-[var(--ink)]">
+              <div className="text-[1rem] leading-relaxed whitespace-pre-wrap text-[var(--ink)]">
                 {description}
               </div>
             </section>

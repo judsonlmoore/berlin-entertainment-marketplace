@@ -64,6 +64,13 @@
       "when": 1785850800000,
       "tag": "0008_entertainer_base_coords",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786000000000,
+      "tag": "0009_post_gig_surveys",
+      "breakpoints": true
     }
   ]
 }
