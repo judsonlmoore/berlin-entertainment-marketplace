@@ -62,9 +62,7 @@ export function VenueProfileContactPanel({
       });
       if (!result.ok) {
         setError(
-          result.code === "validation" ||
-            result.code === "forbidden" ||
-            result.code === "conflict"
+          result.code === "validation" || result.code === "forbidden"
             ? errors(result.code)
             : result.message,
         );

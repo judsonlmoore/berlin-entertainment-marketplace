@@ -1,5 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
+import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
+import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
 import {
   auditEvents,
   bookings,
@@ -287,31 +289,97 @@ export async function updateProfileEnquiryProposal(input: {
     );
   }
 
-  const starts = input.proposedStartsAt;
-  const ends = input.proposedEndsAt;
+  const starts =
+    input.proposedStartsAt !== undefined
+      ? input.proposedStartsAt
+      : enquiry.proposedStartsAt;
+  const ends =
+    input.proposedEndsAt !== undefined
+      ? input.proposedEndsAt
+      : enquiry.proposedEndsAt;
   if (starts && ends && ends <= starts) {
     throw new AppError("validation", "End must be after start");
   }
 
-  await db
-    .update(profileEnquiries)
-    .set({
-      ...(input.proposedStartsAt !== undefined
-        ? { proposedStartsAt: input.proposedStartsAt }
-        : {}),
-      ...(input.proposedEndsAt !== undefined
-        ? { proposedEndsAt: input.proposedEndsAt }
-        : {}),
-      ...(input.proposedFeeCents !== undefined
-        ? { proposedFeeCents: input.proposedFeeCents }
-        : {}),
-      ...(input.proposedFormat !== undefined
-        ? { proposedFormat: input.proposedFormat?.trim() || null }
-        : {}),
-      ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
-      updatedAt: new Date(),
-    })
-    .where(eq(profileEnquiries.id, enquiry.id));
+  const booking = await db.query.bookings.findFirst({
+    where: and(
+      eq(bookings.originType, "profile_enquiry"),
+      eq(bookings.originId, enquiry.id),
+    ),
+    columns: { id: true },
+  });
+
+  const shouldPlaceCalendar =
+    enquiry.state === "interested" && Boolean(starts && ends && booking?.id);
+
+  if (shouldPlaceCalendar && starts && ends && booking) {
+    await assertNoHardCalendarConflict({
+      entertainerProfileId: enquiry.entertainerProfileId,
+      venueId: enquiry.venueId,
+      startsAt: starts,
+      endsAt: ends,
+      excludeBookingId: booking.id,
+    });
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(profileEnquiries)
+      .set({
+        ...(input.proposedStartsAt !== undefined
+          ? { proposedStartsAt: input.proposedStartsAt }
+          : {}),
+        ...(input.proposedEndsAt !== undefined
+          ? { proposedEndsAt: input.proposedEndsAt }
+          : {}),
+        ...(input.proposedFeeCents !== undefined
+          ? { proposedFeeCents: input.proposedFeeCents }
+          : {}),
+        ...(input.proposedFormat !== undefined
+          ? { proposedFormat: input.proposedFormat?.trim() || null }
+          : {}),
+        ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(profileEnquiries.id, enquiry.id));
+
+    if (shouldPlaceCalendar && starts && ends && booking) {
+      const { spaceId } = await assertNoHardCalendarConflict({
+        entertainerProfileId: enquiry.entertainerProfileId,
+        venueId: enquiry.venueId,
+        startsAt: starts,
+        endsAt: ends,
+        excludeBookingId: booking.id,
+      });
+      await upsertBookingCalendarEntry(tx, {
+        ownerType: "entertainer",
+        ownerId: enquiry.entertainerProfileId,
+        startsAt: starts,
+        endsAt: ends,
+        state: "requested",
+        bookingId: booking.id,
+      });
+      await upsertBookingCalendarEntry(tx, {
+        ownerType: "venue_space",
+        ownerId: spaceId,
+        startsAt: starts,
+        endsAt: ends,
+        state: "requested",
+        bookingId: booking.id,
+      });
+    }
+
+    await tx.insert(auditEvents).values({
+      actorUserId: input.actor.userId,
+      action: "profile_enquiry.proposal_updated",
+      subjectType: "profile_enquiry",
+      subjectId: enquiry.id,
+      metadata: {
+        dated: Boolean(starts && ends),
+        ...(booking?.id ? { bookingId: booking.id } : {}),
+      },
+    });
+  });
 }
 
 export async function listProfileEnquiriesForVenues(venueIds: string[]) {

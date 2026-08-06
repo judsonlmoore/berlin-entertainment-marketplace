@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { projectLeadStatus } from "./lead";
+import { leadContactsUnlocked, projectLeadStatus } from "./lead";
 
 describe("projectLeadStatus", () => {
   it("maps pending and open booking states", () => {
@@ -8,6 +8,12 @@ describe("projectLeadStatus", () => {
     expect(projectLeadStatus({ bookingState: "shortlisted" })).toBe("open");
     expect(projectLeadStatus({ bookingState: "accepted" })).toBe("open");
     expect(projectLeadStatus({ bookingState: "terms_agreed" })).toBe("open");
+    expect(projectLeadStatus({ bookingState: "agreement_generated" })).toBe(
+      "open",
+    );
+    expect(projectLeadStatus({ bookingState: "partially_signed" })).toBe(
+      "open",
+    );
   });
 
   it("maps won and completed from confirmed", () => {
@@ -33,5 +39,17 @@ describe("projectLeadStatus", () => {
     expect(projectLeadStatus({ bookingState: "rejected" })).toBe("lost");
     expect(projectLeadStatus({ bookingState: "declined" })).toBe("lost");
     expect(projectLeadStatus({ bookingState: "withdrawn" })).toBe("lost");
+    expect(projectLeadStatus({ bookingState: "expired" })).toBe("lost");
+    expect(projectLeadStatus({ bookingState: "cancelled" })).toBe("lost");
+  });
+});
+
+describe("leadContactsUnlocked", () => {
+  it("unlocks only after mutual interest", () => {
+    expect(leadContactsUnlocked("pending")).toBe(false);
+    expect(leadContactsUnlocked("lost")).toBe(false);
+    expect(leadContactsUnlocked("open")).toBe(true);
+    expect(leadContactsUnlocked("won")).toBe(true);
+    expect(leadContactsUnlocked("completed")).toBe(true);
   });
 });

@@ -108,6 +108,27 @@ describe("permissions", () => {
     ).toBe(false);
   });
 
+  it("gates profile enquiry send and respond on published profiles", () => {
+    expect(can(actor(), "profile_enquiry.send")).toBe(true);
+    expect(
+      can(actor({ entertainerVerified: false }), "profile_enquiry.send"),
+    ).toBe(false);
+    expect(
+      can(
+        actor({
+          roles: ["venue"],
+          entertainerVerified: false,
+          venueVerified: true,
+          venueMemberships: [
+            { venueId: "venue-1", role: "owner", status: "active" },
+          ],
+        }),
+        "profile_enquiry.respond",
+        { venueId: "venue-1" },
+      ),
+    ).toBe(true);
+  });
+
   it("gates direct request send on venue verification", () => {
     expect(
       can(

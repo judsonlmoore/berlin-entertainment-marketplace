@@ -6,21 +6,14 @@ import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { getLeadByBookingId } from "@/src/db/queries/leads";
+import { leadContactsUnlocked } from "@/src/domain/lead";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
-import { formatEur } from "@/src/lib/format";
+import { formatEur, toDatetimeLocal } from "@/src/lib/format";
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
 };
-
-function toDatetimeLocalValue(date: Date | null | undefined): string {
-  if (!date) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  // Display in Europe/Berlin-ish local via UTC offset approximation for form defaults
-  const d = new Date(date);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export default async function LeadDetailPage({ params }: Props) {
   const { locale, id } = await params;
@@ -71,6 +64,8 @@ export default async function LeadDetailPage({ params }: Props) {
     timeZone: "Europe/Berlin",
   });
 
+  const contactsUnlocked = leadContactsUnlocked(lead.leadStatus);
+
   return (
     <section className="mx-auto grid w-full max-w-3xl gap-8">
       <div>
@@ -84,8 +79,11 @@ export default async function LeadDetailPage({ params }: Props) {
           title={`${lead.act.actName} · ${lead.venue.name}`}
           body={t("detailBody")}
         />
-        <div className="mt-3">
+        <div className="mt-3 flex flex-wrap gap-2">
           <StatusLabel>{t(`status.${lead.leadStatus}`)}</StatusLabel>
+          {contactsUnlocked ? (
+            <StatusLabel tone="success">{t("contactsUnlocked")}</StatusLabel>
+          ) : null}
         </div>
       </div>
 
@@ -161,8 +159,12 @@ export default async function LeadDetailPage({ params }: Props) {
                 enquiry.proposedFeeCents != null
                   ? String(enquiry.proposedFeeCents / 100)
                   : "",
-              proposedStartsAt: toDatetimeLocalValue(enquiry.proposedStartsAt),
-              proposedEndsAt: toDatetimeLocalValue(enquiry.proposedEndsAt),
+              proposedStartsAt: enquiry.proposedStartsAt
+                ? toDatetimeLocal(enquiry.proposedStartsAt)
+                : "",
+              proposedEndsAt: enquiry.proposedEndsAt
+                ? toDatetimeLocal(enquiry.proposedEndsAt)
+                : "",
             }}
           />
           {enquiry.proposedFeeCents != null ? (

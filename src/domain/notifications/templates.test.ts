@@ -16,4 +16,32 @@ describe("notification templates", () => {
     );
     expect(content.actionLabel).toBe("Give feedback");
   });
+
+  it("links profile enquiry notifications to the lead", () => {
+    const received = generateNotificationContent({
+      type: "profile_enquiry_received",
+      locale: "en",
+      params: {
+        entertainerName: "Trio Nord",
+        venueName: "Salon Mitte",
+        bookingId: "b34ef01f-0000-0000-0000-b34ef01f0000",
+      },
+    });
+    expect(received.actionUrl).toBe(
+      "/marketplace/leads/b34ef01f-0000-0000-0000-b34ef01f0000",
+    );
+    expect(received.actionLabel).toBe("View lead");
+
+    const interested = generateNotificationContent({
+      type: "profile_enquiry_interested",
+      locale: "de",
+      params: {
+        entertainerName: "Trio Nord",
+        venueName: "Salon Mitte",
+        bookingId: "b34ef01f-0000-0000-0000-b34ef01f0000",
+      },
+    });
+    expect(interested.body).toContain("Salon Mitte");
+    expect(interested.actionLabel).toBe("Lead ansehen");
+  });
 });

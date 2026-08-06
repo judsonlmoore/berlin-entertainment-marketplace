@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/src/i18n/navigation";
 import { updateLeadProposalAction } from "@/src/actions/profile-enquiries";
 import { Button } from "@/src/components/ui/button";
+import { parseDatetimeLocalInTimeZone } from "@/src/lib/format";
 
 type Props = {
   locale: "en" | "de";
@@ -41,9 +42,11 @@ export function LeadProposalForm({ locale, enquiryId, initial }: Props) {
         proposedFormat: String(formData.get("proposedFormat") ?? ""),
         proposedFeeEur: feeRaw === "" ? null : Number(feeRaw),
         proposedStartsAt: startsLocal
-          ? new Date(startsLocal).toISOString()
+          ? parseDatetimeLocalInTimeZone(startsLocal).toISOString()
           : null,
-        proposedEndsAt: endsLocal ? new Date(endsLocal).toISOString() : null,
+        proposedEndsAt: endsLocal
+          ? parseDatetimeLocalInTimeZone(endsLocal).toISOString()
+          : null,
       });
       if (!result.ok) {
         setError(

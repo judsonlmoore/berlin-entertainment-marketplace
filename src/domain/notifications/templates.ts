@@ -282,7 +282,7 @@ const templates: Record<
       locale === "de" ? `Neues Profil-Interesse` : `New profile enquiry`,
     getBody: (locale, params) => {
       return locale === "de"
-        ? `${params.entertainerName} hat ihr Profil an ${params.venueName} gesendet.`
+        ? `${params.entertainerName} hat das Profil an ${params.venueName} gesendet.`
         : `${params.entertainerName} submitted their profile to ${params.venueName}.`;
     },
     getActionUrl: (params) =>
