@@ -110,8 +110,9 @@ Members save drafts and publish when the checklist passes. Publishing sets `appr
 
 ## 5. Private discovery and contact privacy
 
-- Public visitors see only the landing, sign-in, privacy, and terms surfaces (apply redirects into self-serve signup).
-- Active (non-suspended) accounts access private marketplace surfaces for search and explore.
+- Public visitors see the landing, sign-in, help FAQ (`/help`), contact form (`/contact`), privacy, terms, and cookies surfaces (apply redirects into self-serve signup). Public help stays thin (what Salon is, how access works, contact privacy pointers) and must not publish booking/ops playbooks.
+- Active (non-suspended) accounts access private marketplace surfaces for search and explore, plus an in-product help hub (`/marketplace/help`) with member workflow guides. Member-only help articles are not readable while signed out.
+- Contact form posts to Spamblock (client pixel + fetch); signed-in users may have name/email prefilled. Formal GDPR requests still follow the privacy page; the form supplements support intake.
 - **Role segregation (server-enforced):**
   - Entertainers may search published venues and venue spaces only. They must not browse, search, or open other entertainers’ profiles (except their own). Open calls appear on venue profiles (and as result badges), not as a separate top-level browse.
   - Venues may search published entertainer profiles only. They must not browse, search, or open other venues’ private profiles, except where already a party to a shared booking involving that venue.

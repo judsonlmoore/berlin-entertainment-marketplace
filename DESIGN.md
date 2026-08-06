@@ -127,7 +127,9 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 - Member rail ops: **Marketplace** (directory), **Bookings** (match pipeline), **Calendar** (time), plus Overview and Profile. No top-level Opportunities or separate Leads.
 - Member rail may show a quiet **Getting started** checklist (publish → search → open a result → send an enquiry). When all steps are done, show a one-line congrats + dismiss; dismiss hides it permanently. Staff and support-mode overlays never see it.
 - Venue profiles (talent-facing) include **Submit my profile** and listed **open calls** (dated + standing) with 1-click apply. Mutual opt-in opens a shared booking; contacts unlock then. No in-app chat.
-- Logged-out surfaces share one public footer (privacy, terms, cookies, sign-in)
+- Logged-out surfaces share one public footer (help, contact, privacy, terms, cookies, sign-in)
+- Help/contact prose reuses the legal markdown chrome (`legal-prose` / `MarkdownDocument`); no separate help visual system
+- Authenticated account menu includes Help → `/marketplace/help`; Getting started rail may link “Need help?” there
 
 ## Explicitly prohibited
 No gradients, glassmorphism, neon, purple-first templates, oversized rounded cards, pill-everything, generic stock photography, decorative blobs, drop-shadow-heavy cards, warm-cream + terracotta + giant serif everywhere as the default authenticated look.
@@ -154,3 +156,4 @@ No live marketplace preview rail on profile edit.
 | 2026-08-06 | Mobile drawer drops account avatar menu | Account/sign-out already in sticky header; reclaim rail space for checklist + nav |
 | 2026-08-06 | Mobile modals are edge-to-edge sheets | Feel like screens; sticky close (top) and CTA (bottom); calendar opens on tap via dateClick |
 | 2026-08-06 | Marketplace IA: Marketplace / Bookings / Calendar | Collapse Leads+Bookings lists; open calls live on profiles; availability is a discovery filter |
+| 2026-08-06 | Public Help + Contact; member help hub | Thin public FAQ; ops guides stay signed-in; Spamblock-backed contact form in footer and app |

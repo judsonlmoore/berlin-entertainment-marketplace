@@ -48,6 +48,7 @@
     "profile": "Profil",
     "editProfile": "Bearbeiten",
     "account": "Konto",
+    "help": "Hilfe",
     "admin": "Admin",
     "superAdmin": "Super-Admin",
     "privacy": "Datenschutz",
@@ -90,7 +91,40 @@
     "progress": "{done} von {total} erledigt",
     "completeBody": "Alles erledigt — willkommen im Marktplatz.",
     "dismiss": "Verstanden",
-    "dismissing": "Wird gespeichert…"
+    "dismissing": "Wird gespeichert…",
+    "needHelp": "Hilfe nötig?"
+  },
+  "help": {
+    "publicTitle": "Hilfe",
+    "publicBody": "Kurze Antworten zu Salon, Zugang und Kontaktprivatsphäre. Mitglieder-Guides finden Sie im angemeldeten Hilfe-Bereich.",
+    "membersTitle": "Hilfe",
+    "membersBody": "Guides zu Veröffentlichen, Discovery, Bookings, Open Calls, Kalender und Vereinbarungen.",
+    "contactCta": "Salon kontaktieren",
+    "backToHelp": "Zurück zur Hilfe"
+  },
+  "contact": {
+    "title": "Kontakt",
+    "body": "Partnerschaft, Presse, Zugang, Produkt, Barrierefreiheit oder Datenschutz — schreiben Sie uns, wir antworten per E-Mail.",
+    "nameLabel": "Name",
+    "emailLabel": "E-Mail",
+    "topicLabel": "Thema",
+    "messageLabel": "Nachricht",
+    "submit": "Nachricht senden",
+    "submitting": "Wird gesendet…",
+    "successTitle": "Nachricht gesendet",
+    "successBody": "Danke — wir melden uns per E-Mail.",
+    "errorBody": "Das hat gerade nicht geklappt. Bitte erneut versuchen oder <mailto>hello@moorewwe.com</mailto> schreiben.",
+    "validationRequired": "Bitte Name, E-Mail und Nachricht ausfüllen.",
+    "validationEmail": "Bitte eine gültige E-Mail-Adresse eingeben.",
+    "validationMessageLength": "Die Nachricht darf höchstens 4000 Zeichen haben.",
+    "topics": {
+      "access": "Zugang / Beitritt",
+      "account": "Konto",
+      "booking": "Booking",
+      "product": "Produkt",
+      "privacy": "Datenschutz",
+      "other": "Sonstiges"
+    }
   },
   "home": {
     "eyebrow": "Berlins privater Booking-Kreis",
@@ -112,10 +146,12 @@
     "principle3Body": "Native Holds und bestätigte Blöcke halten beide Kalender vor dem Abend ehrlich.",
     "calloutAvailable": "Verfügbar Freitag",
     "calloutConfirmed": "Booking bestätigt",
+    "footerHelp": "Hilfe",
+    "footerContact": "Kontakt",
     "footerLegal": "Datenschutz",
     "footerTerms": "Nutzungsbedingungen",
     "footerCookies": "Cookie-Richtlinie",
-    "footerNavLabel": "Rechtliche und Konto-Links",
+    "footerNavLabel": "Hilfe-, Rechts- und Konto-Links",
     "footerNote": "Salon ist ein privater B2B-Marktplatz. Keine Consumer-Event-Plattform."
   },
   "apply": {

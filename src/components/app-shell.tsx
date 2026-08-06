@@ -253,6 +253,11 @@ export function AppShell({
 
   const accountItems: AccountNavItem[] = [
     { href: "/account", labelKey: "account", match: "/account" },
+    {
+      href: "/marketplace/help",
+      labelKey: "help",
+      match: "/marketplace/help",
+    },
     ...(isStaff
       ? [
           {

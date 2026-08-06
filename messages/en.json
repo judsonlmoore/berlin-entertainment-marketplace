@@ -48,6 +48,7 @@
     "profile": "Profile",
     "editProfile": "Edit",
     "account": "Account",
+    "help": "Help",
     "admin": "Admin",
     "superAdmin": "Super admin",
     "privacy": "Privacy",
@@ -90,7 +91,40 @@
     "progress": "{done} of {total} complete",
     "completeBody": "You’re set — welcome to the marketplace.",
     "dismiss": "Got it",
-    "dismissing": "Saving…"
+    "dismissing": "Saving…",
+    "needHelp": "Need help?"
+  },
+  "help": {
+    "publicTitle": "Help",
+    "publicBody": "Short answers about Salon, access, and contact privacy. Member guides live in the signed-in help hub.",
+    "membersTitle": "Help",
+    "membersBody": "Guides for publishing, discovery, bookings, open calls, calendar, and agreements.",
+    "contactCta": "Contact Salon",
+    "backToHelp": "Back to help"
+  },
+  "contact": {
+    "title": "Contact",
+    "body": "Partnership, press, access, product, accessibility, or privacy questions — send a message and we’ll reply by email.",
+    "nameLabel": "Name",
+    "emailLabel": "Email",
+    "topicLabel": "Topic",
+    "messageLabel": "Message",
+    "submit": "Send message",
+    "submitting": "Sending…",
+    "successTitle": "Message sent",
+    "successBody": "Thanks — we’ll get back to you by email.",
+    "errorBody": "We couldn’t send that just now. Try again, or email <mailto>hello@moorewwe.com</mailto>.",
+    "validationRequired": "Please fill in name, email, and message.",
+    "validationEmail": "Enter a valid email address.",
+    "validationMessageLength": "Keep the message under 4000 characters.",
+    "topics": {
+      "access": "Access / joining",
+      "account": "Account",
+      "booking": "Booking",
+      "product": "Product",
+      "privacy": "Privacy",
+      "other": "Other"
+    }
   },
   "home": {
     "eyebrow": "Berlin's private booking circle",
@@ -112,10 +146,12 @@
     "principle3Body": "Native holds and confirmed blocks keep both calendars honest before the night.",
     "calloutAvailable": "Available Friday",
     "calloutConfirmed": "Booking confirmed",
+    "footerHelp": "Help",
+    "footerContact": "Contact",
     "footerLegal": "Privacy",
     "footerTerms": "Terms",
     "footerCookies": "Cookie Policy",
-    "footerNavLabel": "Legal and account links",
+    "footerNavLabel": "Help, legal, and account links",
     "footerNote": "Salon is a private B2B marketplace. Not a consumer event platform."
   },
   "apply": {
