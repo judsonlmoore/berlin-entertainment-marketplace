@@ -217,8 +217,10 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
             openCalls={openCalls.map((c) => ({
               id: c.id,
               title: c.title,
+              kind: c.kind,
               startsAt: c.startsAt,
               endsAt: c.endsAt,
+              standingSchedule: c.standingSchedule,
               formatCategory: c.formatCategory,
               ownApplicationState: c.ownApplicationState,
             }))}

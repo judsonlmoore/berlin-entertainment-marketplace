@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canTransitionOpportunity,
   isOpportunityAcceptingApplications,
+  isValidOpportunityWindow,
 } from "./opportunity";
 
 describe("opportunity transitions", () => {
@@ -36,5 +37,50 @@ describe("application window", () => {
       ),
     ).toBe(false);
     expect(isOpportunityAcceptingApplications("draft", null, now)).toBe(false);
+  });
+});
+
+describe("opportunity kind window", () => {
+  it("requires ends after starts for dated calls", () => {
+    const start = new Date("2026-09-01T18:00:00Z");
+    const end = new Date("2026-09-01T20:00:00Z");
+    expect(
+      isValidOpportunityWindow({
+        kind: "dated",
+        startsAt: start,
+        endsAt: end,
+      }),
+    ).toBe(true);
+    expect(
+      isValidOpportunityWindow({
+        kind: "dated",
+        startsAt: start,
+        endsAt: start,
+      }),
+    ).toBe(false);
+    expect(
+      isValidOpportunityWindow({
+        kind: "dated",
+        startsAt: null,
+        endsAt: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("requires null window for standing calls", () => {
+    expect(
+      isValidOpportunityWindow({
+        kind: "standing",
+        startsAt: null,
+        endsAt: null,
+      }),
+    ).toBe(true);
+    expect(
+      isValidOpportunityWindow({
+        kind: "standing",
+        startsAt: new Date("2026-09-01T18:00:00Z"),
+        endsAt: new Date("2026-09-01T20:00:00Z"),
+      }),
+    ).toBe(false);
   });
 });

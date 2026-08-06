@@ -10,8 +10,10 @@ import { Button } from "@/src/components/ui/button";
 type OpenCall = {
   id: string;
   title: string;
-  startsAt: Date;
-  endsAt: Date;
+  kind: "dated" | "standing";
+  startsAt: Date | null;
+  endsAt: Date | null;
+  standingSchedule: string | null;
   formatCategory: string;
   ownApplicationState: string | null;
 };
@@ -170,7 +172,12 @@ export function VenueProfileContactPanel({
                 <div>
                   <p className="font-medium text-[var(--ink)]">{call.title}</p>
                   <p className="text-sm text-[var(--text-muted)]">
-                    {call.formatCategory} · {dateFmt.format(call.startsAt)}
+                    {call.formatCategory}
+                    {call.kind === "standing"
+                      ? ` · ${call.standingSchedule?.trim() || t("standingOpenCall")}`
+                      : call.startsAt
+                        ? ` · ${dateFmt.format(call.startsAt)}`
+                        : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">

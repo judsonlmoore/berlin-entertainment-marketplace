@@ -40,6 +40,11 @@ export const opportunityStateEnum = pgEnum("opportunity_state", [
   "cancelled",
 ]);
 
+export const opportunityKindEnum = pgEnum("opportunity_kind", [
+  "dated",
+  "standing",
+]);
+
 export const applicationStateEnum = pgEnum("application_state", [
   "draft",
   "submitted",

@@ -129,19 +129,32 @@ export default async function OpportunityDetailPage({ params }: Props) {
   return (
     <section className="mx-auto grid max-w-3xl gap-6">
       <p className="text-sm">
-        <Link href="/marketplace/opportunities">{t("backToList")}</Link>
+        <Link href={`/marketplace/venues/${opportunity.venueId}`}>
+          {t("backToVenue")}
+        </Link>
       </p>
       <div>
         <h1 className="page-title text-3xl">{opportunity.title}</h1>
         <p className="mt-2 text-[var(--muted)]">
           {opportunity.venueName} · {opportunity.district} · {opportunity.state}
         </p>
+        <div className="mt-2">
+          <span className="text-sm text-[var(--text-muted)]">
+            {opportunity.kind === "standing"
+              ? t("kindStanding")
+              : t("kindDated")}
+          </span>
+        </div>
       </div>
 
       <div className="panel grid gap-2 p-6 text-sm">
         <p>
-          {t("when")}: {dateFmt.format(opportunity.startsAt)} –{" "}
-          {dateFmt.format(opportunity.endsAt)}
+          {t("when")}:{" "}
+          {opportunity.kind === "standing" ||
+          !opportunity.startsAt ||
+          !opportunity.endsAt
+            ? opportunity.standingSchedule?.trim() || t("standingWhen")
+            : `${dateFmt.format(opportunity.startsAt)} – ${dateFmt.format(opportunity.endsAt)}`}
         </p>
         <p>
           {t("formatCategory")}: {opportunity.formatCategory}

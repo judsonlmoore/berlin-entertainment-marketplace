@@ -193,8 +193,12 @@ export default async function BookingDetailPage({ params }: Props) {
       });
       if (opportunity) {
         defaults = {
-          startsAtLocal: toDatetimeLocal(opportunity.startsAt),
-          endsAtLocal: toDatetimeLocal(opportunity.endsAt),
+          startsAtLocal: opportunity.startsAt
+            ? toDatetimeLocal(opportunity.startsAt)
+            : defaults.startsAtLocal,
+          endsAtLocal: opportunity.endsAt
+            ? toDatetimeLocal(opportunity.endsAt)
+            : defaults.endsAtLocal,
           feeEur: Math.round(
             (application.quoteMinCents + application.quoteMaxCents) / 200,
           ),

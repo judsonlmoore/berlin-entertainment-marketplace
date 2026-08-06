@@ -107,7 +107,14 @@ export default async function VenuesDiscoveryPage({
                   tone="blue"
                 />
                 <div className="grid gap-2 p-4">
-                  <StatusLabel tone="info">{venue.venueType}</StatusLabel>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusLabel tone="info">{venue.venueType}</StatusLabel>
+                    {venue.openCallCount > 0 ? (
+                      <StatusLabel tone="warning">
+                        {t("openCallsBadge", { count: venue.openCallCount })}
+                      </StatusLabel>
+                    ) : null}
+                  </div>
                   <h2 className="page-title text-xl leading-tight">
                     {venue.name}
                   </h2>

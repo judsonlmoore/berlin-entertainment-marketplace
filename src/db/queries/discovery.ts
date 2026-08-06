@@ -15,6 +15,7 @@ import {
   contactMethods,
   contactUnlocks,
   entertainerProfiles,
+  opportunities,
   portfolioItems,
   venues,
 } from "@/src/db/schema/marketplace";
@@ -87,6 +88,7 @@ export type VenueDiscoveryCard = {
   audienceDescription: string;
   capacity: number;
   capacityContext: string | null;
+  openCallCount: number;
 };
 
 export type VenueDiscoveryDetail = VenueDiscoveryCard & {
@@ -395,9 +397,33 @@ export async function listDiscoverableVenues(
     .limit(pageSize)
     .offset(offset);
 
+  const venueIds = items.map((item) => item.id);
+  const openCallRows =
+    venueIds.length > 0
+      ? await db
+          .select({
+            venueId: opportunities.venueId,
+            value: count(),
+          })
+          .from(opportunities)
+          .where(
+            and(
+              inArray(opportunities.venueId, venueIds),
+              eq(opportunities.state, "open"),
+            ),
+          )
+          .groupBy(opportunities.venueId)
+      : [];
+  const openCallByVenue = new Map(
+    openCallRows.map((row) => [row.venueId, Number(row.value)]),
+  );
+
   const total = totalRow?.value ?? 0;
   return {
-    items,
+    items: items.map((item) => ({
+      ...item,
+      openCallCount: openCallByVenue.get(item.id) ?? 0,
+    })),
     total,
     page,
     pageSize,
@@ -552,6 +578,16 @@ export async function getDiscoverableVenueDetail(input: {
   );
   const unlocked = unlockedMethodIds.length > 0;
 
+  const [openCallRow] = await db
+    .select({ value: count() })
+    .from(opportunities)
+    .where(
+      and(
+        eq(opportunities.venueId, venue.id),
+        eq(opportunities.state, "open"),
+      ),
+    );
+
   return {
     id: venue.id,
     name: venue.name,
@@ -561,6 +597,7 @@ export async function getDiscoverableVenueDetail(input: {
     audienceDescription: venue.audienceDescription,
     capacity: venue.capacity,
     capacityContext: venue.capacityContext,
+    openCallCount: openCallRow?.value ?? 0,
     addressLine1: venue.addressLine1,
     addressLine2: venue.addressLine2,
     postalCode: venue.postalCode,

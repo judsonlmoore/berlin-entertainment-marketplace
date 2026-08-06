@@ -149,7 +149,14 @@ export default async function VenueDetailPage({ params }: Props) {
                     href={`/marketplace/opportunities/${opportunity.id}`}
                     className="flex justify-between border border-[var(--line)] px-3 py-2 no-underline"
                   >
-                    <span>{opportunity.title}</span>
+                    <span>
+                      {opportunity.title}
+                      <span className="ml-2 text-xs text-[var(--muted)]">
+                        {opportunity.kind === "standing"
+                          ? opportunitiesT("kindStanding")
+                          : opportunitiesT("kindDated")}
+                      </span>
+                    </span>
                     <span className="text-sm text-[var(--muted)]">
                       {opportunity.state}
                     </span>

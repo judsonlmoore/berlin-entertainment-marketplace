@@ -27,6 +27,7 @@ import {
   postGigSurveyPartyRoleEnum,
   postGigSurveyStatusEnum,
   membershipStatusEnum,
+  opportunityKindEnum,
   opportunityStateEnum,
   portfolioItemKindEnum,
   profileDocumentVisibilityEnum,
@@ -290,14 +291,17 @@ export const opportunities = pgTable(
       .notNull()
       .references(() => users.id),
     title: text("title").notNull(),
+    kind: opportunityKindEnum("kind").notNull().default("dated"),
     startsAt: timestamp("starts_at", {
       withTimezone: true,
       mode: "date",
-    }).notNull(),
+    }),
     endsAt: timestamp("ends_at", {
       withTimezone: true,
       mode: "date",
-    }).notNull(),
+    }),
+    /** Display-only schedule hint for standing calls (e.g. "Thursdays"). */
+    standingSchedule: text("standing_schedule"),
     timezone: text("timezone").notNull().default("Europe/Berlin"),
     formatCategory: text("format_category").notNull(),
     expectedAudience: text("expected_audience"),
@@ -322,7 +326,14 @@ export const opportunities = pgTable(
   },
   (table) => [
     index("opportunities_state_starts_idx").on(table.state, table.startsAt),
-    check("opportunities_window_chk", sql`${table.endsAt} > ${table.startsAt}`),
+    check(
+      "opportunities_kind_window_chk",
+      sql`(
+        (${table.kind} = 'dated' AND ${table.startsAt} IS NOT NULL AND ${table.endsAt} IS NOT NULL AND ${table.endsAt} > ${table.startsAt})
+        OR
+        (${table.kind} = 'standing' AND ${table.startsAt} IS NULL AND ${table.endsAt} IS NULL)
+      )`,
+    ),
   ],
 );
 

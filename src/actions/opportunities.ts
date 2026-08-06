@@ -29,17 +29,21 @@ import { can } from "@/src/domain/permissions";
 import {
   canTransitionOpportunity,
   isOpportunityAcceptingApplications,
+  isValidOpportunityWindow,
+  type OpportunityKind,
   type OpportunityState,
 } from "@/src/domain/opportunity";
 import { checkRateLimit, rateLimitKey } from "@/src/domain/rate-limit";
 
 const localeSchema = z.enum(["en", "de"]).default("en");
 
-const opportunitySchema = z.object({
+const opportunityBaseSchema = z.object({
   venueId: z.string().uuid(),
   title: z.string().trim().min(1).max(200),
-  startsAt: z.string().datetime({ offset: true }),
-  endsAt: z.string().datetime({ offset: true }),
+  kind: z.enum(["dated", "standing"]).default("dated"),
+  startsAt: z.string().datetime({ offset: true }).optional(),
+  endsAt: z.string().datetime({ offset: true }).optional(),
+  standingSchedule: z.string().trim().max(500).optional(),
   formatCategory: z.string().trim().min(1).max(120),
   expectedAudience: z.string().trim().max(500).optional(),
   budgetMinEur: z.coerce.number().min(0).optional(),
@@ -53,11 +57,11 @@ const opportunitySchema = z.object({
 });
 
 export async function createOpportunity(
-  input: z.infer<typeof opportunitySchema>,
+  input: z.infer<typeof opportunityBaseSchema>,
 ): Promise<ActionResult> {
   try {
     const { session, actor, auditUserId } = await requireActor();
-    const parsed = opportunitySchema.safeParse(input);
+    const parsed = opportunityBaseSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid opportunity");
     }
@@ -65,10 +69,23 @@ export async function createOpportunity(
       throw new AppError("forbidden", "Venue operator required");
     }
 
-    const startsAt = new Date(parsed.data.startsAt);
-    const endsAt = new Date(parsed.data.endsAt);
-    if (endsAt <= startsAt) {
-      throw new AppError("validation", "End must be after start");
+    const kind = parsed.data.kind as OpportunityKind;
+    const startsAt =
+      kind === "dated" && parsed.data.startsAt
+        ? new Date(parsed.data.startsAt)
+        : null;
+    const endsAt =
+      kind === "dated" && parsed.data.endsAt
+        ? new Date(parsed.data.endsAt)
+        : null;
+
+    if (!isValidOpportunityWindow({ kind, startsAt, endsAt })) {
+      throw new AppError(
+        "validation",
+        kind === "dated"
+          ? "End must be after start"
+          : "Standing open calls cannot have a fixed window",
+      );
     }
 
     const db = getDb();
@@ -78,8 +95,13 @@ export async function createOpportunity(
         venueId: parsed.data.venueId,
         createdByUserId: actor.userId,
         title: parsed.data.title,
+        kind,
         startsAt,
         endsAt,
+        standingSchedule:
+          kind === "standing"
+            ? (parsed.data.standingSchedule?.trim() || null)
+            : null,
         formatCategory: parsed.data.formatCategory,
         expectedAudience: parsed.data.expectedAudience ?? null,
         budgetMinCents:
@@ -110,13 +132,18 @@ export async function createOpportunity(
       action: "opportunity.created",
       subjectType: "opportunity",
       subjectId: created.id,
-      metadata: { venueId: parsed.data.venueId, state: "draft" },
+      metadata: {
+        venueId: parsed.data.venueId,
+        state: "draft",
+        kind,
+      },
     });
 
     revalidatePath(`/${parsed.data.locale}/marketplace/opportunities`);
     revalidatePath(
       `/${parsed.data.locale}/profile/venues/${parsed.data.venueId}`,
     );
+    revalidatePath(`/${parsed.data.locale}/marketplace/venues`);
     return { ok: true, id: created.id };
   } catch (error) {
     return toActionError(error);
@@ -628,12 +655,14 @@ export async function reviewApplication(input: {
     }
 
     if (input.nextState === "shortlisted") {
-      await assertNoHardCalendarConflict({
-        entertainerProfileId: application.entertainerProfileId,
-        venueId: opportunity.venueId,
-        startsAt: opportunity.startsAt,
-        endsAt: opportunity.endsAt,
-      });
+      if (opportunity.startsAt && opportunity.endsAt) {
+        await assertNoHardCalendarConflict({
+          entertainerProfileId: application.entertainerProfileId,
+          venueId: opportunity.venueId,
+          startsAt: opportunity.startsAt,
+          endsAt: opportunity.endsAt,
+        });
+      }
     }
 
     await db.transaction(async (tx) => {

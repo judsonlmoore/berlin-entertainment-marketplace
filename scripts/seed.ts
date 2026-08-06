@@ -234,6 +234,7 @@ async function main() {
         venueId: venue.id,
         createdByUserId: venueOperator.id,
         title: "Late salon set — Neukölln",
+        kind: "dated",
         startsAt,
         endsAt,
         formatCategory: "chamber",
