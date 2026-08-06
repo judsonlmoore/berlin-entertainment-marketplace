@@ -149,11 +149,6 @@ export function SupportContactForm({
             return;
           }
           setClientError(null);
-          if (fallbackTimerRef.current !== null) {
-            clearTimeout(fallbackTimerRef.current);
-            fallbackTimerRef.current = null;
-          }
-          awaitingSpamblockRef.current = false;
 
           const form = event.currentTarget;
           const name = String(new FormData(form).get("name") ?? "").trim();
@@ -172,6 +167,14 @@ export function SupportContactForm({
           if (message.length > 4000) {
             setClientError(t("validationMessageLength"));
             return;
+          }
+
+          // Only reset/replace the fallback after validation succeeds so an
+          // invalid retry cannot cancel a prior valid submit still waiting on
+          // the pixel (or the 2.5s POST fallback).
+          if (fallbackTimerRef.current !== null) {
+            clearTimeout(fallbackTimerRef.current);
+            fallbackTimerRef.current = null;
           }
 
           // Pixel should emit spamblock:allowed; if it never does, fall back to
