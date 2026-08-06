@@ -122,7 +122,7 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 
 ## Shell
 - Desktop ≥1024px: sticky ~280px rail, slim surface top bar (~64–72px), breadcrumb + locale
-- Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav
+- Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav. Drawer header is brand + close on one row; act/venue context lives in the sticky header only (not duplicated in the drawer).
 - Member rail may show a quiet **Getting started** checklist (publish → search → open a result → send an enquiry). When all steps are done, show a one-line congrats + dismiss; dismiss hides it permanently. Staff and support-mode overlays never see it.
 - Venue profiles (talent-facing) include **Submit my profile** and listed **open calls** with 1-click apply. Mutual opt-in opens a shared **lead**; contacts unlock then. No in-app chat.
 - Logged-out surfaces share one public footer (privacy, terms, cookies, sign-in)
@@ -148,3 +148,4 @@ No live marketplace preview rail on profile edit.
 | 2026-08-06 | Self-serve publish/unpublish with QA checklist | Staff review removed from the critical path; edits stay published; leave warning for unsaved changes |
 | 2026-08-06 | Rail getting-started checklist replaces verification banner | Staff no longer review accounts; guide members through publish → discover → enquire, then dismiss forever |
 | 2026-08-06 | Profile contact via leads | Submit profile + 1-click open-call apply; Interest/Pass unlocks contacts; CRM statuses over booking engine |
+| 2026-08-06 | Mobile drawer drops role chip; brand + close share a row | Checklist needs vertical room; act/venue context already sits in the mobile header |
