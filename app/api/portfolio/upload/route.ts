@@ -10,7 +10,10 @@ import {
   PORTFOLIO_MAX_IMAGES,
   validatePortfolioImageInput,
 } from "@/src/domain/portfolio";
-import { savePortfolioImage } from "@/src/integrations/portfolio-image-store";
+import {
+  deletePortfolioImage,
+  savePortfolioImage,
+} from "@/src/integrations/portfolio-image-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 import { and, count, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -99,7 +102,7 @@ export async function POST(request: Request) {
   const sortOrder = row?.value ?? 0;
 
   const bytes = new Uint8Array(await file.arrayBuffer());
-  let blobKey: string;
+  let blobKey: string | null = null;
   let thumbBlobKey: string | null = null;
   try {
     ({ blobKey } = await savePortfolioImage({
@@ -121,7 +124,65 @@ export async function POST(request: Request) {
       // Thumb is best-effort; full image remains usable via ?v=thumb fallback.
       thumbBlobKey = null;
     }
+
+    const [created] = await db
+      .insert(portfolioItems)
+      .values({
+        entertainerProfileId: profile.id,
+        kind: "image",
+        blobKey,
+        thumbBlobKey,
+        caption: caption || null,
+        altText: altText || null,
+        sortOrder,
+      })
+      .returning();
+
+    if (!created) {
+      throw new Error("create_failed");
+    }
+
+    await db.insert(auditEvents).values({
+      actorUserId: auditUserId,
+      action: "portfolio.image_uploaded",
+      subjectType: "portfolio_item",
+      subjectId: created.id,
+      metadata: {
+        kind: "image",
+        mimeType: file.type,
+        sizeBytes: file.size,
+        hasThumb: Boolean(thumbBlobKey),
+      },
+    });
+
+    return NextResponse.json({
+      ok: true,
+      id: created.id,
+      blobKey,
+      thumbBlobKey,
+    });
   } catch (error) {
+    if (blobKey) {
+      try {
+        await deletePortfolioImage(blobKey);
+      } catch {
+        // best-effort orphan cleanup
+      }
+    }
+    if (thumbBlobKey) {
+      try {
+        await deletePortfolioImage(thumbBlobKey);
+      } catch {
+        // best-effort orphan cleanup
+      }
+    }
+    // Blob saved but DB write failed → create_failed; otherwise storage failure.
+    if (blobKey) {
+      return NextResponse.json(
+        { ok: false, error: "create_failed" },
+        { status: 500 },
+      );
+    }
     const message =
       error instanceof Error ? error.message : "storage_unavailable";
     return NextResponse.json(
@@ -129,37 +190,4 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-
-  const [created] = await db
-    .insert(portfolioItems)
-    .values({
-      entertainerProfileId: profile.id,
-      kind: "image",
-      blobKey,
-      thumbBlobKey,
-      caption: caption || null,
-      altText: altText || null,
-      sortOrder,
-    })
-    .returning();
-
-  await db.insert(auditEvents).values({
-    actorUserId: auditUserId,
-    action: "portfolio.image_uploaded",
-    subjectType: "portfolio_item",
-    subjectId: created!.id,
-    metadata: {
-      kind: "image",
-      mimeType: file.type,
-      sizeBytes: file.size,
-      hasThumb: Boolean(thumbBlobKey),
-    },
-  });
-
-  return NextResponse.json({
-    ok: true,
-    id: created!.id,
-    blobKey,
-    thumbBlobKey,
-  });
 }

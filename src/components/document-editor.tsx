@@ -327,7 +327,12 @@ function DocumentRowCard({
           onClick={() => {
             const next =
               doc.visibility === "marketplace" ? "engagement" : "marketplace";
-            saveMeta({ title: doc.title, visibility: next });
+            const effectiveTitle =
+              doc.title.trim() ||
+              doc.originalFilename?.trim() ||
+              title.trim() ||
+              "PDF";
+            saveMeta({ title: effectiveTitle, visibility: next });
           }}
           className={`inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border px-2.5 py-1.5 text-xs font-semibold ${
             doc.visibility === "marketplace"

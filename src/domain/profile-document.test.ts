@@ -4,6 +4,7 @@ import {
   filterDocumentsForViewer,
   isEngagementWindowOpen,
   normalizeDocumentTitle,
+  titleFromFilename,
   validateProfileDocumentUpload,
   type ProfileDocumentAccessContext,
 } from "./profile-document";
@@ -78,6 +79,14 @@ describe("profile-document domain", () => {
         sizeBytes: 1024,
       }).ok,
     ).toBe(false);
+  });
+
+  it("derives a stable title from the uploaded filename when title is empty", () => {
+    expect(titleFromFilename("Tech Rider — Electric.pdf")).toBe(
+      "Tech Rider — Electric",
+    );
+    expect(titleFromFilename("notes.PDF")).toBe("notes");
+    expect(titleFromFilename("")).toBe("PDF document");
   });
 
   it("normalizes title whitespace and length", () => {

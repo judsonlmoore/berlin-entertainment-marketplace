@@ -125,7 +125,7 @@ export default async function BookingDetailPage({ params }: Props) {
     actor: access.actor,
     entertainerProfileId: booking.entertainerProfileId,
     ownerUserId: booking.entertainerUserId,
-    publicationState: "approved",
+    publicationState: booking.entertainerPublicationState,
   });
 
   const db = getDb();

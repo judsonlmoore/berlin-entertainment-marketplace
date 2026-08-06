@@ -8,16 +8,25 @@ import {
 import { can } from "@/src/domain/permissions";
 import {
   PROFILE_DOCUMENT_MAX,
+  titleFromFilename,
   validateProfileDocumentUpload,
 } from "@/src/domain/profile-document";
 import { sanitizeRiderFilename } from "@/src/domain/rider";
 import {
+  deleteDocumentFile,
   isDocumentStoreConfigured,
   saveDocumentFile,
 } from "@/src/integrations/document-file-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
-import { asc, count, eq } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+
+class DocumentLimitError extends Error {
+  constructor() {
+    super("document_limit");
+    this.name = "DocumentLimitError";
+  }
+}
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -95,79 +104,106 @@ export async function POST(request: Request) {
     );
   }
 
-  const [docCount] = await db
-    .select({ value: count() })
-    .from(riderFiles)
-    .where(eq(riderFiles.entertainerProfileId, profile.id));
-  if ((docCount?.value ?? 0) >= PROFILE_DOCUMENT_MAX) {
-    return NextResponse.json(
-      { ok: false, error: "document_limit" },
-      { status: 400 },
-    );
-  }
-
+  const title = check.title || titleFromFilename(originalFilename);
   const bytes = new Uint8Array(await file.arrayBuffer());
   const mimeType = file.type || "application/pdf";
-  const stored = await saveDocumentFile({
-    ownerUserId: actor.userId,
-    mimeType,
-    bytes,
-  });
 
-  const existing = await db
-    .select({ sortOrder: riderFiles.sortOrder })
-    .from(riderFiles)
-    .where(eq(riderFiles.entertainerProfileId, profile.id))
-    .orderBy(asc(riderFiles.sortOrder));
-  const nextSort =
-    existing.length > 0
-      ? (existing[existing.length - 1]?.sortOrder ?? 0) + 1
-      : 0;
-
-  const [created] = await db
-    .insert(riderFiles)
-    .values({
+  let storedBlobKey: string | null = null;
+  try {
+    const stored = await saveDocumentFile({
       ownerUserId: actor.userId,
-      entertainerProfileId: profile.id,
-      blobKey: stored.blobKey,
-      title: check.title,
-      visibility: check.visibility,
-      sortOrder: nextSort,
-      originalFilename,
       mimeType,
-      sizeBytes: file.size,
-      checksum: "0".repeat(64),
-      scanStatus: "clean",
-    })
-    .returning();
+      bytes,
+    });
+    storedBlobKey = stored.blobKey;
 
-  if (!created) {
+    const created = await db.transaction(async (tx) => {
+      // Serialize uploads per profile so concurrent requests cannot exceed the cap.
+      await tx
+        .select({ id: entertainerProfiles.id })
+        .from(entertainerProfiles)
+        .where(eq(entertainerProfiles.id, profile.id))
+        .for("update");
+
+      const [docCount] = await tx
+        .select({ value: count() })
+        .from(riderFiles)
+        .where(eq(riderFiles.entertainerProfileId, profile.id));
+      if ((docCount?.value ?? 0) >= PROFILE_DOCUMENT_MAX) {
+        throw new DocumentLimitError();
+      }
+
+      const [maxSort] = await tx
+        .select({
+          value: sql<number>`coalesce(max(${riderFiles.sortOrder}), -1)`,
+        })
+        .from(riderFiles)
+        .where(eq(riderFiles.entertainerProfileId, profile.id));
+      const nextSort = Number(maxSort?.value ?? -1) + 1;
+
+      const [row] = await tx
+        .insert(riderFiles)
+        .values({
+          ownerUserId: actor.userId,
+          entertainerProfileId: profile.id,
+          blobKey: stored.blobKey,
+          title,
+          visibility: check.visibility,
+          sortOrder: nextSort,
+          originalFilename,
+          mimeType,
+          sizeBytes: file.size,
+          checksum: "0".repeat(64),
+          scanStatus: "clean",
+        })
+        .returning();
+
+      if (!row) {
+        throw new Error("create_failed");
+      }
+
+      await tx.insert(auditEvents).values({
+        actorUserId: auditUserId,
+        action: "profile_document.uploaded",
+        subjectType: "rider_file",
+        subjectId: row.id,
+        metadata: {
+          title: row.title,
+          visibility: row.visibility,
+          sizeBytes: row.sizeBytes,
+        },
+      });
+
+      return row;
+    });
+
+    return NextResponse.json({
+      ok: true,
+      id: created.id,
+      title: created.title,
+      originalFilename: created.originalFilename,
+      visibility: created.visibility,
+      sortOrder: created.sortOrder,
+      sizeBytes: created.sizeBytes,
+      locale,
+    });
+  } catch (error) {
+    if (storedBlobKey) {
+      try {
+        await deleteDocumentFile(storedBlobKey);
+      } catch {
+        // best-effort orphan cleanup
+      }
+    }
+    if (error instanceof DocumentLimitError) {
+      return NextResponse.json(
+        { ok: false, error: "document_limit" },
+        { status: 400 },
+      );
+    }
     return NextResponse.json(
       { ok: false, error: "create_failed" },
       { status: 500 },
     );
   }
-
-  await db.insert(auditEvents).values({
-    actorUserId: auditUserId,
-    action: "profile_document.uploaded",
-    subjectType: "rider_file",
-    subjectId: created.id,
-    metadata: {
-      title: created.title,
-      visibility: created.visibility,
-      sizeBytes: created.sizeBytes,
-    },
-  });
-
-  return NextResponse.json({
-    ok: true,
-    id: created.id,
-    title: created.title,
-    originalFilename: created.originalFilename,
-    visibility: created.visibility,
-    sortOrder: created.sortOrder,
-    sizeBytes: created.sizeBytes,
-    locale,
-  });
 }

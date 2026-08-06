@@ -149,6 +149,7 @@ export default async function EntertainerDetailPage({ params }: Props) {
     });
   }
 
+  // Discovery only loads approved profiles; keep list/download gates aligned.
   const visibleDocuments = await listDocumentsVisibleToActor({
     actor: access.actor,
     entertainerProfileId: profile.id,

@@ -19,6 +19,7 @@ import { can } from "@/src/domain/permissions";
 import {
   PROFILE_DOCUMENT_MAX,
   normalizeDocumentTitle,
+  titleFromFilename,
 } from "@/src/domain/profile-document";
 import { deleteDocumentFile } from "@/src/integrations/document-file-store";
 
@@ -69,7 +70,7 @@ export async function removeProfileDocument(
       throw new AppError("not_found", "Document not found");
     }
 
-    await deleteDocumentFile(doc.blobKey);
+    // Delete the row first so a failed DB write never leaves a broken editor entry.
     await db.delete(riderFiles).where(eq(riderFiles.id, doc.id));
     await db.insert(auditEvents).values({
       actorUserId: auditUserId,
@@ -78,6 +79,11 @@ export async function removeProfileDocument(
       subjectId: doc.id,
       metadata: { title: doc.title },
     });
+    try {
+      await deleteDocumentFile(doc.blobKey);
+    } catch {
+      // Best-effort blob cleanup; the row is already gone.
+    }
 
     revalidatePath(`/${parsed.data.locale}/profile`);
     return { ok: true, id: doc.id };
@@ -142,7 +148,7 @@ export async function reorderProfileDocuments(
 const updateSchema = z.object({
   entertainerProfileId: z.string().uuid(),
   documentId: z.string().uuid(),
-  title: z.string().min(1).max(120),
+  title: z.string().max(120),
   visibility: z.enum(["marketplace", "engagement"]),
   locale: localeSchema,
 });
@@ -159,11 +165,6 @@ export async function updateProfileDocumentMeta(
       parsed.data.entertainerProfileId,
     );
 
-    const title = normalizeDocumentTitle(parsed.data.title);
-    if (!title) {
-      throw new AppError("validation", "Document title is required");
-    }
-
     const doc = await db.query.riderFiles.findFirst({
       where: and(
         eq(riderFiles.id, parsed.data.documentId),
@@ -173,6 +174,12 @@ export async function updateProfileDocumentMeta(
     if (!doc) {
       throw new AppError("not_found", "Document not found");
     }
+
+    // Uploads may store an empty title; resolve a stable display title for updates.
+    const title =
+      normalizeDocumentTitle(parsed.data.title) ||
+      normalizeDocumentTitle(doc.title) ||
+      titleFromFilename(doc.originalFilename ?? "document.pdf");
 
     await db
       .update(riderFiles)

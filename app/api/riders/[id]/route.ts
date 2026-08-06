@@ -13,7 +13,8 @@ import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 
 type Props = { params: Promise<{ id: string }> };
 
-const DOWNLOADABLE_SCAN_STATES = new Set(["clean", "awaiting_blob", "pending"]);
+/** Non-owners may only download scanned-clean (or legacy awaiting_blob stub) files. */
+const DOWNLOADABLE_SCAN_STATES = new Set(["clean", "awaiting_blob"]);
 
 /** Authorized document download — streams private bytes; never permanent public URLs. */
 export async function GET(request: Request, { params }: Props) {
