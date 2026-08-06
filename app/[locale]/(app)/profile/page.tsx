@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
 import { DocumentEditor } from "@/src/components/document-editor";
 import { EntertainerProfileForm } from "@/src/components/entertainer-profile-form";
+import { OpportunityForm } from "@/src/components/opportunity-form";
 import { PortfolioEditor } from "@/src/components/portfolio-editor";
 import { ProfileRoleTabs } from "@/src/components/profile-role-tabs";
 import { VenueProfileForm } from "@/src/components/venue-profile-form";
@@ -14,12 +15,14 @@ import {
   listVenueSpaces,
   listVenuesForUser,
 } from "@/src/db/queries/profiles";
+import { listVenueOpportunities } from "@/src/db/queries/opportunities";
 import { getDb } from "@/src/db/client";
 import { users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { can } from "@/src/domain/permissions";
 import { isDocumentStoreConfigured } from "@/src/integrations/document-file-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
+import { Link } from "@/src/i18n/navigation";
 import {
   listRiderFilesForProfile,
   listRiderFilesForVenue,
@@ -31,6 +34,7 @@ export default async function ProfilePage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("profile");
+  const opportunitiesT = await getTranslations("opportunities");
   const session = await auth();
 
   if (!session?.user?.id || !process.env.DATABASE_URL) {
@@ -93,6 +97,13 @@ export default async function ProfilePage({ params }: Props) {
     venue && process.env.DATABASE_URL
       ? await listPortfolioItemsForVenue(venue.id)
       : [];
+  const venueOpportunities =
+    venue && process.env.DATABASE_URL
+      ? await listVenueOpportunities(venue.id)
+      : [];
+  const canManageOpportunities = Boolean(
+    venue && can(effectiveActor, "opportunity.manage", { venueId: venue.id }),
+  );
   const storeConfigured = isDocumentStoreConfigured();
 
   const entertainerPanel = showEntertainer ? (
@@ -174,69 +185,109 @@ export default async function ProfilePage({ params }: Props) {
       : {};
 
   const venuePanel = showVenue ? (
-    <VenueProfileForm
-      locale={locale as "en" | "de"}
-      accountEmail={accountEmail}
-      {...(venue
-        ? {
-            venueId: venue.id,
-            publicationState: venue.publicationState,
-            mediaSlot: (
-              <PortfolioEditor
-                locale={locale as "en" | "de"}
-                venueId={venue.id}
-                items={venuePortfolioItems}
-              />
-            ),
-            documentsSlot: (
-              <DocumentEditor
-                locale={locale as "en" | "de"}
-                venueId={venue.id}
-                storeConfigured={storeConfigured}
-                documents={venueRiderFiles.map((file) => ({
-                  id: file.id,
-                  title: file.title,
-                  originalFilename: file.originalFilename,
-                  visibility: file.visibility,
-                  sortOrder: file.sortOrder,
-                  sizeBytes: file.sizeBytes,
-                }))}
-              />
-            ),
-            defaultValues: {
-              name: venue.name,
-              shortDescription: venue.shortDescription,
-              addressLine1: venue.addressLine1,
-              addressLine2: venue.addressLine2,
-              district: venue.district,
-              postalCode: venue.postalCode,
-              city: venue.city,
-              latitude: venue.latitude,
-              longitude: venue.longitude,
-              googlePlaceId: venue.googlePlaceId,
-              venueType: venue.venueType,
-              audienceDescription: venue.audienceDescription,
-              capacity: venue.capacity,
-              capacityContext: venue.capacityContext,
-              roomName: primarySpace?.name ?? "Main room",
-              roomStageDimensions: primarySpace?.stageDimensions ?? "",
-              productionNotes,
-              productionPa: productionField("pa"),
-              productionMixer: productionField("mixer"),
-              productionMics: productionField("mics"),
-              productionLighting: productionField("lighting"),
-              productionBackline: productionField("backline"),
-              productionPower: productionField("power"),
-              productionStage: productionField("stage"),
-              houseRules: venue.houseRules,
-              loadInNotes: venue.loadInNotes,
-              accessibilityNotes: venue.accessibilityNotes,
-              socialLinks,
-              websiteUrl: venue.websiteUrl,
-            },
-          }
-        : {})}
-    />
+    <div className="grid gap-8">
+      <VenueProfileForm
+        locale={locale as "en" | "de"}
+        accountEmail={accountEmail}
+        {...(venue
+          ? {
+              venueId: venue.id,
+              publicationState: venue.publicationState,
+              mediaSlot: (
+                <PortfolioEditor
+                  locale={locale as "en" | "de"}
+                  venueId={venue.id}
+                  items={venuePortfolioItems}
+                />
+              ),
+              documentsSlot: (
+                <DocumentEditor
+                  locale={locale as "en" | "de"}
+                  venueId={venue.id}
+                  storeConfigured={storeConfigured}
+                  documents={venueRiderFiles.map((file) => ({
+                    id: file.id,
+                    title: file.title,
+                    originalFilename: file.originalFilename,
+                    visibility: file.visibility,
+                    sortOrder: file.sortOrder,
+                    sizeBytes: file.sizeBytes,
+                  }))}
+                />
+              ),
+              defaultValues: {
+                name: venue.name,
+                shortDescription: venue.shortDescription,
+                addressLine1: venue.addressLine1,
+                addressLine2: venue.addressLine2,
+                district: venue.district,
+                postalCode: venue.postalCode,
+                city: venue.city,
+                latitude: venue.latitude,
+                longitude: venue.longitude,
+                googlePlaceId: venue.googlePlaceId,
+                venueType: venue.venueType,
+                audienceDescription: venue.audienceDescription,
+                capacity: venue.capacity,
+                capacityContext: venue.capacityContext,
+                roomName: primarySpace?.name ?? "Main room",
+                roomStageDimensions: primarySpace?.stageDimensions ?? "",
+                productionNotes,
+                productionPa: productionField("pa"),
+                productionMixer: productionField("mixer"),
+                productionMics: productionField("mics"),
+                productionLighting: productionField("lighting"),
+                productionBackline: productionField("backline"),
+                productionPower: productionField("power"),
+                productionStage: productionField("stage"),
+                houseRules: venue.houseRules,
+                loadInNotes: venue.loadInNotes,
+                accessibilityNotes: venue.accessibilityNotes,
+                socialLinks,
+                websiteUrl: venue.websiteUrl,
+              },
+            }
+          : {})}
+      />
+
+      {venue && canManageOpportunities ? (
+        <div id="open-calls" className="panel grid scroll-mt-24 gap-6 p-6">
+          <div>
+            <h2 className="page-title text-xl">
+              {opportunitiesT("venueSectionTitle")}
+            </h2>
+            <ul className="mt-3 grid gap-2">
+              {venueOpportunities.length === 0 ? (
+                <li className="text-sm text-[var(--text-muted)]">
+                  {opportunitiesT("empty")}
+                </li>
+              ) : null}
+              {venueOpportunities.map((opportunity) => (
+                <li key={opportunity.id}>
+                  <Link
+                    href={`/marketplace/opportunities/${opportunity.id}`}
+                    className="flex justify-between border border-[var(--line)] px-3 py-2 no-underline"
+                  >
+                    <span>
+                      {opportunity.title}
+                      <span className="ml-2 text-xs text-[var(--text-muted)]">
+                        {opportunity.kind === "standing"
+                          ? opportunitiesT("kindStanding")
+                          : opportunitiesT("kindDated")}
+                      </span>
+                    </span>
+                    <span className="text-sm text-[var(--text-muted)]">
+                      {opportunity.state}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <OpportunityForm locale={locale as "en" | "de"} venueId={venue.id} />
+        </div>
+      ) : null}
+    </div>
   ) : null;
 
   return (

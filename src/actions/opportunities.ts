@@ -140,9 +140,7 @@ export async function createOpportunity(
     });
 
     revalidatePath(`/${parsed.data.locale}/marketplace/opportunities`);
-    revalidatePath(
-      `/${parsed.data.locale}/profile/venues/${parsed.data.venueId}`,
-    );
+    revalidatePath(`/${parsed.data.locale}/profile`);
     revalidatePath(`/${parsed.data.locale}/marketplace/venues`);
     return { ok: true, id: created.id };
   } catch (error) {
@@ -193,6 +191,9 @@ export async function transitionOpportunity(input: {
 
     revalidatePath(`/${locale}/marketplace/opportunities`);
     revalidatePath(`/${locale}/marketplace/opportunities/${opportunity.id}`);
+    revalidatePath(`/${locale}/profile`);
+    revalidatePath(`/${locale}/marketplace/venues`);
+    revalidatePath(`/${locale}/marketplace/venues/${opportunity.venueId}`);
     return { ok: true, id: opportunity.id };
   } catch (error) {
     return toActionError(error);

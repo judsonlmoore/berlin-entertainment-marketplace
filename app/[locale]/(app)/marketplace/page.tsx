@@ -94,7 +94,7 @@ export default async function MarketplacePage({ params }: Props) {
         </div>
         {metrics.canPostOpportunity && metrics.firstVenueId ? (
           <Link
-            href={`/profile/venues/${metrics.firstVenueId}`}
+            href="/profile#open-calls"
             className="inline-flex min-h-11 items-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] no-underline"
           >
             {t("postOpportunity")}
@@ -110,7 +110,7 @@ export default async function MarketplacePage({ params }: Props) {
               metrics.openOpportunities,
               t("metricOpenOpsHint", { count: metrics.pendingApplications }),
               metrics.canPostOpportunity && metrics.firstVenueId
-                ? `/profile/venues/${metrics.firstVenueId}`
+                ? "/profile#open-calls"
                 : "/marketplace/bookings",
             ],
             [

@@ -1,7 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import type { AppLocale } from "@/src/i18n/routing";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
-import { getOverviewMetrics } from "@/src/db/queries/overview";
 import { can } from "@/src/domain/permissions";
 import { redirect } from "@/src/i18n/navigation";
 
@@ -27,12 +26,8 @@ export default async function OpportunitiesBrowseRedirect({ params }: Props) {
     return;
   }
 
-  const metrics = await getOverviewMetrics(access.actor);
-  if (metrics.firstVenueId) {
-    redirect({
-      href: `/profile/venues/${metrics.firstVenueId}`,
-      locale: appLocale,
-    });
+  if (can(access.actor, "venue.create")) {
+    redirect({ href: "/profile", locale: appLocale });
     return;
   }
 
