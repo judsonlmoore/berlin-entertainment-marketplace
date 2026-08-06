@@ -89,10 +89,11 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 
 ## 4. Database access and migrations
 
-- Use `@neondatabase/serverless` with Drizzle's Neon HTTP driver for standard serverless queries; initialize lazily so builds do not require `DATABASE_URL`.
+- Use `@neondatabase/serverless` with Drizzle's Neon HTTP/WebSocket driver for standard serverless queries; initialize lazily so builds do not require `DATABASE_URL`.
 - Keep all database access server-only. Export narrow query/service functions, not a client to UI code.
 - Commit generated SQL under `drizzle/`; never edit a migration already applied to shared environments.
 - Migration workflow: change schema → generate SQL → inspect constraints/destructive changes → test against disposable/local branch → migrate → seed → run verification.
+- `drizzle-kit` scripts pass `--config=drizzle.config.ts`. Kit prefers `DATABASE_URL_UNPOOLED` (then `DATABASE_URL`) and the `pg` driver so migrate/studio use TCP instead of Neon websockets. App runtime stays on `@neondatabase/serverless`.
 - Seed only synthetic Berlin demo data. Make seeding idempotent and require an explicit non-production guard.
 - Use database transactions for booking transitions, signatures-to-confirmation, contact unlock, and calendar blocking.
 
