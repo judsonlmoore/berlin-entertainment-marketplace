@@ -17,8 +17,10 @@ import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 
 type Props = { params: Promise<{ id: string }> };
 
-export async function GET(_request: Request, { params }: Props) {
+export async function GET(request: Request, { params }: Props) {
   const { id } = await params;
+  const wantThumb =
+    new URL(request.url).searchParams.get("v") === "thumb";
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -73,16 +75,29 @@ export async function GET(_request: Request, { params }: Props) {
     }
   }
 
+  const key =
+    wantThumb && item.thumbBlobKey ? item.thumbBlobKey : item.blobKey;
+
   // Local disk + Vercel Blob keys are both served through our auth proxy.
-  if (isLocalPortfolioKey(item.blobKey) || isBlobPortfolioKey(item.blobKey)) {
-    const stored = await loadPortfolioImage(item.blobKey);
+  if (isLocalPortfolioKey(key) || isBlobPortfolioKey(key)) {
+    const stored = await loadPortfolioImage(key);
     if (!stored) {
+      // Thumb missing/corrupt → fall back to full original once.
+      if (wantThumb && item.thumbBlobKey && key === item.thumbBlobKey) {
+        const full = await loadPortfolioImage(item.blobKey);
+        if (full) {
+          return new NextResponse(Buffer.from(full.bytes), {
+            headers: {
+              "Content-Type": full.mimeType,
+              "Cache-Control": "private, max-age=3600",
+            },
+          });
+        }
+      }
       return NextResponse.json(
         {
           ok: false,
-          error: isBlobPortfolioKey(item.blobKey)
-            ? "blob_fetch_failed"
-            : "not_found",
+          error: isBlobPortfolioKey(key) ? "blob_fetch_failed" : "not_found",
         },
         { status: 404 },
       );
@@ -90,7 +105,9 @@ export async function GET(_request: Request, { params }: Props) {
     return new NextResponse(Buffer.from(stored.bytes), {
       headers: {
         "Content-Type": stored.mimeType,
-        "Cache-Control": "private, no-store",
+        "Cache-Control": wantThumb
+          ? "private, max-age=3600"
+          : "private, no-store",
       },
     });
   }

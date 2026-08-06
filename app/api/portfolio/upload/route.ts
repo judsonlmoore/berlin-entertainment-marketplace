@@ -100,12 +100,27 @@ export async function POST(request: Request) {
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   let blobKey: string;
+  let thumbBlobKey: string | null = null;
   try {
     ({ blobKey } = await savePortfolioImage({
       ownerUserId: profile.userId,
       mimeType: file.type,
       bytes,
     }));
+    try {
+      const { createPortfolioThumbBytes } =
+        await import("@/src/integrations/portfolio-image-thumb");
+      const thumbBytes = await createPortfolioThumbBytes(bytes);
+      ({ blobKey: thumbBlobKey } = await savePortfolioImage({
+        ownerUserId: profile.userId,
+        mimeType: "image/webp",
+        bytes: thumbBytes,
+        filenameSuffix: "-thumb",
+      }));
+    } catch {
+      // Thumb is best-effort; full image remains usable via ?v=thumb fallback.
+      thumbBlobKey = null;
+    }
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "storage_unavailable";
@@ -121,6 +136,7 @@ export async function POST(request: Request) {
       entertainerProfileId: profile.id,
       kind: "image",
       blobKey,
+      thumbBlobKey,
       caption: caption || null,
       altText: altText || null,
       sortOrder,
@@ -136,6 +152,7 @@ export async function POST(request: Request) {
       kind: "image",
       mimeType: file.type,
       sizeBytes: file.size,
+      hasThumb: Boolean(thumbBlobKey),
     },
   });
 
@@ -143,5 +160,6 @@ export async function POST(request: Request) {
     ok: true,
     id: created!.id,
     blobKey,
+    thumbBlobKey,
   });
 }

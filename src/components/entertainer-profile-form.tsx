@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { upsertEntertainerProfile } from "@/src/actions/profiles";
+import {
+  submitEntertainerProfile,
+  upsertEntertainerProfile,
+} from "@/src/actions/profiles";
 import { AutosaveStatus } from "@/src/components/profile/autosave-status";
 import { CategorySubcategorySelect } from "@/src/components/profile/category-subcategory-select";
 import { LanguageMultiSelect } from "@/src/components/profile/language-multi-select";
@@ -24,6 +27,7 @@ import {
   TECHNICAL_MAX,
   TECHNICAL_MIN,
 } from "@/src/domain/sanitize-input";
+import { useRouter } from "@/src/i18n/navigation";
 
 type SocialLinks = Partial<
   Record<
@@ -144,6 +148,10 @@ function socialLabelKey(platform: SocialPlatform) {
   }
 }
 
+function canOwnerPublish(state: string | undefined): boolean {
+  return !state || state === "draft" || state === "changes_requested";
+}
+
 export function EntertainerProfileForm({
   locale,
   mediaSlot,
@@ -152,9 +160,13 @@ export function EntertainerProfileForm({
   accountEmail,
 }: Props) {
   const t = useTranslations("profile");
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [actName, setActName] = useState(defaultValues?.actName ?? "");
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [isPublishing, startPublish] = useTransition();
   const social = defaultValues?.socialLinks ?? {};
+  const pubState = publicationState ?? "draft";
 
   function readForm(form: FormData) {
     return {
@@ -198,31 +210,80 @@ export function EntertainerProfileForm({
       if (!payload.actName.trim() || !payload.contactEmail.trim()) return null;
       return payload;
     },
-    save: (payload) => upsertEntertainerProfile(payload),
+    save: async (payload) => {
+      const result = await upsertEntertainerProfile(payload);
+      if (
+        result.ok &&
+        (pubState === "approved" || pubState === "submitted")
+      ) {
+        router.refresh();
+      }
+      return result;
+    },
   });
+
+  function publishProfile() {
+    setPublishError(null);
+    startPublish(async () => {
+      // Flush pending edits so submit validates the latest draft.
+      await autosave.saveNow();
+      const result = await submitEntertainerProfile(locale);
+      if (!result.ok) {
+        setPublishError(result.message || t("publishProfileFailed"));
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  const showPublish = canOwnerPublish(pubState);
 
   return (
     <div className="grid gap-5">
-      <div className="flex flex-wrap items-start justify-end gap-3">
-        <PublicationStatusTag
-          state={publicationState}
-          draftLabel={t("statusDraft")}
-          underReviewLabel={t("statusUnderReview")}
-          verifiedLabel={t("statusVerified")}
-        />
-        <AutosaveStatus
-          phase={autosave.phase}
-          errorMessage={autosave.errorMessage}
-        />
-      </div>
-
       <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-5 py-4">
-        <p className="eyebrow text-[var(--accent)]">
-          {t("displayNameEyebrow")}
-        </p>
-        <h2 className="page-title mt-1 text-[clamp(1.5rem,2vw,2rem)]">
-          {actName.trim() || t("previewNameFallback")}
-        </h2>
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <p className="eyebrow text-[var(--accent)]">
+              {t("displayNameEyebrow")}
+            </p>
+            <h2 className="page-title mt-1 text-[clamp(1.5rem,2vw,2rem)]">
+              {actName.trim() || t("previewNameFallback")}
+            </h2>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <AutosaveStatus
+              phase={autosave.phase}
+              errorMessage={autosave.errorMessage}
+            />
+            {showPublish ? (
+              <button
+                type="button"
+                disabled={isPublishing || autosave.phase === "saving"}
+                onClick={publishProfile}
+                className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] disabled:opacity-60"
+              >
+                {isPublishing ? t("publishingProfile") : t("publishProfile")}
+              </button>
+            ) : (
+              <PublicationStatusTag
+                state={pubState}
+                draftLabel={t("statusDraft")}
+                underReviewLabel={t("statusUnderReview")}
+                verifiedLabel={t("statusVerified")}
+              />
+            )}
+          </div>
+        </div>
+        {publishError ? (
+          <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
+            {publishError}
+          </p>
+        ) : showPublish ? (
+          <p className="mt-3 text-sm text-[var(--text-muted)]">
+            {t("publishProfileHint")}
+          </p>
+        ) : null}
       </div>
 
       <form ref={formRef} className="panel grid gap-6 p-6">

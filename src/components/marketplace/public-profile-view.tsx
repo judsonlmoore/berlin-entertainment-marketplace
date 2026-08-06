@@ -7,6 +7,7 @@ import type {
   PublicProfileLink,
   PublicProfileMedia,
 } from "@/src/lib/public-profile";
+import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
 
 type ContactRow = {
   id: string;
@@ -92,7 +93,7 @@ export function PublicProfileView({
         {media.hero ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`/api/portfolio/${media.hero.id}`}
+            src={portfolioImageSrc(media.hero.id, "full")}
             alt={media.hero.altText ?? media.hero.caption ?? title}
             className="aspect-[16/9] w-full object-cover"
           />
@@ -148,7 +149,7 @@ export function PublicProfileView({
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`/api/portfolio/${item.id}`}
+                      src={portfolioImageSrc(item.id, "thumb")}
                       alt={item.altText ?? item.caption ?? title}
                       className="aspect-[4/3] w-full object-cover"
                     />

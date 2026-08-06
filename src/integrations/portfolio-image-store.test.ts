@@ -42,6 +42,25 @@ describe("portfolio-image-store", () => {
     expect(await loadPortfolioImage(blobKey)).toBeNull();
   });
 
+  it("supports filenameSuffix for thumb derivatives", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const { deletePortfolioImage, loadPortfolioImage, savePortfolioImage } =
+      await import("@/src/integrations/portfolio-image-store");
+
+    const bytes = new Uint8Array([9, 8, 7]);
+    const { blobKey } = await savePortfolioImage({
+      ownerUserId: "user-1",
+      mimeType: "image/webp",
+      bytes,
+      filenameSuffix: "-thumb",
+    });
+    expect(blobKey).toContain("-thumb.webp");
+    expect(Array.from((await loadPortfolioImage(blobKey))?.bytes ?? [])).toEqual(
+      [9, 8, 7],
+    );
+    await deletePortfolioImage(blobKey);
+  });
+
   it("refuses local disk in production without Blob token", async () => {
     vi.stubEnv("NODE_ENV", "production");
     delete process.env.BLOB_READ_WRITE_TOKEN;

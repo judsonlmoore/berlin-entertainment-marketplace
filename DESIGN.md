@@ -94,9 +94,9 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 
 ### Autosave & publication status
 - Autosave while editing. Status copy is only **Saving…** and **Saved.** (no clock time).
-- No **Submit for review** CTA on profile.
-- Soft status tags at the top of profile: **Under review** (warning soft `#F3E8CF`, ink-readable) and **Verified** (success soft `#E3EEE5`, primary-tint text). Optional draft/empty state has no tag or a quiet draft label.
-- Product rule for when a draft becomes “Under review” is decided in product/spec (e.g. completeness threshold or staff intake); the UI must not depend on a manual submit button.
+- Display-name strip hosts publication actions on the right: **Publish** when the profile is draft (or changes requested), otherwise a soft status tag (**Under review** / **Verified**). Autosave status sits beside the action, vertically centered.
+- **Publish** submits for staff verification (`draft` → `submitted`). Staff still approve before discovery. Editing a submitted/approved profile returns it to draft and requires Publish again.
+- Soft status tags: **Under review** (warning soft `#F3E8CF`, ink-readable) and **Verified** (success soft `#E3EEE5`, primary-tint text).
 
 ### Media
 - Empty slots: **dashed outlined** rectangles/squares on white surface — not mystery-person silhouettes, not photo backgrounds as placeholders.
@@ -127,7 +127,6 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 No gradients, glassmorphism, neon, purple-first templates, oversized rounded cards, pill-everything, generic stock photography, decorative blobs, drop-shadow-heavy cards, warm-cream + terracotta + giant serif everywhere as the default authenticated look.
 No mystery-person avatar placeholders for hero/gallery media.
 No fixed social URL prefix chrome on profile/onboarding link fields.
-No Submit-for-review primary on the profile builder (autosave + status tags instead).
 No live marketplace preview rail on profile edit.
 
 ## Decisions Log
@@ -141,3 +140,4 @@ No live marketplace preview rail on profile edit.
 | 2026-08-03 | Remove authenticated sticky bottom nav | Mobile drawer + desktop rail already cover navigation; bottom bar was redundant |
 | 2026-08-03 | Legal pages from markdown under `content/legal` | Easier bilingual updates; shared prose template + public footer |
 | 2026-08-05 | Profile + onboarding as booking-asset editors | Presence-led, autosave, dashed media empties, platform URL validation, status tags instead of submit; preview approved in design consultation |
+| 2026-08-06 | Publish CTA on display-name strip | Owners explicitly submit ready drafts for staff verification; autosave + status tags alone were not actionable enough |

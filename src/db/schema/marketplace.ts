@@ -906,6 +906,8 @@ export const portfolioItems = pgTable(
     altText: text("alt_text"),
     url: text("url"),
     blobKey: text("blob_key"),
+    /** Downscaled WebP derivative for cards/grids; full image remains in blob_key. */
+    thumbBlobKey: text("thumb_blob_key"),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()

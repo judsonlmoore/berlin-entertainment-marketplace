@@ -69,10 +69,12 @@ async function saveToLocalDisk(input: {
   ownerUserId: string;
   mimeType: string;
   bytes: Uint8Array;
+  filenameSuffix?: string;
 }): Promise<{ blobKey: string }> {
   const id = randomUUID();
   const ext = extensionForMime(input.mimeType);
-  const relative = path.join(input.ownerUserId, `${id}.${ext}`);
+  const suffix = input.filenameSuffix ?? "";
+  const relative = path.join(input.ownerUserId, `${id}${suffix}.${ext}`);
   const blobKey = `${LOCAL_PREFIX}${relative.split(path.sep).join("/")}`;
   const filePath = path.join(localRoot(), relative);
   await mkdir(path.dirname(filePath), { recursive: true });
@@ -90,6 +92,7 @@ async function saveToVercelBlob(input: {
   ownerUserId: string;
   mimeType: string;
   bytes: Uint8Array;
+  filenameSuffix?: string;
 }): Promise<{ blobKey: string }> {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) {
@@ -100,7 +103,8 @@ async function saveToVercelBlob(input: {
   }
   const id = randomUUID();
   const ext = extensionForMime(input.mimeType);
-  const pathname = `portfolio/${input.ownerUserId}/${id}.${ext}`;
+  const suffix = input.filenameSuffix ?? "";
+  const pathname = `portfolio/${input.ownerUserId}/${id}${suffix}.${ext}`;
   const result = await put(pathname, Buffer.from(input.bytes), {
     access: "private",
     contentType: input.mimeType,
@@ -122,6 +126,8 @@ export async function savePortfolioImage(input: {
   ownerUserId: string;
   mimeType: string;
   bytes: Uint8Array;
+  /** Optional filename suffix, e.g. `-thumb` for derivative objects. */
+  filenameSuffix?: string;
 }): Promise<{ blobKey: string }> {
   if (hasBlobToken()) {
     return saveToVercelBlob(input);

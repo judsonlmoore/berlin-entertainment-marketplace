@@ -40,6 +40,7 @@ import { YouTubeEmbed } from "@/src/components/youtube-embed";
 import { useRouter } from "@/src/i18n/navigation";
 import { PORTFOLIO_MAX_IMAGES } from "@/src/domain/portfolio";
 import { validateYouTubeUrl } from "@/src/domain/youtube";
+import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
 
 export type PortfolioItemRow = {
   id: string;
@@ -159,7 +160,7 @@ function PortfolioImageTile({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={`/api/portfolio/${item.id}`}
+        src={portfolioImageSrc(item.id, "thumb")}
         alt={item.altText || item.caption || t("portfolioImageAltFallback")}
         className="pointer-events-none h-full w-full object-cover"
         draggable={false}
@@ -710,7 +711,7 @@ export function PortfolioEditor({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`/api/portfolio/${item.id}`}
+                src={portfolioImageSrc(item.id, "thumb")}
                 alt={
                   item.altText || item.caption || t("portfolioImageAltFallback")
                 }
