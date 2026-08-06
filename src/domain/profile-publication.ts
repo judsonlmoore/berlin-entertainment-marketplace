@@ -9,14 +9,19 @@ export const PROFILE_PUBLICATION_STATES = [
 export type ProfilePublicationState =
   (typeof PROFILE_PUBLICATION_STATES)[number];
 
+/**
+ * Self-serve publication: owners publish to approved (discoverable) and
+ * unpublish to draft. Legacy submitted/changes_requested can still publish
+ * or unpublish. Suspended profiles stay staff-only.
+ */
 const OWNER_TRANSITIONS: Record<
   ProfilePublicationState,
   readonly ProfilePublicationState[]
 > = {
-  draft: ["submitted"],
-  submitted: ["draft"],
+  draft: ["approved"],
+  submitted: ["approved", "draft"],
   approved: ["draft"],
-  changes_requested: ["draft", "submitted"],
+  changes_requested: ["approved", "draft"],
   suspended: [],
 };
 
@@ -39,6 +44,18 @@ export function canOwnerTransitionProfile(
   return OWNER_TRANSITIONS[from].includes(to);
 }
 
+export function canOwnerPublishProfile(
+  state: ProfilePublicationState,
+): boolean {
+  return canOwnerTransitionProfile(state, "approved");
+}
+
+export function canOwnerUnpublishProfile(
+  state: ProfilePublicationState,
+): boolean {
+  return canOwnerTransitionProfile(state, "draft");
+}
+
 export function canStaffTransitionProfile(
   from: ProfilePublicationState,
   to: ProfilePublicationState,
@@ -48,5 +65,9 @@ export function canStaffTransitionProfile(
 }
 
 export function isProfileDiscoverable(state: ProfilePublicationState): boolean {
+  return state === "approved";
+}
+
+export function isProfilePublished(state: ProfilePublicationState): boolean {
   return state === "approved";
 }

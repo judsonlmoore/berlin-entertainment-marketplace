@@ -29,6 +29,7 @@ import {
   membershipStatusEnum,
   opportunityStateEnum,
   portfolioItemKindEnum,
+  profileDocumentVisibilityEnum,
   profilePublicationStateEnum,
   venueMembershipRoleEnum,
 } from "./enums";
@@ -875,24 +876,41 @@ export const postGigSurveys = pgTable(
   ],
 );
 
-export const riderFiles = pgTable("rider_files", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  ownerUserId: text("owner_user_id")
-    .notNull()
-    .references(() => users.id),
-  entertainerProfileId: uuid("entertainer_profile_id").references(
-    () => entertainerProfiles.id,
-  ),
-  blobKey: text("blob_key").notNull(),
-  originalFilename: text("original_filename"),
-  mimeType: text("mime_type").notNull(),
-  sizeBytes: integer("size_bytes").notNull(),
-  checksum: text("checksum").notNull(),
-  scanStatus: text("scan_status").notNull().default("pending"),
-  createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
-    .notNull()
-    .defaultNow(),
-});
+export const riderFiles = pgTable(
+  "rider_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => users.id),
+    entertainerProfileId: uuid("entertainer_profile_id").references(
+      () => entertainerProfiles.id,
+    ),
+    blobKey: text("blob_key").notNull(),
+    title: text("title").notNull().default("Technical rider"),
+    visibility: profileDocumentVisibilityEnum("visibility")
+      .notNull()
+      .default("engagement"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    originalFilename: text("original_filename"),
+    mimeType: text("mime_type").notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    checksum: text("checksum").notNull(),
+    scanStatus: text("scan_status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("rider_files_profile_sort_idx").on(
+      table.entertainerProfileId,
+      table.sortOrder,
+    ),
+  ],
+);
 
 export const portfolioItems = pgTable(
   "portfolio_items",
@@ -906,6 +924,8 @@ export const portfolioItems = pgTable(
     altText: text("alt_text"),
     url: text("url"),
     blobKey: text("blob_key"),
+    /** Downscaled WebP derivative for cards/grids; full image remains in blob_key. */
+    thumbBlobKey: text("thumb_blob_key"),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()

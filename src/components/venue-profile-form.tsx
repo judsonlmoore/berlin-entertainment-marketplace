@@ -10,11 +10,21 @@ import {
 import { Button } from "@/src/components/ui/button";
 import { AutosaveStatus } from "@/src/components/profile/autosave-status";
 import { CategorySubcategorySelect } from "@/src/components/profile/category-subcategory-select";
+import {
+  ParagraphTextField,
+  toParagraphEditorHtml,
+} from "@/src/components/profile/paragraph-text-field";
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { useRouter } from "@/src/i18n/navigation";
 import { encodeVenueType, parseVenueType } from "@/src/domain/profile-taxonomy";
+import {
+  DESCRIPTION_MIN,
+  LONG_NOTES_MAX,
+  NOTES_MAX,
+  SHORT_DESCRIPTION_MAX,
+} from "@/src/domain/sanitize-input";
 import {
   VENUE_SOCIAL_ORDER,
   type SocialPlatform,
@@ -207,15 +217,17 @@ export function VenueProfileForm({
             className="field"
           />
         </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">{t("shortDescription")}</span>
-          <textarea
-            name="shortDescription"
-            rows={3}
-            defaultValue={defaultValues?.shortDescription}
-            className="field"
-          />
-        </label>
+        <ParagraphTextField
+          name="shortDescription"
+          label={t("shortDescription")}
+          defaultValue={toParagraphEditorHtml(
+            defaultValues?.shortDescription ?? "",
+          )}
+          min={DESCRIPTION_MIN}
+          max={SHORT_DESCRIPTION_MAX}
+          placeholder={t("descriptionPlaceholder")}
+          size="medium"
+        />
 
         <CategorySubcategorySelect
           kind="venue"
@@ -281,15 +293,16 @@ export function VenueProfileForm({
             />
           </label>
         </div>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">{t("audienceDescription")}</span>
-          <textarea
-            name="audienceDescription"
-            rows={3}
-            defaultValue={defaultValues?.audienceDescription}
-            className="field"
-          />
-        </label>
+        <ParagraphTextField
+          name="audienceDescription"
+          label={t("audienceDescription")}
+          defaultValue={toParagraphEditorHtml(
+            defaultValues?.audienceDescription ?? "",
+          )}
+          min={0}
+          max={NOTES_MAX}
+          size="medium"
+        />
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="grid gap-1 text-sm">
             <span className="font-medium">{t("capacity")}</span>
@@ -315,15 +328,16 @@ export function VenueProfileForm({
           <legend className="px-1 text-sm font-medium">
             {t("productionResources")}
           </legend>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">{t("productionNotes")}</span>
-            <textarea
-              name="productionNotes"
-              rows={2}
-              defaultValue={defaultValues?.productionNotes ?? ""}
-              className="field"
-            />
-          </label>
+          <ParagraphTextField
+            name="productionNotes"
+            label={t("productionNotes")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.productionNotes ?? "",
+            )}
+            min={0}
+            max={LONG_NOTES_MAX}
+            size="short"
+          />
           <div className="grid gap-2 sm:grid-cols-2">
             {(
               [
@@ -347,33 +361,32 @@ export function VenueProfileForm({
             ))}
           </div>
         </fieldset>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">{t("houseRules")}</span>
-          <textarea
-            name="houseRules"
-            rows={2}
-            defaultValue={defaultValues?.houseRules ?? ""}
-            className="field"
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">{t("loadInNotes")}</span>
-          <textarea
-            name="loadInNotes"
-            rows={2}
-            defaultValue={defaultValues?.loadInNotes ?? ""}
-            className="field"
-          />
-        </label>
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">{t("accessibilityNotes")}</span>
-          <textarea
-            name="accessibilityNotes"
-            rows={2}
-            defaultValue={defaultValues?.accessibilityNotes ?? ""}
-            className="field"
-          />
-        </label>
+        <ParagraphTextField
+          name="houseRules"
+          label={t("houseRules")}
+          defaultValue={toParagraphEditorHtml(defaultValues?.houseRules ?? "")}
+          min={0}
+          max={LONG_NOTES_MAX}
+          size="short"
+        />
+        <ParagraphTextField
+          name="loadInNotes"
+          label={t("loadInNotes")}
+          defaultValue={toParagraphEditorHtml(defaultValues?.loadInNotes ?? "")}
+          min={0}
+          max={LONG_NOTES_MAX}
+          size="short"
+        />
+        <ParagraphTextField
+          name="accessibilityNotes"
+          label={t("accessibilityNotes")}
+          defaultValue={toParagraphEditorHtml(
+            defaultValues?.accessibilityNotes ?? "",
+          )}
+          min={0}
+          max={NOTES_MAX}
+          size="short"
+        />
 
         <PrefixedUrlInput
           platform="website"
@@ -460,7 +473,11 @@ export function VenueProfileForm({
                 setError(null);
                 setMessage(null);
                 startTransition(async () => {
-                  await autosave.saveNow();
+                  const saved = await autosave.saveNow();
+                  if (!saved?.ok) {
+                    setError(saved?.message || errors("validation"));
+                    return;
+                  }
                   const result = await submitVenueProfile(venueId, locale);
                   if (!result.ok) {
                     setError(

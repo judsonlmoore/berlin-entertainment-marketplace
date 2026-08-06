@@ -14,10 +14,12 @@ import { BookingTermsForm } from "@/src/components/booking-terms-form";
 import { Avatar } from "@/src/components/ui/monogram";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { PostGigSurveyForm } from "@/src/components/post-gig-survey-form";
+import { ProfileDocumentList } from "@/src/components/profile-document-list";
 import { getDb } from "@/src/db/client";
 import { getBookingDetail } from "@/src/db/queries/bookings";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { getPostGigSurveyInvitationForActor } from "@/src/db/queries/post-gig-surveys";
+import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import {
   applications,
   directRequests,
@@ -118,6 +120,13 @@ export default async function BookingDetailPage({ params }: Props) {
         signerUserId: access.actor.userId,
       })
     : null;
+
+  const bookingDocuments = await listDocumentsVisibleToActor({
+    actor: access.actor,
+    entertainerProfileId: booking.entertainerProfileId,
+    ownerUserId: booking.entertainerUserId,
+    publicationState: booking.entertainerPublicationState,
+  });
 
   const db = getDb();
   const fallbackStart = new Date(booking.createdAt);
@@ -232,6 +241,16 @@ export default async function BookingDetailPage({ params }: Props) {
       <p className="panel border-[var(--warning-soft)] bg-[var(--warning-soft)]/40 p-4 text-sm">
         {t("depositNotice")}
       </p>
+
+      <ProfileDocumentList
+        locale={locale}
+        documents={bookingDocuments.map((doc) => ({
+          id: doc.id,
+          title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+          visibility: doc.visibility,
+          sizeBytes: doc.sizeBytes,
+        }))}
+      />
 
       {agreedTerms ? (
         <div className="panel grid gap-2 p-6 text-sm">

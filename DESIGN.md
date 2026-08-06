@@ -18,21 +18,21 @@
 
 ## Typography
 - **Display/Hero:** Fraunces — brand wordmark and public landing hero only
-- **Body / UI / Labels:** Outfit — navigation, forms, tables, buttons, metadata, authenticated page titles
-- **Data/Tables:** Outfit with `font-variant-numeric: tabular-nums`
+- **Body / UI / Labels:** IBM Plex Sans — navigation, forms, tables, buttons, metadata, authenticated page titles
+- **Data/Tables:** IBM Plex Sans with `font-variant-numeric: tabular-nums`
 - **Code:** JetBrains Mono (admin/debug only if needed)
-- **Loading:** Google Fonts via `next/font` (Fraunces + Outfit)
-- **Rules:** Do not use Instrument Serif for every authenticated H1. Authenticated titles use Outfit 600 at `clamp(1.75rem, 2.5vw, 2.25rem)`.
+- **Loading:** Google Fonts via `next/font` (Fraunces + IBM Plex Sans)
+- **Rules:** Do not use Instrument Serif for every authenticated H1. Authenticated titles use IBM Plex Sans 600 at `clamp(1.75rem, 2.5vw, 2.25rem)`.
 - **Scale:**
   - Public hero: `clamp(3rem, 5.5vw, 5rem)` Fraunces, tight line-height
-  - Authenticated H1: `clamp(1.75rem, 2.5vw, 2.25rem)` Outfit 600
-  - Section H2: `1.15–1.35rem` Outfit 600
-  - Card title: `1.05–1.15rem` Outfit 600
+  - Authenticated H1: `clamp(1.75rem, 2.5vw, 2.25rem)` IBM Plex Sans 600
+  - Section H2: `1.15–1.35rem` IBM Plex Sans 600
+  - Card title: `1.05–1.15rem` IBM Plex Sans 600
   - Body: `1rem` / 400, line-height ~1.5
   - Labels: `0.875rem` / 500
   - UI/meta: `0.8–0.875rem` / 500 on muted
   - Eyebrow: `0.72rem` / 600, uppercase, `0.12–0.16em` tracking, accent color
-- **Blacklist / avoid as primary:** Inter, Roboto, Arial, system-ui as display, Space Grotesk, Instrument Sans as the long-term UI face (migrate to Outfit)
+- **Blacklist / avoid as primary:** Inter, Roboto, Arial, system-ui as display, Space Grotesk, Instrument Sans, Outfit (replaced — too geometric for ops UI)
 
 ## Color
 - **Approach:** Restrained — one primary voltage, rare accent, AA-first neutrals
@@ -71,7 +71,7 @@
 - Respect `prefers-reduced-motion`
 
 ## Forms (first-class)
-- Label above control, Outfit 500, ink
+- Label above control, IBM Plex Sans 500, ink
 - Control: white surface, 1px rule, 8px radius, min-height 44px, comfortable padding
 - Focus: 2px primary ring + offset (or `box-shadow` focus ring); never remove outline without replacement
 - Error: danger text + stronger border; `role="alert"`
@@ -90,13 +90,13 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 
 ### Layout
 - **Onboarding:** Narrow focused steps (shell without app rail). Short path. Final “you’re in / pending verification” screen stays until the user clicks Continue (no auto-redirect).
-- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top. Section hairline rules. Media high; logistics later. Account language/deletion live under `/account`, not profile.
+- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later. Account language/deletion live under `/account`, not profile.
 
 ### Autosave & publication status
-- Autosave while editing. Status copy is only **Saving…** and **Saved.** (no clock time).
-- No **Submit for review** CTA on profile.
-- Soft status tags at the top of profile: **Under review** (warning soft `#F3E8CF`, ink-readable) and **Verified** (success soft `#E3EEE5`, primary-tint text). Optional draft/empty state has no tag or a quiet draft label.
-- Product rule for when a draft becomes “Under review” is decided in product/spec (e.g. completeness threshold or staff intake); the UI must not depend on a manual submit button.
+- Autosave while editing. Status copy: **Unsaved changes**, **Saving…**, and **Saved.** (no clock time). Warn before leaving the page when there are unsaved changes.
+- Display-name strip hosts one publication control on the right: **Publish** when unpublished, **Unpublish** when live (plus **Suspended** when staff-locked). Autosave status sits beside it, vertically centered. The strip is sticky on scroll so the action remains reachable at the bottom of the form.
+- **Publish** is self-serve (`draft` → `approved`) after a built-in QA checklist passes. **Unpublish** returns to draft. Edits while published do **not** unpublish the profile.
+- Staff may still suspend publication for moderation; they are not in the critical path for going live.
 
 ### Media
 - Empty slots: **dashed outlined** rectangles/squares on white surface — not mystery-person silhouettes, not photo backgrounds as placeholders.
@@ -106,7 +106,9 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 - Featured YouTube: URL field + thumbnail; **clicking the thumbnail opens a modal with the embedded video**.
 
 ### Description
-- Rich text (bold / italic / underline / lists / quote). Character counter with min/max (40–2000). No links in description. Same control on onboarding basics and profile.
+- Shared **ParagraphTextField** for all multi-line prose (talent description/technical/accessibility/equipment; buyer short description/audience/house rules/load-in/production notes/accessibility; same on onboarding).
+- Rich text (bold / italic / underline / lists / quote) with Gmail-style toolbar icons. Character counter with field-specific min/max. No links.
+- Same control on onboarding basics and profile builders — do not invent per-field textarea chrome.
 
 ### Website & social links
 - Plain full-URL text inputs with platform-specific **placeholders** (e.g. `https://www.instagram.com/yourhandle`).
@@ -127,7 +129,6 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 No gradients, glassmorphism, neon, purple-first templates, oversized rounded cards, pill-everything, generic stock photography, decorative blobs, drop-shadow-heavy cards, warm-cream + terracotta + giant serif everywhere as the default authenticated look.
 No mystery-person avatar placeholders for hero/gallery media.
 No fixed social URL prefix chrome on profile/onboarding link fields.
-No Submit-for-review primary on the profile builder (autosave + status tags instead).
 No live marketplace preview rail on profile edit.
 
 ## Decisions Log
@@ -136,7 +137,10 @@ No live marketplace preview rail on profile edit.
 | 2026-08-03 | Evolved visual system from warm-ivory editorial to crisp cultural-ops | Status quo felt dated; muted `#7B817D` failed readability; forms were under-designed. Preview approved in design consultation. |
 | 2026-08-03 | Cool stone canvas + true white surfaces | Improves contrast and modern marketplace feel while keeping cultural restraint |
 | 2026-08-03 | Fraunces for brand/hero; Outfit for UI | Serif demoted so ops screens stay scannable |
+| 2026-08-06 | IBM Plex Sans replaces Outfit for UI | Outfit felt too geometric/fashion for ops readability; keep Fraunces for brand/hero only |
 | 2026-08-03 | Form system with 8px radius and section groups | Profile/booking trust surfaces need first-class field UI |
 | 2026-08-03 | Remove authenticated sticky bottom nav | Mobile drawer + desktop rail already cover navigation; bottom bar was redundant |
 | 2026-08-03 | Legal pages from markdown under `content/legal` | Easier bilingual updates; shared prose template + public footer |
 | 2026-08-05 | Profile + onboarding as booking-asset editors | Presence-led, autosave, dashed media empties, platform URL validation, status tags instead of submit; preview approved in design consultation |
+| 2026-08-06 | Publish CTA on display-name strip | Owners explicitly submit ready drafts for staff verification; autosave + status tags alone were not actionable enough |
+| 2026-08-06 | Self-serve publish/unpublish with QA checklist | Staff review removed from the critical path; edits stay published; leave warning for unsaved changes |

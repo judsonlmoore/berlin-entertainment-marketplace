@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Fraunces, Outfit } from "next/font/google";
+import { Fraunces, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
 const display = Fraunces({
@@ -8,7 +8,7 @@ const display = Fraunces({
   variable: "--font-display",
 });
 
-const ui = Outfit({
+const ui = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-ui",

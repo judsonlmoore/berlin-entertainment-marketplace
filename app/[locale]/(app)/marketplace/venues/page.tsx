@@ -8,6 +8,7 @@ import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { listDiscoverableVenues } from "@/src/db/queries/discovery";
 import { requireVenueDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { richTextToPlain } from "@/src/domain/sanitize-input";
 import { Link } from "@/src/i18n/navigation";
 
 type Props = {
@@ -108,7 +109,7 @@ export default async function VenuesDiscoveryPage({
                     {venue.district} · {venue.capacity} {t("capacityUnit")}
                   </p>
                   <p className="line-clamp-2 text-sm text-[var(--text-muted)]">
-                    {venue.shortDescription}
+                    {richTextToPlain(venue.shortDescription)}
                   </p>
                   <span className="mt-1 text-sm text-[var(--primary)]">
                     {t("viewProfile")} →

@@ -219,6 +219,9 @@ export async function removePortfolioItem(
 
     if (item.kind === "image" && item.blobKey) {
       await deletePortfolioImage(item.blobKey);
+      if (item.thumbBlobKey) {
+        await deletePortfolioImage(item.thumbBlobKey);
+      }
     }
 
     await db.delete(portfolioItems).where(eq(portfolioItems.id, item.id));

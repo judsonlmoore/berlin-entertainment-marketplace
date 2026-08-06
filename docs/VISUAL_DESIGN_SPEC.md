@@ -32,7 +32,7 @@ When a screenshot conflicts with accessibility, `DESIGN.md`, product/security ru
 
 Salon should feel like a crisp Berlin cultural-ops product — calm, trustworthy, current — not a dated warm-ivory editorial brochure and not generic booking SaaS. Confidence comes from readable type, AA contrast, disciplined structure, and first-class forms.
 
-Public surfaces may stay more expressive (Fraunces hero). Authenticated surfaces are operational: Outfit titles, clear metrics, scannable lists, sectioned profile forms.
+Public surfaces may stay more expressive (Fraunces hero). Authenticated surfaces are operational: IBM Plex Sans titles, clear metrics, scannable lists, sectioned profile forms.
 
 ### Required character
 
@@ -41,7 +41,7 @@ Public surfaces may stay more expressive (Fraunces hero). Authenticated surfaces
 - Near-black green rail `#121A17` and deeper primary `#1F5A45`
 - Muted terracotta `#B84A32` as a rare accent only
 - Soft blue / ochre / rose as flat monogram identity fields
-- Fraunces for brand/hero; Outfit for all app UI (labels ≥ weight 500)
+- Fraunces for brand/hero; IBM Plex Sans for all app UI (labels ≥ weight 500)
 - Comfortable whitespace and clear rhythm on operational screens
 - Monograms and avatar initials instead of generic stock imagery
 - Rectangular geometry with functional radii (`6–8px` on controls/cards)
@@ -80,9 +80,9 @@ Never rely on color alone. Text on soft semantic surfaces uses `ink`. Meet WCAG 
 ### Typography
 
 - **Display:** Fraunces — Salon wordmark and public hero only
-- **UI/Body:** Outfit 400/500/600 — nav, labels, inputs, tables, buttons, authenticated headings
+- **UI/Body:** IBM Plex Sans 400/500/600 — nav, labels, inputs, tables, buttons, authenticated headings
 - **Numbers:** tabular numerals for metrics, fees, dates, counts, calendar cells
-- **Scale:** see `DESIGN.md` (authenticated H1 is Outfit, not oversized serif)
+- **Scale:** see `DESIGN.md` (authenticated H1 is IBM Plex Sans, not oversized serif)
 - **Eyebrows:** accent uppercase, weight 600, `0.12–0.16em` tracking; never long sentences
 
 ### Forms
@@ -120,7 +120,7 @@ Tablet: collapse rail to icon rail or drawer with labels on demand. Below `768px
 
 ## 6. Page contracts
 
-Layout hierarchy and modules below still apply. Visual treatment follows `DESIGN.md` (stone/white, Outfit titles, form system). Screenshots guide composition only.
+Layout hierarchy and modules below still apply. Visual treatment follows `DESIGN.md` (stone/white, IBM Plex Sans titles, form system). Screenshots guide composition only.
 
 ### 6.1 Public landing
 
@@ -142,7 +142,7 @@ Reference: [dashboard.png](./design-reference/dashboard.png)
 
 **Purpose:** “what needs my attention?” plus next useful actions for role-aware members.
 
-**Hierarchy:** date eyebrow + Outfit greeting + primary action → metrics → recent applications + next booking → role-aware explore (acts for venues, venues for entertainers).
+**Hierarchy:** date eyebrow + IBM Plex Sans greeting + primary action → metrics → recent applications + next booking → role-aware explore (acts for venues, venues for entertainers).
 
 **Required modules:** greeting; post-opportunity when permitted; metric strip; application rows; next-booking + lifecycle; explore cards with monograms (no fake match % unless real).
 
@@ -237,7 +237,7 @@ Reference preview: `~/.gstack/projects/judsonlmoore-berlin-entertainment-marketp
 - [ ] Near-black green rail and solid deeper-green primary actions
 - [ ] Terracotta used sparingly for eyebrows/emphasis only
 - [ ] Muted text `#5C635F` (or darker) passes AA at rendered size
-- [ ] Outfit for authenticated UI; Fraunces limited to brand/hero/monogram accents
+- [ ] IBM Plex Sans for authenticated UI; Fraunces limited to brand/hero/monogram accents
 - [ ] Form controls: 44px, 8px radius, visible focus, section groups
 - [ ] `280px` desktop rail, slim top bar, consistent content width
 - [ ] Thin rules; small radii; no heavy shadows
@@ -252,7 +252,7 @@ Reference preview: `~/.gstack/projects/judsonlmoore-berlin-entertainment-marketp
 
 Implement visual evolution against `DESIGN.md` tokens one shared layer / route at a time:
 
-1. Tokens, font loading (Fraunces + Outfit), form primitives, authenticated shell
+1. Tokens, font loading (Fraunces + IBM Plex Sans), form primitives, authenticated shell
 2. Public landing (Fraunces hero retained)
 3. Dashboard
 4. Discovery (role-segregated)

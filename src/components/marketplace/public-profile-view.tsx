@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { YouTubeEmbed } from "@/src/components/youtube-embed";
 import { Monogram } from "@/src/components/ui/monogram";
+import { SafeRichText } from "@/src/components/ui/safe-rich-text";
 import { Link } from "@/src/i18n/navigation";
 import type {
   PublicProfileFact,
   PublicProfileLink,
   PublicProfileMedia,
 } from "@/src/lib/public-profile";
+import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
 
 type ContactRow = {
   id: string;
@@ -92,7 +94,7 @@ export function PublicProfileView({
         {media.hero ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`/api/portfolio/${media.hero.id}`}
+            src={portfolioImageSrc(media.hero.id, "full")}
             alt={media.hero.altText ?? media.hero.caption ?? title}
             className="aspect-[16/9] w-full object-cover"
           />
@@ -118,9 +120,10 @@ export function PublicProfileView({
           {description.trim() ? (
             <section className="grid gap-3">
               <h2 className="text-[1.15rem] font-semibold">{aboutTitle}</h2>
-              <div className="text-[1rem] leading-relaxed whitespace-pre-wrap text-[var(--ink)]">
-                {description}
-              </div>
+              <SafeRichText
+                html={description}
+                className="text-[1rem] leading-relaxed text-[var(--ink)]"
+              />
             </section>
           ) : null}
 
@@ -148,7 +151,7 @@ export function PublicProfileView({
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={`/api/portfolio/${item.id}`}
+                      src={portfolioImageSrc(item.id, "thumb")}
                       alt={item.altText ?? item.caption ?? title}
                       className="aspect-[4/3] w-full object-cover"
                     />
@@ -176,8 +179,8 @@ export function PublicProfileView({
                     <dt className="font-medium text-[var(--text-muted)]">
                       {fact.label}
                     </dt>
-                    <dd className="whitespace-pre-wrap text-[var(--ink)]">
-                      {fact.value}
+                    <dd className="text-[var(--ink)]">
+                      <SafeRichText html={fact.value} />
                     </dd>
                   </div>
                 ))}

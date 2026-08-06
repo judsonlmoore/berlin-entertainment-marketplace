@@ -64,6 +64,12 @@ export const portfolioItemKindEnum = pgEnum("portfolio_item_kind", [
   "youtube",
 ]);
 
+/** Profile PDF visibility: discovery vs booking-pipeline unlock. */
+export const profileDocumentVisibilityEnum = pgEnum(
+  "profile_document_visibility",
+  ["marketplace", "engagement"],
+);
+
 export const bookingStateEnum = pgEnum("booking_state", [
   "requested",
   "applied",

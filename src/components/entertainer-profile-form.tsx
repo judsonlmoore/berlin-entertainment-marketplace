@@ -1,19 +1,29 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { upsertEntertainerProfile } from "@/src/actions/profiles";
+import {
+  publishEntertainerProfile,
+  unpublishEntertainerProfile,
+  upsertEntertainerProfile,
+} from "@/src/actions/profiles";
 import { AutosaveStatus } from "@/src/components/profile/autosave-status";
 import { CategorySubcategorySelect } from "@/src/components/profile/category-subcategory-select";
 import { LanguageMultiSelect } from "@/src/components/profile/language-multi-select";
 import { LocationAutocomplete } from "@/src/components/profile/location-autocomplete";
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
-import { PublicationStatusTag } from "@/src/components/profile/publication-status-tag";
+import { PublicationControl } from "@/src/components/profile/publication-control";
 import {
-  CharacterCountedTextarea,
-  RichTextField,
-} from "@/src/components/profile/rich-text-field";
+  ParagraphTextField,
+  toParagraphEditorHtml,
+} from "@/src/components/profile/paragraph-text-field";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
+import {
+  canOwnerPublishProfile,
+  canOwnerUnpublishProfile,
+  isProfilePublished,
+  type ProfilePublicationState,
+} from "@/src/domain/profile-publication";
 import {
   ENTERTAINER_SOCIAL_ORDER,
   type SocialPlatform,
@@ -21,9 +31,12 @@ import {
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  NOTES_MAX,
   TECHNICAL_MAX,
   TECHNICAL_MIN,
+  stripHtmlToPlain,
 } from "@/src/domain/sanitize-input";
+import { useRouter } from "@/src/i18n/navigation";
 
 type SocialLinks = Partial<
   Record<
@@ -77,7 +90,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className="grid gap-4 border-t border-[var(--rule)] pt-6 first:border-t-0 first:pt-0">
+    <section className="panel grid gap-4 p-6">
       <div>
         <h3 className="text-sm font-semibold tracking-[0.12em] text-[var(--ink)] uppercase">
           {title}
@@ -89,17 +102,6 @@ function Section({
       {children}
     </section>
   );
-}
-
-function toEditorHtml(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "<p></p>";
-  if (/<[a-z][\s\S]*>/i.test(trimmed)) return trimmed;
-  const escaped = trimmed
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return `<p>${escaped}</p>`;
 }
 
 function socialFieldName(platform: SocialPlatform): string {
@@ -144,6 +146,10 @@ function socialLabelKey(platform: SocialPlatform) {
   }
 }
 
+function canOwnerPublish(state: string | undefined): boolean {
+  return canOwnerPublishProfile((state ?? "draft") as ProfilePublicationState);
+}
+
 export function EntertainerProfileForm({
   locale,
   mediaSlot,
@@ -152,9 +158,16 @@ export function EntertainerProfileForm({
   accountEmail,
 }: Props) {
   const t = useTranslations("profile");
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [actName, setActName] = useState(defaultValues?.actName ?? "");
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [isPublishing, startPublish] = useTransition();
   const social = defaultValues?.socialLinks ?? {};
+  const pubState = (publicationState ?? "draft") as ProfilePublicationState;
+  const published = isProfilePublished(pubState);
+  const showPublish = canOwnerPublish(pubState);
+  const showUnpublish = canOwnerUnpublishProfile(pubState);
 
   function readForm(form: FormData) {
     return {
@@ -201,31 +214,115 @@ export function EntertainerProfileForm({
     save: (payload) => upsertEntertainerProfile(payload),
   });
 
+  function publishProfile() {
+    setPublishError(null);
+    startPublish(async () => {
+      const saved = await autosave.saveNow();
+      if (!saved?.ok) {
+        setPublishError(saved?.message || t("publishProfileFailed"));
+        return;
+      }
+      const result = await publishEntertainerProfile(locale);
+      if (!result.ok) {
+        setPublishError(result.message || t("publishProfileFailed"));
+        return;
+      }
+      router.refresh();
+    });
+  }
+
+  function unpublishProfile() {
+    setPublishError(null);
+    startPublish(async () => {
+      const result = await unpublishEntertainerProfile(locale);
+      if (!result.ok) {
+        setPublishError(result.message || t("unpublishProfileFailed"));
+        return;
+      }
+      router.refresh();
+    });
+  }
+
   return (
     <div className="grid gap-5">
-      <div className="flex flex-wrap items-start justify-end gap-3">
-        <PublicationStatusTag
-          state={publicationState}
-          draftLabel={t("statusDraft")}
-          underReviewLabel={t("statusUnderReview")}
-          verifiedLabel={t("statusVerified")}
-        />
-        <AutosaveStatus
-          phase={autosave.phase}
-          errorMessage={autosave.errorMessage}
-        />
+      <div className="sticky top-14 z-10 bg-[var(--canvas)] py-3 lg:top-0">
+        <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-5 py-4">
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+            <div className="min-w-0">
+              <p className="eyebrow text-[var(--accent)]">
+                {t("displayNameEyebrow")}
+              </p>
+              <h2 className="page-title mt-1 text-[clamp(1.5rem,2vw,2rem)]">
+                {actName.trim() || t("previewNameFallback")}
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <AutosaveStatus
+                phase={autosave.phase}
+                errorMessage={autosave.errorMessage}
+              />
+              <PublicationControl
+                state={pubState}
+                unpublishedLabel={t("statusUnpublished")}
+                suspendedLabel={t("statusSuspended")}
+                publishLabel={t("publishProfile")}
+                publishingLabel={t("publishingProfile")}
+                unpublishLabel={t("unpublishProfile")}
+                unpublishingLabel={t("unpublishingProfile")}
+                canPublish={showPublish}
+                canUnpublish={showUnpublish}
+                pending={isPublishing}
+                disabled={autosave.phase === "saving"}
+                onPublish={publishProfile}
+                onUnpublish={unpublishProfile}
+              />
+            </div>
+          </div>
+          {publishError ? (
+            <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
+              {publishError}
+            </p>
+          ) : showPublish ? (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {t("publishProfileHint")}
+            </p>
+          ) : published ? (
+            <p className="mt-3 text-sm text-[var(--text-muted)]">
+              {t("publishedProfileHint")}
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-5 py-4">
-        <p className="eyebrow text-[var(--accent)]">
-          {t("displayNameEyebrow")}
-        </p>
-        <h2 className="page-title mt-1 text-[clamp(1.5rem,2vw,2rem)]">
-          {actName.trim() || t("previewNameFallback")}
-        </h2>
-      </div>
+      <form ref={formRef} className="grid gap-5">
+        <Section title={t("displayNameEyebrow")}>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium">{t("actName")}</span>
+            <input
+              name="actName"
+              required
+              className="field"
+              value={actName}
+              onChange={(event) => setActName(event.target.value)}
+              onPaste={(event) => {
+                const html = event.clipboardData.getData("text/html");
+                if (!html) return;
+                event.preventDefault();
+                const plain = stripHtmlToPlain(
+                  html || event.clipboardData.getData("text/plain"),
+                );
+                const input = event.currentTarget;
+                const start = input.selectionStart ?? actName.length;
+                const end = input.selectionEnd ?? actName.length;
+                const next =
+                  actName.slice(0, start) + plain + actName.slice(end);
+                setActName(next);
+              }}
+            />
+          </label>
+        </Section>
 
-      <form ref={formRef} className="panel grid gap-6 p-6">
         {mediaSlot ? (
           <Section title={t("sectionMedia")}>{mediaSlot}</Section>
         ) : (
@@ -237,17 +334,6 @@ export function EntertainerProfileForm({
         )}
 
         <Section title={t("sectionBasics")}>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">{t("actName")}</span>
-            <input
-              name="actName"
-              required
-              className="field"
-              value={actName}
-              onChange={(event) => setActName(event.target.value)}
-            />
-          </label>
-
           <CategorySubcategorySelect
             kind="entertainer"
             categoryName="category"
@@ -260,13 +346,16 @@ export function EntertainerProfileForm({
             otherLabel={t("subcategoryOther")}
           />
 
-          <RichTextField
+          <ParagraphTextField
             name="description"
             label={t("description")}
-            defaultValue={toEditorHtml(defaultValues?.description ?? "")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.description ?? "",
+            )}
             min={DESCRIPTION_MIN}
             max={DESCRIPTION_MAX}
             placeholder={t("descriptionPlaceholder")}
+            size="tall"
           />
         </Section>
 
@@ -361,39 +450,45 @@ export function EntertainerProfileForm({
             </label>
           </div>
 
-          <CharacterCountedTextarea
-            name="technicalRequirements"
-            label={t("technicalRequirements")}
-            defaultValue={defaultValues?.technicalRequirements ?? ""}
-            min={TECHNICAL_MIN}
-            max={TECHNICAL_MAX}
-            rows={4}
-          />
-
           <LanguageMultiSelect
             name="languages"
             defaultValue={defaultValues?.languages}
             label={t("languages")}
             hint={t("languagesHint")}
           />
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">{t("accessibilityNotes")}</span>
-            <textarea
-              name="accessibilityNotes"
-              rows={2}
-              defaultValue={defaultValues?.accessibilityNotes ?? ""}
-              className="field"
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">{t("equipmentSupplied")}</span>
-            <textarea
-              name="equipmentSupplied"
-              rows={2}
-              defaultValue={defaultValues?.equipmentSupplied ?? ""}
-              className="field"
-            />
-          </label>
+
+          <ParagraphTextField
+            name="technicalRequirements"
+            label={t("technicalRequirements")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.technicalRequirements ?? "",
+            )}
+            min={TECHNICAL_MIN}
+            max={TECHNICAL_MAX}
+            size="medium"
+          />
+
+          <ParagraphTextField
+            name="equipmentSupplied"
+            label={t("equipmentSupplied")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.equipmentSupplied ?? "",
+            )}
+            min={0}
+            max={NOTES_MAX}
+            size="short"
+          />
+
+          <ParagraphTextField
+            name="accessibilityNotes"
+            label={t("accessibilityNotes")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.accessibilityNotes ?? "",
+            )}
+            min={0}
+            max={NOTES_MAX}
+            size="short"
+          />
         </Section>
 
         <Section title={t("sectionLinks")} hint={t("linksHint")}>

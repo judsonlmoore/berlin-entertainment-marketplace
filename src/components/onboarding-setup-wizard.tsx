@@ -9,7 +9,10 @@ import {
 } from "@/src/actions/profiles";
 import { ConfettiBurst } from "@/src/components/confetti-burst";
 import { CategorySubcategorySelect } from "@/src/components/profile/category-subcategory-select";
-import { RichTextField } from "@/src/components/profile/rich-text-field";
+import {
+  ParagraphTextField,
+  toParagraphEditorHtml,
+} from "@/src/components/profile/paragraph-text-field";
 import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 import {
@@ -21,6 +24,7 @@ import {
 import {
   DESCRIPTION_MAX,
   DESCRIPTION_MIN,
+  SHORT_DESCRIPTION_MAX,
   validateRichTextField,
 } from "@/src/domain/sanitize-input";
 
@@ -83,17 +87,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function toEditorHtml(raw: string): string {
-  const trimmed = raw.trim();
-  if (!trimmed) return "<p></p>";
-  if (/<[a-z][\s\S]*>/i.test(trimmed)) return trimmed;
-  const escaped = trimmed
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return `<p>${escaped}</p>`;
-}
-
 /** Overall onboarding: 1 role (prior page) → 2 basics → 3 confirm. */
 const TOTAL_FLOW_STEPS = 3;
 const BASICS_STEP_INDEX = 1; // 0-based: step 2 of 3
@@ -144,14 +137,16 @@ export function OnboardingSetupWizard({
       );
     }
 
-    const plain = venue.shortDescription.trim();
+    const descriptionCheck = validateRichTextField(venue.shortDescription, {
+      min: DESCRIPTION_MIN,
+      max: SHORT_DESCRIPTION_MAX,
+    });
     const parsed = parseVenueType(venue.venueType);
     return (
       venue.name.trim().length > 0 &&
       parsed.categoryId.trim().length > 0 &&
       parsed.subcategoryRaw.trim().length > 0 &&
-      plain.length >= DESCRIPTION_MIN &&
-      plain.length <= 500
+      descriptionCheck.ok
     );
   };
 
@@ -291,13 +286,14 @@ export function OnboardingSetupWizard({
                 });
               }}
             />
-            <RichTextField
+            <ParagraphTextField
               label={t("fields.description")}
-              defaultValue={toEditorHtml(entertainerDraft.description)}
+              defaultValue={toParagraphEditorHtml(entertainerDraft.description)}
               min={DESCRIPTION_MIN}
               max={DESCRIPTION_MAX}
               placeholder={tProfile("descriptionPlaceholder")}
               onChange={(html) => updateEntertainer({ description: html })}
+              size="tall"
             />
           </>
         ) : null}
@@ -337,18 +333,15 @@ export function OnboardingSetupWizard({
                 });
               }}
             />
-            <Field label={t("fields.shortDescription")}>
-              <textarea
-                className="field"
-                rows={5}
-                value={venue.shortDescription}
-                onChange={(e) =>
-                  patchVenue({ shortDescription: e.target.value })
-                }
-                placeholder={tProfile("descriptionPlaceholder")}
-                required
-              />
-            </Field>
+            <ParagraphTextField
+              label={t("fields.shortDescription")}
+              defaultValue={toParagraphEditorHtml(venueDraft.shortDescription)}
+              min={DESCRIPTION_MIN}
+              max={SHORT_DESCRIPTION_MAX}
+              placeholder={tProfile("descriptionPlaceholder")}
+              onChange={(html) => patchVenue({ shortDescription: html })}
+              size="medium"
+            />
           </>
         ) : null}
 

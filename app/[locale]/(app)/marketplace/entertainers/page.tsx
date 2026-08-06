@@ -14,6 +14,7 @@ import {
 import { requireEntertainerDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
+import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -126,7 +127,7 @@ export default async function EntertainersDiscoveryPage({
                   {act.heroImageId ? (
                     // Auth-proxied private portfolio bytes — same-origin /api route.
                     <img
-                      src={`/api/portfolio/${act.heroImageId}`}
+                      src={portfolioImageSrc(act.heroImageId, "thumb")}
                       alt={act.actName}
                       className="h-40 w-full object-cover"
                     />

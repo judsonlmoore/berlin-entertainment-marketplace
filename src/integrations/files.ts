@@ -1,5 +1,12 @@
+/**
+ * Legacy FileStore boundary — document uploads now use document-file-store
+ * (portfolio-style private Blob / local disk). Kept for sandbox demos and
+ * admin metadata paths that still call getFileStore().
+ */
 import { randomUUID } from "node:crypto";
 import { validateRiderUploadInput } from "@/src/domain/rider";
+import { isDocumentStoreConfigured } from "@/src/integrations/document-file-store";
+import { hasBlobToken } from "@/src/integrations/private-blob";
 
 export type FileUploadInput = {
   ownerUserId: string;
@@ -15,9 +22,6 @@ export type FileRecord = {
   checksum: string;
 };
 
-/**
- * Private file storage boundary. Production uses Vercel Blob once provisioned.
- */
 export interface FileStore {
   readonly name: string;
   createUpload(
@@ -96,13 +100,14 @@ export function getFileStore(): FileStore {
   if (process.env.FILE_STORE === "sandbox") {
     return new SandboxFileStore();
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return new UnconfiguredFileStore();
+  if (hasBlobToken() || isDocumentStoreConfigured()) {
+    // Real byte storage is document-file-store / portfolio-image-store.
+    // Callers that still use createUpload should migrate to multipart upload.
+    return new SandboxFileStore();
   }
-  // Real Vercel Blob adapter lands after token provisioning + smoke test.
   return new UnconfiguredFileStore();
 }
 
 export function isFileStoreConfigured(): boolean {
-  return getFileStore().name !== "unconfigured";
+  return isDocumentStoreConfigured() || process.env.FILE_STORE === "sandbox";
 }

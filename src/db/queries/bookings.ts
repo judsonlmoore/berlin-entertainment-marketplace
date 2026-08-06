@@ -76,6 +76,7 @@ export async function getBookingDetail(bookingId: string) {
       entertainerProfileId: entertainerProfiles.id,
       actName: entertainerProfiles.actName,
       entertainerUserId: entertainerProfiles.userId,
+      entertainerPublicationState: entertainerProfiles.publicationState,
     })
     .from(bookings)
     .innerJoin(venues, eq(venues.id, bookings.venueId))

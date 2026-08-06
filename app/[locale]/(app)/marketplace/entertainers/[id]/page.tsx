@@ -2,8 +2,10 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { DirectRequestForm } from "@/src/components/direct-request-form";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
+import { ProfileDocumentList } from "@/src/components/profile-document-list";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
+import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
 import {
   ENTERTAINER_CATEGORIES,
@@ -147,6 +149,14 @@ export default async function EntertainerDetailPage({ params }: Props) {
     });
   }
 
+  // Discovery only loads approved profiles; keep list/download gates aligned.
+  const visibleDocuments = await listDocumentsVisibleToActor({
+    actor: access.actor,
+    entertainerProfileId: profile.id,
+    ownerUserId: profile.userId,
+    publicationState: "approved",
+  });
+
   return (
     <PublicProfileView
       backHref="/marketplace/entertainers"
@@ -174,6 +184,16 @@ export default async function EntertainerDetailPage({ params }: Props) {
       videoTitle={t("videoTitle")}
       linksTitle={t("linksTitle")}
     >
+      <ProfileDocumentList
+        locale={locale}
+        documents={visibleDocuments.map((doc) => ({
+          id: doc.id,
+          title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+          visibility: doc.visibility,
+          sizeBytes: doc.sizeBytes,
+        }))}
+      />
+
       {!isOwnProfile && operableVenues.length > 0 ? (
         <div id="direct-request" className="scroll-mt-24">
           <DirectRequestForm

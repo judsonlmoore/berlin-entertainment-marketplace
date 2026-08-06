@@ -10,6 +10,8 @@ type Props = {
   locale: "en" | "de";
 };
 
+type SelectableRole = "entertainer" | "venue";
+
 export function RoleSelectionForm({ locale }: Props) {
   const t = useTranslations("roleSelection");
   const errors = useTranslations("errors");
@@ -17,9 +19,7 @@ export function RoleSelectionForm({ locale }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<
-    "entertainer" | "venue" | null
-  >(null);
+  const [selectedRole, setSelectedRole] = useState<SelectableRole | null>(null);
 
   return (
     <form
@@ -55,7 +55,9 @@ export function RoleSelectionForm({ locale }: Props) {
         });
       }}
     >
-      <div className="grid gap-4">
+      <fieldset className="grid gap-4" disabled={pending}>
+        <legend className="sr-only">{t("title")}</legend>
+
         <label
           className={`flex cursor-pointer items-start gap-4 rounded-lg border-2 p-4 transition-colors ${
             selectedRole === "entertainer"
@@ -72,9 +74,9 @@ export function RoleSelectionForm({ locale }: Props) {
             className="mt-1"
           />
           <div className="flex-1">
-            <div className="font-semibold">{t("entertainer")}</div>
+            <div className="font-semibold">{t("talent")}</div>
             <div className="mt-1 text-sm text-[var(--text-muted)]">
-              {t("entertainerDesc")}
+              {t("talentDesc")}
             </div>
           </div>
         </label>
@@ -95,13 +97,46 @@ export function RoleSelectionForm({ locale }: Props) {
             className="mt-1"
           />
           <div className="flex-1">
-            <div className="font-semibold">{t("venue")}</div>
+            <div className="font-semibold">{t("buyer")}</div>
             <div className="mt-1 text-sm text-[var(--text-muted)]">
-              {t("venueDesc")}
+              {t("buyerDesc")}
             </div>
           </div>
         </label>
-      </div>
+
+        {/* Demand probe: agency is visible but not selectable until roster orgs ship. */}
+        <div
+          className="flex cursor-not-allowed items-start gap-4 rounded-lg border-2 border-dashed border-[var(--rule)] bg-[var(--background)] p-4 opacity-70"
+          aria-disabled="true"
+        >
+          <input
+            type="radio"
+            name="role"
+            value="agency"
+            disabled
+            tabIndex={-1}
+            className="mt-1"
+            aria-describedby="agency-coming-soon"
+          />
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-[var(--text-muted)]">
+                {t("agency")}
+              </span>
+              <span
+                id="agency-coming-soon"
+                className="rounded-sm bg-[var(--rule)] px-1.5 py-0.5 text-[0.6875rem] font-medium tracking-wide text-[var(--text-muted)] uppercase"
+              >
+                {t("comingSoon")}
+              </span>
+            </div>
+            <div className="mt-1 text-sm text-[var(--text-muted)]">
+              {t("agencyDesc")}
+            </div>
+            <p className="mt-2 text-sm text-[var(--ink)]">{t("agencyHint")}</p>
+          </div>
+        </div>
+      </fieldset>
 
       {error ? (
         <p role="alert" className="text-sm text-red-800">

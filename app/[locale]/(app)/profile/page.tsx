@@ -1,9 +1,9 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
+import { DocumentEditor } from "@/src/components/document-editor";
 import { EntertainerProfileForm } from "@/src/components/entertainer-profile-form";
 import { PortfolioEditor } from "@/src/components/portfolio-editor";
 import { ProfileRoleTabs } from "@/src/components/profile-role-tabs";
-import { RiderUploadForm } from "@/src/components/rider-upload-form";
 import { VenueProfileForm } from "@/src/components/venue-profile-form";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { listRiderFilesForProfile } from "@/src/db/queries/admin-ops";
@@ -16,7 +16,7 @@ import { getDb } from "@/src/db/client";
 import { users } from "@/src/db/schema";
 import { eq } from "drizzle-orm";
 import { can } from "@/src/domain/permissions";
-import { isFileStoreConfigured } from "@/src/integrations/files";
+import { isDocumentStoreConfigured } from "@/src/integrations/document-file-store";
 import { Link } from "@/src/i18n/navigation";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 
@@ -75,7 +75,7 @@ export default async function ProfilePage({ params }: Props) {
     entertainerProfile && process.env.DATABASE_URL
       ? await listPortfolioItemsForProfile(entertainerProfile.id)
       : [];
-  const storeConfigured = isFileStoreConfigured();
+  const storeConfigured = isDocumentStoreConfigured();
 
   const profileTitle = showEntertainer
     ? (entertainerProfile?.actName ?? t("entertainerTitle"))
@@ -124,39 +124,22 @@ export default async function ProfilePage({ params }: Props) {
       />
 
       <div className="panel p-6">
-        <h3 className="text-sm font-semibold tracking-[0.12em] uppercase">
-          {t("riderPlaceholderTitle")}
-        </h3>
-        <p className="mt-2 text-sm text-[var(--text-muted)]">
-          {t("riderPlaceholderBody")}
-        </p>
-        {riderFiles.length > 0 ? (
-          <ul className="mt-3 grid gap-1 text-sm">
-            {riderFiles.map((file) => (
-              <li key={file.id}>
-                <a
-                  href={`/api/riders/${file.id}`}
-                  className="text-[var(--primary)]"
-                >
-                  {file.originalFilename ?? t("riderDownload")}
-                </a>
-                {" · "}
-                {file.scanStatus} · {file.sizeBytes} B ·{" "}
-                {file.createdAt.toISOString().slice(0, 10)}
-              </li>
-            ))}
-          </ul>
-        ) : null}
         {entertainerProfile ? (
-          <div className="mt-4">
-            <RiderUploadForm
-              locale={locale as "en" | "de"}
-              entertainerProfileId={entertainerProfile.id}
-              storeConfigured={storeConfigured}
-            />
-          </div>
+          <DocumentEditor
+            locale={locale as "en" | "de"}
+            entertainerProfileId={entertainerProfile.id}
+            storeConfigured={storeConfigured}
+            documents={riderFiles.map((file) => ({
+              id: file.id,
+              title: file.title,
+              originalFilename: file.originalFilename,
+              visibility: file.visibility,
+              sortOrder: file.sortOrder,
+              sizeBytes: file.sizeBytes,
+            }))}
+          />
         ) : (
-          <p className="mt-3 text-sm text-[var(--text-muted)]">
+          <p className="text-sm text-[var(--text-muted)]">
             {t("riderNeedProfile")}
           </p>
         )}

@@ -119,8 +119,8 @@
 .page-title {
   font-family: var(--font-ui), system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
 }
 
 .eyebrow {

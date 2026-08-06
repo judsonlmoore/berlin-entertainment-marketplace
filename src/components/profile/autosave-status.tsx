@@ -16,7 +16,7 @@ export function AutosaveStatus({ phase, errorMessage }: Props) {
 
   switch (phase) {
     case "dirty":
-      label = t("autosavePending");
+      label = t("autosaveUnsaved");
       tone = "muted";
       break;
     case "saving":
@@ -51,7 +51,10 @@ export function AutosaveStatus({ phase, errorMessage }: Props) {
   if (!label.trim()) return null;
 
   return (
-    <p aria-live="polite" className={`text-sm font-medium ${className}`}>
+    <p
+      aria-live="polite"
+      className={`inline-flex min-h-9 items-center text-sm font-medium ${className}`}
+    >
       {label}
     </p>
   );

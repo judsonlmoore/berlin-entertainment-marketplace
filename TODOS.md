@@ -2,29 +2,17 @@
 
 ## Product / Phase A
 
-### Private post-gig feedback survey
+### Entertainer profile document library (PDF)
 
-**What:** After a completed gig, collect private feedback from both parties (no public reviews).
+**What:** Titled PDF documents on entertainer profiles with portfolio-like editor (drag/drop, delete, reorder), real private Vercel Blob storage, and visibility `marketplace` | `engagement` (pipeline shortlisted/accepted→confirmed until `endsAt` past). Surfaces: owner editor (all), discovery (marketplace only), booking detail + profile (all docs the viewer may access).
 
-**Why:** Closes the reliability loop for Tom’s first nights without shipping a public review system the product explicitly rejects.
+**Why:** Tom needs downloadable tech packs without leaving Salon; replaces vague “tech notes ≥48h notify” with actual files. Fixes stub FileStore that ignored `BLOB_READ_WRITE_TOKEN`.
 
-**Context:** Approved design (“Tom’s first reliable night,” 2026-08-05): no public reviews; private surveys after completed gigs only. Deferred from PR #22 Step 0 so support-mode / profiles / portfolio could ship first. Start from booking → `completed` transition, existing notification patterns, DE/EN copy. Do not add public directories or star ratings.
-
-**Effort:** M
-**Priority:** P1
-**Depends on:** Stable booking completion state; not blocked by PR #22 support overlay
-
-### Tech notes on booking detail (≥48h)
-
-**What:** Let venue and entertainer capture/share technical notes on the booking (PA, stage, power, timing) with a clear expectation ≥48h before the gig.
-
-**Why:** Prevents last-minute tech surprises that break the audience promise even when casting worked (Tom / Electric Social pain).
-
-**Context:** Design Phase A checklist item; not in PR #22. Distinct from Phase B “tech checklist gate” (hard block). Start from booking detail UI + notification center; DE/EN copy; both parties can read/write with audit. Do not invent escrow or chat.
+**Context:** Eng-review 2026-08-06 locked: portfolio-style server upload; shared private-Blob helper; dedicated DocumentEditor (not merged into PortfolioEditor); one access context then filter lists; entertainer-only this PR; no ≥48h cron; no booking free-text notes. Default visibility for any migrated rows = `engagement`. Start from `rider_files` + `portfolio-editor` patterns + `canAccessRiderFile` rewrite.
 
 **Effort:** M
 **Priority:** P1
-**Depends on:** Existing booking detail surfaces; independent of support-mode PR
+**Depends on:** `BLOB_READ_WRITE_TOKEN` provisioned (portfolio already uses it)
 
 ## Product / Phase B
 
@@ -40,7 +28,31 @@
 **Priority:** P3
 **Depends on:** Phase A proof (real venue night completed on Salon)
 
+### Shared free-text booking tech notes + waiver
+
+**What:** Optional booking-scoped free-text notes (PA/stage/power/timing) and/or explicit “tech reviewed / waived” stamp.
+
+**Why:** PDFs cover packs; night-specific scribbles or a waiver may still help after first pilots if PDF-only isn’t enough.
+
+**Context:** Cut from eng-review document-library scope (2026-08-06). Distinct from Phase B checklist gate. Revisit after Tom’s first night feedback.
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** Entertainer document library shipped + Phase A pilot feedback
+
 ## Platform
+
+### Venue PDF document library
+
+**What:** Same titled PDF library for venue profiles (house plot, power, load-in packs) with marketplace vs engagement visibility.
+
+**Why:** Symmetric prep for acts booking a room; venues currently only have text production notes.
+
+**Context:** Deferred from eng-review D7 (entertainer-only first). Needs XOR owner on documents (venue vs entertainer) after entertainer path is green.
+
+**Effort:** M
+**Priority:** P3
+**Depends on:** Entertainer document library shipped
 
 ### City-scoped expansion (beyond Berlin HQ)
 
@@ -55,3 +67,17 @@
 **Depends on:** Phase A proof; Berlin as sole launch city until then
 
 ## Completed
+
+### Private post-gig feedback survey
+
+**What:** After a completed gig, collect private feedback from both parties (no public reviews).
+
+**Why:** Closes the reliability loop for Tom’s first nights without shipping a public review system the product explicitly rejects.
+
+**Context:** Approved design (“Tom’s first reliable night,” 2026-08-05). Implemented on `staging`: `post_gig_surveys`, daily cron reconcile, booking detail form, notification type, DE/EN copy. Gig past = confirmed + `endsAt <= now`. Apply migration `0009` on deploy.
+
+**Effort:** M
+**Priority:** P1
+**Depends on:** Stable booking completion state
+
+**Completed:** staging (2026-08-06) — pending merge/QA on main as needed

@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/src/auth";
-import { getActorContext } from "@/src/db/queries/actor";
 import {
   canAccessRiderFile,
   getRiderFileForDownload,
 } from "@/src/db/queries/rider-access";
 import { hasMarketplaceAccess } from "@/src/domain/approval";
-import { getFileStore, isFileStoreConfigured } from "@/src/integrations/files";
+import {
+  isDocumentStoreConfigured,
+  loadDocumentFile,
+} from "@/src/integrations/document-file-store";
+import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 
 type Props = { params: Promise<{ id: string }> };
 
+/** Non-owners may only download scanned-clean (or legacy awaiting_blob stub) files. */
 const DOWNLOADABLE_SCAN_STATES = new Set(["clean", "awaiting_blob"]);
 
-/** Authorized rider download — short-lived read URL, never permanent public links. */
-export async function GET(_request: Request, { params }: Props) {
+/** Authorized document download — streams private bytes; never permanent public URLs. */
+export async function GET(request: Request, { params }: Props) {
   const { id } = await params;
+  const inline = new URL(request.url).searchParams.get("inline") === "1";
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -22,20 +27,22 @@ export async function GET(_request: Request, { params }: Props) {
       { status: 401 },
     );
   }
-  if (!isFileStoreConfigured()) {
+  if (!isDocumentStoreConfigured()) {
     return NextResponse.json(
       { ok: false, error: "blob_unconfigured" },
       { status: 503 },
     );
   }
 
-  const actor = await getActorContext(session.user.id);
-  if (!actor) {
+  const resolved = await resolveEffectiveActor(session.user.id);
+  if (!resolved) {
     return NextResponse.json(
       { ok: false, error: "unauthorized" },
       { status: 401 },
     );
   }
+  const { actor } = resolved;
+
   if (
     !actor.isPlatformStaff &&
     (actor.accountStatus === null || !hasMarketplaceAccess(actor.accountStatus))
@@ -54,7 +61,7 @@ export async function GET(_request: Request, { params }: Props) {
     );
   }
 
-  const isOwner = rider.ownerUserId === session.user.id;
+  const isOwner = rider.ownerUserId === actor.userId;
   if (
     !actor.isPlatformStaff &&
     !isOwner &&
@@ -80,15 +87,29 @@ export async function GET(_request: Request, { params }: Props) {
     );
   }
 
-  const store = getFileStore();
-  const readUrl = await store.createAuthorizedReadUrl(rider.blobKey);
-  const filename =
-    rider.originalFilename?.trim() || `rider-${rider.id.slice(0, 8)}.pdf`;
+  const loaded = await loadDocumentFile(rider.blobKey);
+  if (!loaded) {
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      { status: 404 },
+    );
+  }
 
-  return NextResponse.redirect(readUrl, {
+  const filename =
+    rider.title?.trim() ||
+    rider.originalFilename?.trim() ||
+    `document-${rider.id.slice(0, 8)}.pdf`;
+  const safeName = filename.replace(/"/g, "").endsWith(".pdf")
+    ? filename.replace(/"/g, "")
+    : `${filename.replace(/"/g, "")}.pdf`;
+
+  return new NextResponse(Buffer.from(loaded.bytes), {
+    status: 200,
     headers: {
+      "Content-Type": loaded.mimeType || "application/pdf",
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename="${safeName}"`,
       "Cache-Control": "private, no-store",
-      "Content-Disposition": `attachment; filename="${filename.replace(/"/g, "")}"`,
+      "Content-Length": String(loaded.bytes.byteLength),
     },
   });
 }
