@@ -5,7 +5,8 @@ export const ONBOARDING_CHECKLIST_STEPS = [
   "enquiry",
 ] as const;
 
-export type OnboardingChecklistStep = (typeof ONBOARDING_CHECKLIST_STEPS)[number];
+export type OnboardingChecklistStep =
+  (typeof ONBOARDING_CHECKLIST_STEPS)[number];
 
 export type OnboardingChecklistProgress = {
   published: boolean;

@@ -338,7 +338,9 @@ export async function updateProfileEnquiryProposal(input: {
         ...(input.proposedFormat !== undefined
           ? { proposedFormat: input.proposedFormat?.trim() || null }
           : {}),
-        ...(input.note !== undefined ? { note: input.note?.trim() || null } : {}),
+        ...(input.note !== undefined
+          ? { note: input.note?.trim() || null }
+          : {}),
         updatedAt: new Date(),
       })
       .where(eq(profileEnquiries.id, enquiry.id));

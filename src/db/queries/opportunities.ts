@@ -117,7 +117,10 @@ export async function listOpenCallsForVenue(input: {
     .orderBy(opportunities.startsAt);
 
   if (!input.entertainerProfileId || rows.length === 0) {
-    return rows.map((row) => ({ ...row, ownApplicationState: null as string | null }));
+    return rows.map((row) => ({
+      ...row,
+      ownApplicationState: null as string | null,
+    }));
   }
 
   const ownApps = await db

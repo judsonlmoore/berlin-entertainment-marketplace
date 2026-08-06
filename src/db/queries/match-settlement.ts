@@ -125,11 +125,7 @@ export async function settleMatchAcceptance(
     });
   }
 
-  if (
-    !input.origin.bookingId ||
-    !input.startsAt ||
-    !input.endsAt
-  ) {
+  if (!input.origin.bookingId || !input.startsAt || !input.endsAt) {
     return;
   }
 
