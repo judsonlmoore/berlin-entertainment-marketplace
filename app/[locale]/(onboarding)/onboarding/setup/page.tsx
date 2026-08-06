@@ -1,14 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { setRequestLocale } from "next-intl/server";
 import { redirect } from "@/src/i18n/navigation";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import {
-  entertainerProfiles,
-  userRoles,
-  venueMemberships,
-  venues,
-} from "@/src/db/schema/marketplace";
+import { userRoles } from "@/src/db/schema/marketplace";
 import {
   OnboardingSetupWizard,
   type EntertainerDraft,
@@ -31,9 +26,10 @@ export default async function OnboardingSetupPage({ params }: Props) {
   }
 
   const userId = session!.user!.id!;
+  const isPlatformStaff = Boolean(session!.user!.isPlatformStaff);
   const destination = await resolveOnboardingDestination({
     userId,
-    isPlatformStaff: Boolean(session!.user!.isPlatformStaff),
+    isPlatformStaff,
     sessionRoles: session!.user!.roles,
   });
 
@@ -44,9 +40,9 @@ export default async function OnboardingSetupPage({ params }: Props) {
     });
   }
 
-  // Profile already created — never re-show onboarding setup.
-  if (destination === "none") {
-    redirect({ href: "/profile", locale: locale as AppLocale });
+  // Staff skip the member onboarding ceremony.
+  if (isPlatformStaff) {
+    redirect({ href: "/marketplace", locale: locale as AppLocale });
   }
 
   const db = getDb();
@@ -78,33 +74,10 @@ export default async function OnboardingSetupPage({ params }: Props) {
     shortDescription: "",
   };
 
-  if (setupRole === "entertainer") {
-    const profile = await db.query.entertainerProfiles.findFirst({
-      where: eq(entertainerProfiles.userId, userId),
-      columns: { id: true },
-    });
-    if (profile) {
-      redirect({ href: "/profile", locale: locale as AppLocale });
-    }
-  } else {
-    const membership = await db.query.venueMemberships.findFirst({
-      where: and(
-        eq(venueMemberships.userId, userId),
-        eq(venueMemberships.status, "active"),
-        eq(venueMemberships.role, "owner"),
-      ),
-      columns: { venueId: true },
-    });
-    if (membership) {
-      const venue = await db.query.venues.findFirst({
-        where: eq(venues.id, membership.venueId),
-        columns: { id: true },
-      });
-      if (venue) {
-        redirect({ href: "/profile", locale: locale as AppLocale });
-      }
-    }
-  }
+  // After basics save, the server action revalidates and remounts this page.
+  // Profile existence means destination === "none" — keep the completion step
+  // until the user clicks Continue (do not auto-redirect to /profile).
+  const initialPhase = destination === "none" ? "done" : "basics";
 
   return (
     <OnboardingSetupWizard
@@ -113,6 +86,7 @@ export default async function OnboardingSetupPage({ params }: Props) {
       accountEmail={accountEmail}
       entertainerDraft={entertainerDraft}
       venueDraft={venueDraft}
+      initialPhase={initialPhase}
     />
   );
 }
