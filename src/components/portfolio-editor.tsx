@@ -73,17 +73,18 @@ function SortableImageTile({
     <li
       ref={setNodeRef}
       style={style}
-      className={`relative overflow-hidden rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--canvas)] ${
+      className={`relative cursor-grab overflow-hidden rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--canvas)] ${
         isHero ? "aspect-[16/9]" : "aspect-square"
       } ${isDragging ? "z-10 opacity-90" : ""}`}
+      {...attributes}
+      {...listeners}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={`/api/portfolio/${item.id}`}
         alt={item.altText || item.caption || t("portfolioImageAltFallback")}
-        className="h-full w-full object-cover"
-        {...attributes}
-        {...listeners}
+        className="pointer-events-none h-full w-full object-cover"
+        draggable={false}
       />
       {isHero ? (
         <span className="absolute top-2 left-2 z-10 rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
@@ -187,6 +188,7 @@ export function PortfolioEditor({
     "idle" | "valid" | "invalid"
   >("idle");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
 
   const images = [...items]
     .filter((item) => item.kind === "image")
@@ -198,6 +200,10 @@ export function PortfolioEditor({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!videoOpen) return;
@@ -352,6 +358,49 @@ export function PortfolioEditor({
               <span className="absolute inset-0 bg-[rgba(20,24,22,0.45)]" />
               <span className="absolute inset-0 m-auto size-6 animate-spin rounded-full border-2 border-white/35 border-t-white" />
             </div>
+          ) : null}
+        </div>
+      ) : !mounted ? (
+        <div className="grid gap-3">
+          {images[0] ? (
+            <ul className="grid gap-3">
+              <li className="relative aspect-[16/9] overflow-hidden rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--canvas)]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/portfolio/${images[0].id}`}
+                  alt={
+                    images[0].altText ||
+                    images[0].caption ||
+                    t("portfolioImageAltFallback")
+                  }
+                  className="h-full w-full object-cover"
+                />
+                <span className="absolute top-2 left-2 z-10 rounded-full border border-[var(--rule)] bg-[var(--surface)]/95 px-2.5 py-1 text-[0.65rem] font-semibold tracking-[0.08em] text-[var(--ink)] uppercase">
+                  {t("portfolioHero")}
+                </span>
+              </li>
+            </ul>
+          ) : null}
+          {images.length > 1 ? (
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {images.slice(1).map((item) => (
+                <li
+                  key={item.id}
+                  className="aspect-square overflow-hidden rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--canvas)]"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`/api/portfolio/${item.id}`}
+                    alt={
+                      item.altText ||
+                      item.caption ||
+                      t("portfolioImageAltFallback")
+                    }
+                    className="h-full w-full object-cover"
+                  />
+                </li>
+              ))}
+            </ul>
           ) : null}
         </div>
       ) : (
