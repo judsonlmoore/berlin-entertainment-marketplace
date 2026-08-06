@@ -749,8 +749,7 @@ export async function updateVenue(
           .update(venueSpaces)
           .set({
             name:
-              parsed.data.roomName?.trim() ||
-              `${parsed.data.name} — Main room`,
+              parsed.data.roomName?.trim() || `${parsed.data.name} — Main room`,
             capacity: parsed.data.capacity,
             stageDimensions: parsed.data.roomStageDimensions?.trim() || null,
             updatedAt: new Date(),

@@ -24,10 +24,7 @@ function parseAudience(value: unknown): HelpAudience {
   return "public";
 }
 
-function loadArticleFile(
-  slug: string,
-  locale: AppLocale,
-): HelpArticle | null {
+function loadArticleFile(slug: string, locale: AppLocale): HelpArticle | null {
   const filePath = path.join(CONTENT_DIR, `${slug}.${locale}.md`);
   if (!fs.existsSync(filePath)) return null;
 

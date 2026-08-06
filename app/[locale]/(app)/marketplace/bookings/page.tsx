@@ -64,9 +64,7 @@ export default async function BookingsInboxPage({
     );
   }
 
-  const operableVenueIds = access.actor.venueId
-    ? [access.actor.venueId]
-    : [];
+  const operableVenueIds = access.actor.venueId ? [access.actor.venueId] : [];
 
   const [leads, incomingEnquiries, outgoingEnquiries, incomingDr, outgoingDr] =
     await Promise.all([
@@ -88,12 +86,10 @@ export default async function BookingsInboxPage({
     ]);
 
   const pendingVenueEnquiries = incomingEnquiries.filter(
-    (e) =>
-      e.state === "pending" && e.submittedByUserId === e.entertainerUserId,
+    (e) => e.state === "pending" && e.submittedByUserId === e.entertainerUserId,
   );
   const pendingActConnectionRequests = outgoingEnquiries.filter(
-    (e) =>
-      e.state === "pending" && e.submittedByUserId !== e.entertainerUserId,
+    (e) => e.state === "pending" && e.submittedByUserId !== e.entertainerUserId,
   );
   const pendingEnquiriesToReview = [
     ...pendingVenueEnquiries,
@@ -157,48 +153,48 @@ export default async function BookingsInboxPage({
               const initiatedByAct =
                 enquiry.submittedByUserId === enquiry.entertainerUserId;
               return (
-              <li
-                key={enquiry.id}
-                className="border border-[var(--rule)] p-4 text-sm"
-              >
-                <p className="font-medium">
-                  {initiatedByAct
-                    ? `${enquiry.actName} → ${enquiry.venueName}`
-                    : `${enquiry.venueName} → ${enquiry.actName}`}
-                </p>
-                {enquiry.note ? (
-                  <p className="mt-1 text-[var(--text-muted)]">
-                    {enquiry.note}
-                  </p>
-                ) : null}
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <Link
-                    href={
-                      initiatedByAct
-                        ? `/marketplace/entertainers/${enquiry.entertainerProfileId}`
-                        : `/marketplace/venues/${enquiry.venueId}`
-                    }
-                    className="text-sm font-medium underline"
-                  >
+                <li
+                  key={enquiry.id}
+                  className="border border-[var(--rule)] p-4 text-sm"
+                >
+                  <p className="font-medium">
                     {initiatedByAct
-                      ? leadsT("viewActProfile")
-                      : leadsT("viewVenueProfile")}
-                  </Link>
-                  {enquiry.bookingId ? (
+                      ? `${enquiry.actName} → ${enquiry.venueName}`
+                      : `${enquiry.venueName} → ${enquiry.actName}`}
+                  </p>
+                  {enquiry.note ? (
+                    <p className="mt-1 text-[var(--text-muted)]">
+                      {enquiry.note}
+                    </p>
+                  ) : null}
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
                     <Link
-                      href={`/marketplace/bookings/${enquiry.bookingId}`}
+                      href={
+                        initiatedByAct
+                          ? `/marketplace/entertainers/${enquiry.entertainerProfileId}`
+                          : `/marketplace/venues/${enquiry.venueId}`
+                      }
                       className="text-sm font-medium underline"
                     >
-                      {t("open")}
+                      {initiatedByAct
+                        ? leadsT("viewActProfile")
+                        : leadsT("viewVenueProfile")}
                     </Link>
-                  ) : null}
-                  <ProfileEnquiryRespondButtons
-                    locale={locale as "en" | "de"}
-                    enquiryId={enquiry.id}
-                    state={enquiry.state}
-                  />
-                </div>
-              </li>
+                    {enquiry.bookingId ? (
+                      <Link
+                        href={`/marketplace/bookings/${enquiry.bookingId}`}
+                        className="text-sm font-medium underline"
+                      >
+                        {t("open")}
+                      </Link>
+                    ) : null}
+                    <ProfileEnquiryRespondButtons
+                      locale={locale as "en" | "de"}
+                      enquiryId={enquiry.id}
+                      state={enquiry.state}
+                    />
+                  </div>
+                </li>
               );
             })}
           </ul>

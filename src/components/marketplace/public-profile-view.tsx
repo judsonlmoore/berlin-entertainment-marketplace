@@ -108,7 +108,7 @@ export function PublicProfileView({
         )}
 
         <div className="flex flex-col gap-4 border-t border-[var(--line)] px-5 py-6 sm:flex-row sm:items-end sm:justify-between sm:gap-6 sm:px-8 sm:py-8">
-          <div className="min-w-0 grid gap-2">
+          <div className="grid min-w-0 gap-2">
             <p className="eyebrow text-[0.72rem] font-semibold tracking-[0.14em] uppercase">
               {eyebrow}
             </p>

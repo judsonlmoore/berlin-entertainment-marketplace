@@ -8,7 +8,10 @@ import {
   requireDiscoveryAccess,
 } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
-import { findActiveProfileEnquiry, findRecentProfileEnquiry } from "@/src/db/queries/profile-enquiries";
+import {
+  findActiveProfileEnquiry,
+  findRecentProfileEnquiry,
+} from "@/src/db/queries/profile-enquiries";
 import { listOpenCallsForVenue } from "@/src/db/queries/opportunities";
 import { getDb } from "@/src/db/client";
 import { bookings, entertainerProfiles } from "@/src/db/schema/marketplace";

@@ -5,7 +5,11 @@ import {
   parseSubcategory,
   parseVenueType,
 } from "./profile-taxonomy";
-import { parseLanguageCodes, serializeLanguageCodes, formatLanguageList } from "./languages";
+import {
+  parseLanguageCodes,
+  serializeLanguageCodes,
+  formatLanguageList,
+} from "./languages";
 import { joinSocialPrefix, validatePlatformUrl } from "./social-urls";
 import {
   validateBerlinPostalCode,

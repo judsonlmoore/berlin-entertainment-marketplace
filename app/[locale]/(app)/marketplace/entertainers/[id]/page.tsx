@@ -9,9 +9,7 @@ import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklis
 import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
 import { listVenueActConnectionStatuses } from "@/src/db/queries/profile-enquiries";
-import {
-  formatLanguageList,
-} from "@/src/domain/languages";
+import { formatLanguageList } from "@/src/domain/languages";
 import {
   ENTERTAINER_CATEGORIES,
   getCategoryNode,

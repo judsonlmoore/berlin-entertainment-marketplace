@@ -8,7 +8,10 @@ import {
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401 },
+    );
   }
 
   if (!isGooglePlacesConfigured()) {
@@ -23,7 +26,12 @@ export async function GET(request: Request) {
   const sessionToken = (searchParams.get("sessionToken") ?? "").trim();
   const languageCode = searchParams.get("lang") === "de" ? "de" : "en";
 
-  if (!placeId || placeId.length > 256 || !sessionToken || sessionToken.length > 128) {
+  if (
+    !placeId ||
+    placeId.length > 256 ||
+    !sessionToken ||
+    sessionToken.length > 128
+  ) {
     return NextResponse.json(
       { ok: false, error: "invalid_query" },
       { status: 400 },

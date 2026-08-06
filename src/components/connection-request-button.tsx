@@ -120,7 +120,10 @@ export function ConnectionRequestButton({
         </p>
       ) : null}
       {error ? (
-        <p role="alert" className="max-w-xs text-right text-sm text-[var(--danger)]">
+        <p
+          role="alert"
+          className="max-w-xs text-right text-sm text-[var(--danger)]"
+        >
           {error}
         </p>
       ) : null}

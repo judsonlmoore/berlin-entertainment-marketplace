@@ -126,7 +126,9 @@ export function VenuePlacesSearch({ locale, onPrefill, disabled }: Props) {
 
   if (!configured) {
     return (
-      <p className="text-sm text-[var(--text-muted)]">{t("placesNotConfigured")}</p>
+      <p className="text-sm text-[var(--text-muted)]">
+        {t("placesNotConfigured")}
+      </p>
     );
   }
 
@@ -156,7 +158,9 @@ export function VenuePlacesSearch({ locale, onPrefill, disabled }: Props) {
         />
       </label>
       {loading ? (
-        <p className="text-sm text-[var(--text-muted)]">{t("placesSearching")}</p>
+        <p className="text-sm text-[var(--text-muted)]">
+          {t("placesSearching")}
+        </p>
       ) : null}
       {error ? (
         <p role="alert" className="text-sm text-[var(--danger)]">
@@ -177,7 +181,9 @@ export function VenuePlacesSearch({ locale, onPrefill, disabled }: Props) {
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => void selectPrediction(row)}
               >
-                <span className="font-medium text-[var(--ink)]">{row.label}</span>
+                <span className="font-medium text-[var(--ink)]">
+                  {row.label}
+                </span>
                 {row.secondaryText ? (
                   <span className="text-[var(--text-muted)]">
                     {row.secondaryText}
@@ -188,7 +194,9 @@ export function VenuePlacesSearch({ locale, onPrefill, disabled }: Props) {
           ))}
         </ul>
       ) : null}
-      <p className="text-sm text-[var(--text-muted)]">{t("placesSearchHint")}</p>
+      <p className="text-sm text-[var(--text-muted)]">
+        {t("placesSearchHint")}
+      </p>
     </div>
   );
 }

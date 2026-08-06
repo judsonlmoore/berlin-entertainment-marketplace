@@ -485,9 +485,7 @@ export function PortfolioEditor({
   function persistOrder(nextImages: PortfolioItemRow[]) {
     if (!owner) {
       setMediaError(
-        venueId
-          ? t("portfolioNeedVenue")
-          : t("portfolioNeedProfile"),
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
       );
       return;
     }
@@ -576,9 +574,7 @@ export function PortfolioEditor({
 
     if (!owner) {
       setMediaError(
-        venueId
-          ? t("portfolioNeedVenue")
-          : t("portfolioNeedProfile"),
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
       );
       return;
     }
@@ -684,9 +680,7 @@ export function PortfolioEditor({
     }
     if (!owner) {
       setVideoError(
-        venueId
-          ? t("portfolioNeedVenue")
-          : t("portfolioNeedProfile"),
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
       );
       return;
     }
@@ -721,9 +715,7 @@ export function PortfolioEditor({
   function removeImage(itemId: string) {
     if (!owner) {
       setMediaError(
-        venueId
-          ? t("portfolioNeedVenue")
-          : t("portfolioNeedProfile"),
+        venueId ? t("portfolioNeedVenue") : t("portfolioNeedProfile"),
       );
       return;
     }

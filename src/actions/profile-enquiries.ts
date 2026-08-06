@@ -160,9 +160,7 @@ export async function sendVenueConnectionRequestAction(input: {
     if (!parsed.success) {
       throw new AppError("validation", "Invalid connection request");
     }
-    if (
-      !can(actor, "direct_request.send", { venueId: parsed.data.venueId })
-    ) {
+    if (!can(actor, "direct_request.send", { venueId: parsed.data.venueId })) {
       throw new AppError("forbidden", "Published venue required to connect");
     }
 

@@ -1,9 +1,6 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
-import {
-  entertainerProfiles,
-  venues,
-} from "@/src/db/schema/marketplace";
+import { entertainerProfiles, venues } from "@/src/db/schema/marketplace";
 import type { SupportEntityType } from "@/src/lib/support-session";
 
 export type ResolvedSupportEntity = {

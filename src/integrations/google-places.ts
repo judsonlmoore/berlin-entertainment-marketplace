@@ -65,8 +65,7 @@ export function mapPlaceDetailsToPrefill(input: {
     "";
 
   const subpremise = componentByType(components, "subpremise")?.longText ?? "";
-  const postalCode =
-    componentByType(components, "postal_code")?.longText ?? "";
+  const postalCode = componentByType(components, "postal_code")?.longText ?? "";
   const district =
     componentByType(components, "sublocality_level_1")?.longText ||
     componentByType(components, "sublocality")?.longText ||
@@ -117,13 +116,21 @@ export function mapGoogleTypesToVenueType(types: string[]): string {
   ) {
     return "theatre-stage";
   }
-  if (set.has("museum") || set.has("art_gallery") || set.has("tourist_attraction")) {
+  if (
+    set.has("museum") ||
+    set.has("art_gallery") ||
+    set.has("tourist_attraction")
+  ) {
     return "gallery-museum";
   }
   if (set.has("park") || set.has("stadium") || set.has("campground")) {
     return "outdoor";
   }
-  if (set.has("church") || set.has("place_of_worship") || set.has("synagogue")) {
+  if (
+    set.has("church") ||
+    set.has("place_of_worship") ||
+    set.has("synagogue")
+  ) {
     return "cultural-community";
   }
   return "";

@@ -134,10 +134,7 @@ export async function removeProfileDocument(
     const { auditUserId, owner, db } = await requireDocumentOwner(parsed.data);
 
     const doc = await db.query.riderFiles.findFirst({
-      where: and(
-        eq(riderFiles.id, parsed.data.documentId),
-        owner.ownerFilter,
-      ),
+      where: and(eq(riderFiles.id, parsed.data.documentId), owner.ownerFilter),
     });
     if (!doc) {
       throw new AppError("not_found", "Document not found");
@@ -233,10 +230,7 @@ export async function updateProfileDocumentMeta(
     const { auditUserId, owner, db } = await requireDocumentOwner(parsed.data);
 
     const doc = await db.query.riderFiles.findFirst({
-      where: and(
-        eq(riderFiles.id, parsed.data.documentId),
-        owner.ownerFilter,
-      ),
+      where: and(eq(riderFiles.id, parsed.data.documentId), owner.ownerFilter),
     });
     if (!doc) {
       throw new AppError("not_found", "Document not found");

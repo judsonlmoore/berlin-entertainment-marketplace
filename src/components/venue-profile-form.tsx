@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { useTranslations } from "next-intl";
 import {
   createVenue,
@@ -183,9 +189,7 @@ export function VenueProfileForm({
     defaultValues?.addressLine2 ?? "",
   );
   const [district, setDistrict] = useState(defaultValues?.district ?? "");
-  const [postalCode, setPostalCode] = useState(
-    defaultValues?.postalCode ?? "",
-  );
+  const [postalCode, setPostalCode] = useState(defaultValues?.postalCode ?? "");
   const [latitude, setLatitude] = useState(defaultValues?.latitude ?? "");
   const [longitude, setLongitude] = useState(defaultValues?.longitude ?? "");
   const [googlePlaceId, setGooglePlaceId] = useState(
@@ -605,7 +609,9 @@ export function VenueProfileForm({
           <ParagraphTextField
             name="houseRules"
             label={t("houseRules")}
-            defaultValue={toParagraphEditorHtml(defaultValues?.houseRules ?? "")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.houseRules ?? "",
+            )}
             min={0}
             max={LONG_NOTES_MAX}
             size="short"
@@ -613,7 +619,9 @@ export function VenueProfileForm({
           <ParagraphTextField
             name="loadInNotes"
             label={t("loadInNotes")}
-            defaultValue={toParagraphEditorHtml(defaultValues?.loadInNotes ?? "")}
+            defaultValue={toParagraphEditorHtml(
+              defaultValues?.loadInNotes ?? "",
+            )}
             min={0}
             max={LONG_NOTES_MAX}
             size="short"
@@ -652,9 +660,7 @@ export function VenueProfileForm({
         </Section>
       </form>
 
-      {documentsSlot ? (
-        <div className="panel p-6">{documentsSlot}</div>
-      ) : null}
+      {documentsSlot ? <div className="panel p-6">{documentsSlot}</div> : null}
     </div>
   );
 }

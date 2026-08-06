@@ -123,10 +123,7 @@ function ownerInsertValues(owner: PortfolioOwner) {
   return { venueId: owner.venueId };
 }
 
-async function nextSortOrder(
-  db: ReturnType<typeof getDb>,
-  ownerFilter: SQL,
-) {
+async function nextSortOrder(db: ReturnType<typeof getDb>, ownerFilter: SQL) {
   const [row] = await db
     .select({ value: count() })
     .from(portfolioItems)
@@ -282,10 +279,7 @@ export async function removePortfolioItem(
     const { auditUserId, owner, db } = await requirePortfolioOwner(parsed.data);
 
     const item = await db.query.portfolioItems.findFirst({
-      where: and(
-        eq(portfolioItems.id, parsed.data.itemId),
-        owner.ownerFilter,
-      ),
+      where: and(eq(portfolioItems.id, parsed.data.itemId), owner.ownerFilter),
     });
     if (!item) {
       throw new AppError("not_found", "Portfolio item not found");
