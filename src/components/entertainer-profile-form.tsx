@@ -34,7 +34,6 @@ import {
   NOTES_MAX,
   TECHNICAL_MAX,
   TECHNICAL_MIN,
-  stripHtmlToPlain,
 } from "@/src/domain/sanitize-input";
 import { useRouter } from "@/src/i18n/navigation";
 
@@ -305,20 +304,6 @@ export function EntertainerProfileForm({
               className="field"
               value={actName}
               onChange={(event) => setActName(event.target.value)}
-              onPaste={(event) => {
-                const html = event.clipboardData.getData("text/html");
-                if (!html) return;
-                event.preventDefault();
-                const plain = stripHtmlToPlain(
-                  html || event.clipboardData.getData("text/plain"),
-                );
-                const input = event.currentTarget;
-                const start = input.selectionStart ?? actName.length;
-                const end = input.selectionEnd ?? actName.length;
-                const next =
-                  actName.slice(0, start) + plain + actName.slice(end);
-                setActName(next);
-              }}
             />
           </label>
         </Section>

@@ -9,7 +9,7 @@ function actor(overrides: Partial<ActorContext> = {}): ActorContext {
     roles: ["entertainer"],
     entertainerVerified: true,
     venueVerified: false,
-    venueMemberships: [],
+    venueId: null,
     ...overrides,
   };
 }
@@ -25,17 +25,17 @@ describe("role-segregated discovery surfaces", () => {
   it("blocks venue-only users from venue list permission", () => {
     const a = actor({
       roles: ["venue"],
-      venueMemberships: [{ venueId: "v1", role: "owner", status: "active" }],
+      venueId: "v1",
     });
     expect(can(a, "marketplace.discover")).toBe(true);
     expect(can(a, "discover.entertainers")).toBe(true);
     expect(can(a, "discover.venues")).toBe(false);
   });
 
-  it("treats active venue membership as venue operator for act discovery", () => {
+  it("treats owned venueId as venue operator for act discovery", () => {
     const a = actor({
       roles: [],
-      venueMemberships: [{ venueId: "v1", role: "member", status: "active" }],
+      venueId: "v1",
     });
     expect(can(a, "discover.entertainers")).toBe(true);
     expect(can(a, "discover.venues")).toBe(false);

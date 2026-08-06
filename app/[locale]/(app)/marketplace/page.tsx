@@ -48,9 +48,7 @@ export default async function MarketplacePage({ params }: Props) {
     );
   }
 
-  const venueIds = access.actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const venueIds = access.actor.venueId ? [access.actor.venueId] : [];
   const metrics = await getOverviewMetrics(access.actor);
   const recentApps = await listRecentApplicationsForVenues(venueIds, 5);
   const nextBooking = await getNextActiveBooking({

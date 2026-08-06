@@ -21,9 +21,7 @@ async function hasOpenEngagementWithProfile(input: {
   entertainerProfileId: string;
   now: Date;
 }): Promise<boolean> {
-  const venueIds = input.actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const venueIds = input.actor.venueId ? [input.actor.venueId] : [];
   if (venueIds.length === 0) return false;
 
   const db = getDb();

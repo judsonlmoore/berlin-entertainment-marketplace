@@ -56,19 +56,18 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 
 ### Venue and entertainer
 
-- `venues`: organization profile, address/location, type, audience, capacity, approval/publication state
-- `venue_memberships`: venue ID, user ID, `owner`/`member`, status; prevent removal of last active owner
-- `venue_spaces`: capacity and production-resource fields where a venue has multiple rooms
+- `venues`: buyer-owned profile (`owner_user_id` unique — 1 account → 1 venue), address/location, optional `google_place_id`, type, audience, capacity, publication state
+- `venue_spaces`: exactly one room per venue for calendar ownership (MVP); capacity/stage fields synced from the buyer profile
 - `entertainer_profiles`: act identity, category, description, group size, price range, duration, travel/production data
 - `portfolio_items`: metadata and restricted/public-to-members Blob key, not a public URL
-- `rider_files`: Blob key, owner, MIME type, size, checksum, scan status, uploader
+- `rider_files` / profile documents: Blob key, owner, MIME type, size, checksum, scan status, uploader
 
 ### Matching and booking
 
 - `opportunities`: venue/space, **kind** `dated` | `standing`, window (required for dated; null for standing), optional standing schedule text, budget, constraints, deadline, draft/open/closed/cancelled state (member UI: **open call**)
 - `applications`: opportunity + entertainer, message/quote, lifecycle; unique pair
 - `direct_requests`: venue + entertainer, proposed terms, lifecycle
-- `profile_enquiries`: act→venue undated (or optionally dated) profile submission; pending/interested/passed/withdrawn; one active pending/interested pair per act↔venue (partial unique index); 30-day pass cooldown before re-submit
+- `profile_enquiries`: act↔venue undated (or optionally dated) profile / connection request; pending/interested/passed/withdrawn; one active pending/interested pair per act↔venue (partial unique index); 7-day re-request cooldown after any request; 30-day pass cooldown before re-submit
 - `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI is the **Bookings** inbox (Pending/Open/Confirmed/Lost/Done)
 - `booking_terms`: immutable versioned snapshots with currency amounts in integer cents (required once formal terms exist; open undated bookings may negotiate dates/fees on the origin row first)
 - `contact_unlocks`: booking/application/request/profile_enquiry, parties, reason, timestamp; unlock on mutual opt-in (shortlist / accept / enquiry interested). Undated opens skip calendar holds until a performance window exists; adding dates later places requested holds.
@@ -102,7 +101,7 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 - Configure Auth.js in `src/auth.ts` with `@auth/drizzle-adapter` and the shared Drizzle client.
 - Persist sessions in the database. Use secure, HTTP-only, same-site cookies and trusted host/origin configuration.
 - Provider credentials remain environment configuration. A development-only demo bypass, if retained, must be explicit, impossible in production, visibly labeled, and never share production data.
-- Central permission functions evaluate authenticated user, account status, profile publication verification for contact, platform staff role, requested capability, organization membership, and record ownership.
+- Central permission functions evaluate authenticated user, account status, profile publication verification for contact, platform staff role, requested capability, and venue ownership (`venues.owner_user_id`).
 - Suspended users lose private reads/writes immediately; preserve bookings/audit history for staff handling.
 - Protect at data access and mutation boundaries. A route proxy may redirect early but is not sufficient authorization.
 - Prevent open redirects and account-linking ambiguity; normalize and verify provider email behavior.
@@ -116,13 +115,13 @@ Representative pages:
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
 - Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (pipeline + terms/agreement), `/calendar`, `/profile` (incl. open-call manage). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
 - Admin: `/[locale]/admin/reviews`, `/accounts/[id]`, `/operations`
-- Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, authorized download route
+- Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, `/api/places/autocomplete`, `/api/places/details`, authorized download route
 
 Discovery authorization is role-scoped: `discover.entertainers` for venue operators/staff; `discover.venues` for entertainers/staff. Dual-role actors may hold both. Queries and pages must enforce this; navigation alone is insufficient.
 
 Use Server Components for initial reads. Use Server Actions for same-origin form mutations where progressive enhancement helps; use Route Handlers for Auth.js, webhooks, uploads/downloads, and external APIs. Every mutation validates Zod input, authorizes, uses an idempotency/concurrency strategy, writes audit events, and returns typed expected errors. Revalidate affected paths/tags after commit.
 
-Key actions include: submit onboarding/profile; invite/manage venue member; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); submit/respond profile enquiry (Interested/Pass); update open-lead proposal fields; shortlist/reject; send/accept/decline request; propose/accept terms; generate agreement; process signature event; cancel booking; set availability/hold; expire holds; record deposit status; staff suspend/reactivate.
+Key actions include: submit onboarding/profile; Google Places autocomplete/details prefill for buyer venues; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); submit/respond profile enquiry (Interested/Pass); update open-lead proposal fields; shortlist/reject; send/accept/decline request; propose/accept terms; generate agreement; process signature event; cancel booking; set availability/hold; expire holds; record deposit status; staff suspend/reactivate.
 
 ## 7. Booking and calendar concurrency
 

@@ -20,9 +20,9 @@ User-facing language uses **Talent**, **Buyer**, and (later) **Agency**. Persist
 | Term | Meaning | Marketplace side | MVP status |
 |---|---|---|---|
 | **Talent** | Solo performer or small act seeking paid bookings (profile = act listing) | Supply | Live — free for 1 talent listing |
-| **Buyer** | Venue operator or booker who searches talent and sends performance requests (listing = location / venue org) | Demand | Live — free for 1 location |
+| **Buyer** | Venue operator or booker who searches talent and sends performance requests (listing = one venue / location) | Demand | Live — free for 1 location |
 | **Agency** | Org that manages a multi-talent roster on the supply side | Supply (multi-listing) | Coming soon — shown inactive on signup as a demand probe; no selectable role or backend yet |
-| **Location** | A buyer-owned place (venue org). Distinct from **spaces** (rooms inside one location) | Demand listing | Live |
+| **Location** | A buyer-owned place (exactly one per buyer account). Exactly one **room** for calendar ownership in MVP | Demand listing | Live |
 | **Platform staff** | Verifies profiles, suspends accounts, moderates | Ops | Live |
 
 **Monetization direction (not implemented):** free forever for 1 talent listing and 1 buyer location; paid plans later for multi-location buyer orgs and multi-talent agencies. Early-access paid tiers may show €0 to frame future pricing.
@@ -32,8 +32,7 @@ User-facing language uses **Talent**, **Buyer**, and (later) **Agency**. Persist
 ### Personas (operational)
 
 - **Talent:** act seeking appropriate paid bookings, with clear pricing, availability, production needs, and portfolio evidence.
-- **Buyer owner:** accountable operator who creates a location organization, manages members, publishes opportunities, requests acts, and signs agreements.
-- **Buyer member:** staff member authorized by an owner to operate a location within assigned permissions.
+- **Buyer:** accountable operator who owns exactly one venue profile, publishes open calls, requests acts, and signs agreements.
 - **Platform staff:** suspends abusive accounts/publication, handles moderation, and monitors booking operations.
 
 ## 3. Roles, account status, and permissions
@@ -61,10 +60,7 @@ Published profiles stay published across edits. Owners may **unpublish** (back t
 
 - A person has one account and exactly one selectable marketplace role: talent (**`entertainer`**) **or** buyer (**`venue`**) (XOR). Dual-role accounts are out of scope.
 - Agency is not a selectable role in MVP. Signup may show it as **Coming soon** (disabled) to test inbound interest; do not persist an agency role or build roster APIs until specified.
-- A buyer location is an organization, not a person.
-- Location membership is many-to-many and has `owner` or `member` role.
-- Owners manage organization profile, membership, opportunities, requests, bookings, and signatures.
-- Members may manage buyer workflows granted by the permission set, but cannot remove the last owner or change platform account status.
+- A buyer account owns **exactly one venue** (`venues.owner_user_id`, unique). Team membership / multi-user venue orgs are out of scope.
 - Every authorization decision is server-enforced; hidden UI is not authorization.
 - Future agency support should be modeled as a **supply-side org with multiple talent listings** (membership + plan limits), not a third XOR signup role.
 
@@ -74,20 +70,23 @@ Published profiles stay published across edits. Owners may **unpublish** (back t
 
 After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider. Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Agency may appear on the role picker as a non-selectable coming-soon option.
 
-### 4.2 Venue organization profile
+Buyer onboarding may search Google Places (New) to prefill venue name/address/coords/website; all prefilled fields remain editable. Places is optional — manual entry always works.
+
+### 4.2 Buyer venue profile
+
+One account → one venue → one room (calendar resource). Profile builder matches talent parity (sticky Publish/Unpublish, sectioned autosave form).
 
 Required before self-serve publication:
 
 - Public-to-members venue name and short description
-- Structured Berlin address, district, and map coordinates
+- Structured Berlin address, district, and map coordinates (Places prefill or manual)
 - Venue type and audience description
-- Capacity, including seated/standing context where relevant
+- Capacity (and optional seated/standing context)
 - Production resources: PA, mixer, microphones, backline, lighting, stage dimensions, power, accessibility/load-in notes
-- At least one contact method, stored privately
-- Native availability calendar
-- Owner membership
+- Contact via account email (optional phone); stored privately for unlocks
+- Native availability calendar (backed by the single room)
 
-Optional: website/social links, house rules, venue images, multiple spaces with distinct capacity/resources. A venue profile is discoverable only to **entertainers** (and staff) after publication.
+Optional: website/social links, house rules, venue images, Google Place id for re-link. A venue profile is discoverable only to **entertainers** (and staff) after publication.
 
 ### 4.3 Entertainer profile
 
@@ -145,7 +144,7 @@ An approved venue operator sends a request to an approved entertainer for a venu
 
 ### 6.3 Profile enquiries
 
-An approved entertainer may submit their act profile to an approved venue from the venue discovery page (optional short note; no date required). This creates a pending booking. The venue may mark **Interested** or **Pass**. Interest unlocks preferred contacts both ways and opens the booking without requiring dates, fees, or terms yet. Pass closes it as lost without unlocking contacts. One active pending/open undated profile enquiry is allowed per act↔venue pair; after Pass, further undated enquiries to that venue are blocked for a cooldown unless the venue re-opens.
+An approved entertainer may submit their act profile to an approved venue from the venue discovery page (optional short note; no date required). An approved venue may likewise send a one-click connection request from an act profile. Either creates a pending booking. The receiving party may mark **Interested** or **Pass**. Interest unlocks preferred contacts both ways and opens the booking without requiring dates, fees, or terms yet. Pass closes it as lost without unlocking contacts. One active pending/open undated profile enquiry is allowed per act↔venue pair. After any contact request for a pair, a new request is blocked for **7 days** (inactive CTA + message). After Pass, further undated enquiries are also blocked for a **30-day** cooldown unless the venue re-opens.
 
 ### 6.4 One booking engine
 

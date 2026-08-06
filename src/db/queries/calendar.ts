@@ -4,7 +4,6 @@ import {
   calendarEntries,
   calendarRecurrenceExceptions,
   entertainerProfiles,
-  venueMemberships,
   venueSpaces,
   venues,
 } from "@/src/db/schema/marketplace";
@@ -27,31 +26,19 @@ export async function listCalendarResourcesForUser(userId: string) {
       venueId: venues.id,
       venueName: venues.name,
     })
-    .from(venueMemberships)
-    .innerJoin(venues, eq(venues.id, venueMemberships.venueId))
+    .from(venues)
     .innerJoin(venueSpaces, eq(venueSpaces.venueId, venues.id))
-    .where(
-      and(
-        eq(venueMemberships.userId, userId),
-        eq(venueMemberships.status, "active"),
-      ),
-    );
+    .where(eq(venues.ownerUserId, userId));
 
-  // Venues with membership but no space yet — caller can ensureDefaultVenueSpace.
+  // Owned venues with no space yet — caller can ensureDefaultVenueSpace.
   const venuesWithoutSpace = await db
     .select({
       venueId: venues.id,
       venueName: venues.name,
     })
-    .from(venueMemberships)
-    .innerJoin(venues, eq(venues.id, venueMemberships.venueId))
+    .from(venues)
     .leftJoin(venueSpaces, eq(venueSpaces.venueId, venues.id))
-    .where(
-      and(
-        eq(venueMemberships.userId, userId),
-        eq(venueMemberships.status, "active"),
-      ),
-    );
+    .where(eq(venues.ownerUserId, userId));
 
   const missing = venuesWithoutSpace.filter(
     (row, index, all) =>

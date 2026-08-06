@@ -11,7 +11,6 @@ import {
   marketplaceAccounts,
   opportunities,
   userRoles,
-  venueMemberships,
   venueSpaces,
   venues,
 } from "../src/db/schema/marketplace";
@@ -154,6 +153,7 @@ async function main() {
     const [created] = await db
       .insert(venues)
       .values({
+        ownerUserId: venueOperator.id,
         name: "Salon am Kanal",
         shortDescription: "Synthetic canal-side room for small formats.",
         addressLine1: "Maybachufer 12",
@@ -174,12 +174,6 @@ async function main() {
     venue = created;
 
     if (venue) {
-      await db.insert(venueMemberships).values({
-        venueId: venue.id,
-        userId: venueOperator.id,
-        role: "owner",
-        status: "active",
-      });
       await db.insert(venueSpaces).values({
         venueId: venue.id,
         name: `${venue.name} — Main room`,
@@ -190,6 +184,13 @@ async function main() {
   }
 
   if (venue) {
+    if (venue.ownerUserId !== venueOperator.id) {
+      await db
+        .update(venues)
+        .set({ ownerUserId: venueOperator.id, updatedAt: new Date() })
+        .where(eq(venues.id, venue.id));
+      venue = { ...venue, ownerUserId: venueOperator.id };
+    }
     const existingSpace = await db.query.venueSpaces.findFirst({
       where: eq(venueSpaces.venueId, venue.id),
     });

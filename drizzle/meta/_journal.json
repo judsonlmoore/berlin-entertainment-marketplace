@@ -113,6 +113,27 @@
       "when": 1786600000000,
       "tag": "0015_opportunity_kind_standing",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786700000000,
+      "tag": "0016_buyer_venue_ownership",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786800000000,
+      "tag": "0017_venue_portfolio_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786900000000,
+      "tag": "0018_agreements_rendered_bodies",
+      "breakpoints": true
     }
   ]
 }

@@ -96,11 +96,11 @@ export default async function EntertainersDiscoveryPage({
     listEntertainerCategoryFacets(),
   ]);
 
-  const canRequest = access.actor.venueMemberships.some(
-    (m) =>
-      m.status === "active" &&
-      can(access.actor, "direct_request.send", { venueId: m.venueId }),
-  );
+  const canRequest =
+    Boolean(access.actor.venueId) &&
+    can(access.actor, "direct_request.send", {
+      venueId: access.actor.venueId!,
+    });
 
   const hasPerformedSearch = Boolean(values.q);
 
@@ -184,10 +184,10 @@ export default async function EntertainersDiscoveryPage({
                     </Link>
                     {canRequest ? (
                       <Link
-                        href={`/marketplace/entertainers/${act.id}#direct-request`}
-                        className="text-sm font-medium text-[var(--terracotta)]"
+                        href={`/marketplace/entertainers/${act.id}`}
+                        className="text-sm font-medium text-[var(--primary)]"
                       >
-                        {t("requestAct")}
+                        {t("connectionRequestCta")}
                       </Link>
                     ) : null}
                   </div>

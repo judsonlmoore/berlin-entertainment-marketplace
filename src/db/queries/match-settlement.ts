@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import {
   contactMethods,
   contactUnlocks,
-  venueMemberships,
+  venues,
 } from "@/src/db/schema/marketplace";
 import { selectPreferredContact } from "@/src/domain/contact-projection";
 import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
@@ -71,15 +71,13 @@ export async function settleMatchAcceptance(
     ),
   );
 
-  const venueOperators = await tx
-    .select({ userId: venueMemberships.userId })
-    .from(venueMemberships)
-    .where(
-      and(
-        eq(venueMemberships.venueId, input.venueId),
-        eq(venueMemberships.status, "active"),
-      ),
-    );
+  const [venueOwner] = await tx
+    .select({ userId: venues.ownerUserId })
+    .from(venues)
+    .where(eq(venues.id, input.venueId))
+    .limit(1);
+
+  const venueOperators = venueOwner ? [venueOwner] : [];
 
   if (preferredEntertainer) {
     for (const operator of venueOperators) {

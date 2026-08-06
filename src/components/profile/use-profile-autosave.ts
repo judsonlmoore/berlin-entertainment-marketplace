@@ -109,7 +109,11 @@ export function useProfileAutosave<T>({
 
     const wasClean = !dirtyRef.current;
     dirtyRef.current = true;
-    setPhase((current) => (current === "saving" ? current : "dirty"));
+    // Avoid re-rendering the whole form on every keystroke once already dirty.
+    setPhase((current) => {
+      if (current === "saving" || current === "dirty") return current;
+      return "dirty";
+    });
 
     // Idle debounce: reset on every keystroke.
     if (idleTimerRef.current) window.clearTimeout(idleTimerRef.current);

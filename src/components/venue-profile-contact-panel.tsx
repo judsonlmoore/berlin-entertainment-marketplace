@@ -24,6 +24,7 @@ type Props = {
   canSubmit: boolean;
   publishRequired: boolean;
   activeEnquiryBookingId?: string | null;
+  cooldownDaysRemaining?: number | null;
   openCalls: OpenCall[];
   defaultQuoteMinEur?: number;
   defaultQuoteMaxEur?: number;
@@ -35,6 +36,7 @@ export function VenueProfileContactPanel({
   canSubmit,
   publishRequired,
   activeEnquiryBookingId,
+  cooldownDaysRemaining,
   openCalls,
   defaultQuoteMinEur = 0,
   defaultQuoteMaxEur = 0,
@@ -120,6 +122,26 @@ export function VenueProfileContactPanel({
               {t("goToProfile")}
             </Link>
           </p>
+        ) : cooldownDaysRemaining != null && cooldownDaysRemaining > 0 ? (
+          <div className="mt-4 grid gap-3">
+            <Button type="button" disabled className="justify-self-start">
+              {t("submitProfileCta")}
+            </Button>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t("enquiryCooldown", { days: cooldownDaysRemaining })}
+              {activeEnquiryBookingId ? (
+                <>
+                  {" "}
+                  <Link
+                    href={`/marketplace/bookings/${activeEnquiryBookingId}`}
+                    className="font-medium underline"
+                  >
+                    {t("viewLead")}
+                  </Link>
+                </>
+              ) : null}
+            </p>
+          </div>
         ) : activeEnquiryBookingId ? (
           <p className="mt-4 text-sm text-[var(--ink)]">
             {t("enquiryAlreadyActive")}{" "}

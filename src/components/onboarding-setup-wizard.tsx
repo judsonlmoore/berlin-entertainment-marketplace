@@ -13,13 +13,16 @@ import {
   ParagraphTextField,
   toParagraphEditorHtml,
 } from "@/src/components/profile/paragraph-text-field";
+import { VenuePlacesSearch } from "@/src/components/profile/venue-places-search";
 import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 import {
   encodeSubcategory,
   encodeVenueType,
+  getCategoryNode,
   parseSubcategory,
   parseVenueType,
+  VENUE_CATEGORIES,
 } from "@/src/domain/profile-taxonomy";
 import {
   DESCRIPTION_MAX,
@@ -27,6 +30,7 @@ import {
   SHORT_DESCRIPTION_MAX,
   validateRichTextField,
 } from "@/src/domain/sanitize-input";
+import type { PlacesPrefill } from "@/src/integrations/google-places";
 
 type Role = "entertainer" | "venue";
 
@@ -42,6 +46,14 @@ export type VenueDraft = {
   name: string;
   venueType: string;
   shortDescription: string;
+  googlePlaceId?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  district?: string;
+  postalCode?: string;
+  latitude?: string;
+  longitude?: string;
+  websiteUrl?: string;
 };
 
 type Props = {
@@ -114,6 +126,8 @@ export function OnboardingSetupWizard({
   const [entertainer, setEntertainer] =
     useState<EntertainerDraft>(entertainerDraft);
   const [venue, setVenue] = useState<VenueDraft>(venueDraft);
+  const [venueTypeKey, setVenueTypeKey] = useState(0);
+  const [shortDescriptionKey, setShortDescriptionKey] = useState(0);
 
   const isDoneStep = phase === "done";
   const stepIndex = isDoneStep ? DONE_STEP_INDEX : BASICS_STEP_INDEX;
@@ -123,6 +137,45 @@ export function OnboardingSetupWizard({
   };
   const patchVenue = (patch: Partial<VenueDraft>) => {
     setVenue((prev) => ({ ...prev, ...patch }));
+  };
+
+  const applyVenuePlacePrefill = (prefill: PlacesPrefill) => {
+    const nextName = prefill.name.trim() || venue.name;
+    let nextVenueType = venue.venueType;
+    if (
+      prefill.venueTypeHint &&
+      getCategoryNode(VENUE_CATEGORIES, prefill.venueTypeHint)
+    ) {
+      const node = getCategoryNode(VENUE_CATEGORIES, prefill.venueTypeHint);
+      const firstSub = node?.children[0]?.id ?? "";
+      nextVenueType = encodeVenueType(
+        prefill.venueTypeHint,
+        encodeSubcategory(firstSub, ""),
+      );
+      setVenueTypeKey((key) => key + 1);
+    }
+    const nextShortDescription =
+      venue.shortDescription.trim().length > 0
+        ? venue.shortDescription
+        : nextName
+          ? `<p>${nextName}</p>`
+          : venue.shortDescription;
+    if (nextShortDescription !== venue.shortDescription) {
+      setShortDescriptionKey((key) => key + 1);
+    }
+    patchVenue({
+      name: nextName,
+      venueType: nextVenueType,
+      shortDescription: nextShortDescription,
+      googlePlaceId: prefill.googlePlaceId,
+      addressLine1: prefill.addressLine1,
+      addressLine2: prefill.addressLine2,
+      district: prefill.district,
+      postalCode: prefill.postalCode,
+      latitude: prefill.latitude,
+      longitude: prefill.longitude,
+      websiteUrl: prefill.websiteUrl,
+    });
   };
 
   const currentStepValid = (): boolean => {
@@ -192,9 +245,16 @@ export function OnboardingSetupWizard({
           name: venue.name,
           shortDescription: venue.shortDescription,
           venueType: venue.venueType,
-          addressLine1: "",
-          district: "",
-          postalCode: "",
+          addressLine1: venue.addressLine1 ?? "",
+          ...(venue.addressLine2 ? { addressLine2: venue.addressLine2 } : {}),
+          district: venue.district ?? "",
+          postalCode: venue.postalCode ?? "",
+          ...(venue.latitude ? { latitude: venue.latitude } : {}),
+          ...(venue.longitude ? { longitude: venue.longitude } : {}),
+          ...(venue.googlePlaceId
+            ? { googlePlaceId: venue.googlePlaceId }
+            : {}),
+          ...(venue.websiteUrl ? { websiteUrl: venue.websiteUrl } : {}),
           audienceDescription: "",
           capacity: 50,
           capacityContext: "",
@@ -303,6 +363,10 @@ export function OnboardingSetupWizard({
 
         {!isDoneStep && role === "venue" ? (
           <>
+            <VenuePlacesSearch
+              locale={locale}
+              onPrefill={applyVenuePlacePrefill}
+            />
             <Field label={t("fields.venueName")}>
               <input
                 className="field"
@@ -312,13 +376,14 @@ export function OnboardingSetupWizard({
               />
             </Field>
             <CategorySubcategorySelect
+              key={venueTypeKey}
               kind="venue"
               categoryName="venueCategory"
               subcategoryName="venueSubcategory"
               otherName="venueSubcategoryOther"
-              defaultCategory={parseVenueType(venueDraft.venueType).categoryId}
+              defaultCategory={parseVenueType(venue.venueType).categoryId}
               defaultSubcategoryRaw={
-                parseVenueType(venueDraft.venueType).subcategoryRaw
+                parseVenueType(venue.venueType).subcategoryRaw
               }
               categoryLabel={tProfile("venueType")}
               subcategoryLabel={tProfile("subcategory")}
@@ -337,8 +402,9 @@ export function OnboardingSetupWizard({
               }}
             />
             <ParagraphTextField
+              key={shortDescriptionKey}
               label={t("fields.shortDescription")}
-              defaultValue={toParagraphEditorHtml(venueDraft.shortDescription)}
+              defaultValue={toParagraphEditorHtml(venue.shortDescription)}
               min={DESCRIPTION_MIN}
               max={SHORT_DESCRIPTION_MAX}
               placeholder={tProfile("descriptionPlaceholder")}

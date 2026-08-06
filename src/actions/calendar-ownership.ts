@@ -2,8 +2,8 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   entertainerProfiles,
-  venueMemberships,
   venueSpaces,
+  venues,
 } from "@/src/db/schema/marketplace";
 import type { CalendarOwnerType } from "@/src/domain/calendar";
 import { AppError } from "@/src/domain/errors";
@@ -34,14 +34,14 @@ export async function assertOwnsCalendarResource(
   if (!space) {
     throw new AppError("not_found", "Venue space not found");
   }
-  const membership = await db.query.venueMemberships.findFirst({
+  const venue = await db.query.venues.findFirst({
     where: and(
-      eq(venueMemberships.venueId, space.venueId),
-      eq(venueMemberships.userId, actorUserId),
-      eq(venueMemberships.status, "active"),
+      eq(venues.id, space.venueId),
+      eq(venues.ownerUserId, actorUserId),
     ),
+    columns: { id: true },
   });
-  if (!membership) {
+  if (!venue) {
     throw new AppError("forbidden", "Not a venue operator for this space");
   }
 }

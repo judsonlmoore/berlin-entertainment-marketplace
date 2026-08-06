@@ -17,7 +17,7 @@ describe("support-mode party vs audit identity", () => {
     roles: [],
     entertainerVerified: false,
     venueVerified: false,
-    venueMemberships: [],
+    venueId: null,
   };
 
   const subject: ActorContext = {
@@ -27,13 +27,7 @@ describe("support-mode party vs audit identity", () => {
     roles: ["venue"],
     entertainerVerified: false,
     venueVerified: true,
-    venueMemberships: [
-      {
-        venueId: "venue-1",
-        role: "owner",
-        status: "active",
-      },
-    ],
+    venueId: "venue-1",
   };
 
   const support: SupportSessionPayload = {
@@ -67,7 +61,7 @@ describe("support-mode party vs audit identity", () => {
       roles: ["entertainer"],
       entertainerVerified: true,
       venueVerified: false,
-      venueMemberships: [],
+      venueId: null,
     };
     const entertainerSupport: SupportSessionPayload = {
       ...support,

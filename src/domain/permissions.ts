@@ -2,7 +2,6 @@ import { AppError } from "./errors";
 import { hasMarketplaceAccess, type AccountStatus } from "./approval";
 
 export type MarketplaceRole = "entertainer" | "venue";
-export type VenueMembershipRole = "owner" | "member";
 
 export type ActorContext = {
   userId: string;
@@ -11,13 +10,10 @@ export type ActorContext = {
   roles: readonly MarketplaceRole[];
   /** Entertainer profile publication is staff-approved. */
   entertainerVerified: boolean;
-  /** At least one venue org the user belongs to is staff-approved for publication. */
+  /** Owned venue is staff-approved for publication. */
   venueVerified: boolean;
-  venueMemberships: readonly {
-    venueId: string;
-    role: VenueMembershipRole;
-    status: "active" | "invited" | "removed";
-  }[];
+  /** Owned venue id when buyer has a venue; null otherwise. */
+  venueId: string | null;
 };
 
 /** Profile drafting for active members (and staff). */
@@ -65,23 +61,11 @@ function hasPrivateAccess(actor: ActorContext): boolean {
 }
 
 function isActiveVenueOperator(actor: ActorContext): boolean {
-  return (
-    actor.roles.includes("venue") ||
-    actor.venueMemberships.some((m) => m.status === "active")
-  );
+  return actor.roles.includes("venue") || Boolean(actor.venueId);
 }
 
-function isActiveVenueMember(
-  actor: ActorContext,
-  venueId: string,
-  roles?: readonly VenueMembershipRole[],
-): boolean {
-  return actor.venueMemberships.some(
-    (membership) =>
-      membership.venueId === venueId &&
-      membership.status === "active" &&
-      (!roles || roles.includes(membership.role)),
-  );
+function ownsVenue(actor: ActorContext, venueId: string): boolean {
+  return actor.venueId === venueId;
 }
 
 export function can(
@@ -123,7 +107,7 @@ export function can(
     case "venue.manage":
       return (
         Boolean(resource?.venueId) &&
-        isActiveVenueMember(actor, resource!.venueId!, ["owner"]) &&
+        ownsVenue(actor, resource!.venueId!) &&
         canDraftProfiles(actor)
       );
 
@@ -132,14 +116,14 @@ export function can(
     case "application.review":
       return (
         Boolean(resource?.venueId) &&
-        isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
+        ownsVenue(actor, resource!.venueId!) &&
         hasPrivateAccess(actor)
       );
 
     case "direct_request.send":
       return (
         Boolean(resource?.venueId) &&
-        isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
+        ownsVenue(actor, resource!.venueId!) &&
         hasPrivateAccess(actor) &&
         actor.venueVerified
       );
@@ -156,7 +140,7 @@ export function can(
     case "profile_enquiry.respond":
       return (
         Boolean(resource?.venueId) &&
-        isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
+        ownsVenue(actor, resource!.venueId!) &&
         hasPrivateAccess(actor) &&
         actor.venueVerified
       );
@@ -173,7 +157,7 @@ export function can(
       return (
         actor.isPlatformStaff ||
         (Boolean(resource?.venueId) &&
-          isActiveVenueMember(actor, resource!.venueId!, ["owner", "member"]) &&
+          ownsVenue(actor, resource!.venueId!) &&
           hasPrivateAccess(actor))
       );
 
@@ -181,8 +165,7 @@ export function can(
       return (
         actor.isPlatformStaff ||
         (hasPrivateAccess(actor) &&
-          (actor.roles.includes("entertainer") ||
-            actor.venueMemberships.some((m) => m.status === "active")))
+          (actor.roles.includes("entertainer") || Boolean(actor.venueId)))
       );
 
     default:

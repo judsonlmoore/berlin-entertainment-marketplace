@@ -64,9 +64,9 @@ export default async function BookingsInboxPage({
     );
   }
 
-  const operableVenueIds = access.actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const operableVenueIds = access.actor.venueId
+    ? [access.actor.venueId]
+    : [];
 
   const [leads, incomingEnquiries, outgoingEnquiries, incomingDr, outgoingDr] =
     await Promise.all([
@@ -88,7 +88,19 @@ export default async function BookingsInboxPage({
     ]);
 
   const pendingVenueEnquiries = incomingEnquiries.filter(
-    (e) => e.state === "pending",
+    (e) =>
+      e.state === "pending" && e.submittedByUserId === e.entertainerUserId,
+  );
+  const pendingActConnectionRequests = outgoingEnquiries.filter(
+    (e) =>
+      e.state === "pending" && e.submittedByUserId !== e.entertainerUserId,
+  );
+  const pendingEnquiriesToReview = [
+    ...pendingVenueEnquiries,
+    ...pendingActConnectionRequests,
+  ];
+  const venueOutgoingEnquiries = incomingEnquiries.filter(
+    (e) => e.submittedByUserId !== e.entertainerUserId,
   );
 
   const dateFmt = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {
@@ -135,19 +147,24 @@ export default async function BookingsInboxPage({
         })}
       </div>
 
-      {pendingVenueEnquiries.length > 0 ? (
+      {pendingEnquiriesToReview.length > 0 ? (
         <div className="panel grid gap-3 p-6">
           <h2 className="page-title text-xl">
             {leadsT("pendingEnquiriesTitle")}
           </h2>
           <ul className="grid gap-3">
-            {pendingVenueEnquiries.map((enquiry) => (
+            {pendingEnquiriesToReview.map((enquiry) => {
+              const initiatedByAct =
+                enquiry.submittedByUserId === enquiry.entertainerUserId;
+              return (
               <li
                 key={enquiry.id}
                 className="border border-[var(--rule)] p-4 text-sm"
               >
                 <p className="font-medium">
-                  {enquiry.actName} → {enquiry.venueName}
+                  {initiatedByAct
+                    ? `${enquiry.actName} → ${enquiry.venueName}`
+                    : `${enquiry.venueName} → ${enquiry.actName}`}
                 </p>
                 {enquiry.note ? (
                   <p className="mt-1 text-[var(--text-muted)]">
@@ -156,10 +173,16 @@ export default async function BookingsInboxPage({
                 ) : null}
                 <div className="mt-3 flex flex-wrap items-center gap-3">
                   <Link
-                    href={`/marketplace/entertainers/${enquiry.entertainerProfileId}`}
+                    href={
+                      initiatedByAct
+                        ? `/marketplace/entertainers/${enquiry.entertainerProfileId}`
+                        : `/marketplace/venues/${enquiry.venueId}`
+                    }
                     className="text-sm font-medium underline"
                   >
-                    {leadsT("viewActProfile")}
+                    {initiatedByAct
+                      ? leadsT("viewActProfile")
+                      : leadsT("viewVenueProfile")}
                   </Link>
                   {enquiry.bookingId ? (
                     <Link
@@ -176,7 +199,8 @@ export default async function BookingsInboxPage({
                   />
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
       ) : null}
@@ -281,7 +305,7 @@ export default async function BookingsInboxPage({
           <h2 className="page-title text-xl">
             {leadsT("outgoingRequestsTitle")}
           </h2>
-          {outgoingDr.length === 0 && outgoingEnquiries.length === 0 ? (
+          {outgoingDr.length === 0 && venueOutgoingEnquiries.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">
               {leadsT("emptyOutgoingRequests")}
             </p>
@@ -309,6 +333,35 @@ export default async function BookingsInboxPage({
                     requestId={request.id}
                     state={request.state}
                   />
+                </div>
+              </li>
+            ))}
+            {venueOutgoingEnquiries.map((enquiry) => (
+              <li
+                key={enquiry.id}
+                className="border border-[var(--rule)] p-4 text-sm"
+              >
+                <p className="font-medium">
+                  {enquiry.actName} ← {enquiry.venueName}
+                </p>
+                <p className="text-[var(--text-muted)]">
+                  {leadsT("channel.profile_enquiry")} · {enquiry.state}
+                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-3">
+                  <Link
+                    href={`/marketplace/entertainers/${enquiry.entertainerProfileId}`}
+                    className="text-sm font-medium underline"
+                  >
+                    {leadsT("viewActProfile")}
+                  </Link>
+                  {enquiry.bookingId ? (
+                    <Link
+                      href={`/marketplace/bookings/${enquiry.bookingId}`}
+                      className="text-sm font-medium underline"
+                    >
+                      {t("open")}
+                    </Link>
+                  ) : null}
                 </div>
               </li>
             ))}

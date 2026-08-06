@@ -66,7 +66,6 @@ const notificationGroups = {
     "approval_suspended",
   ],
   calendar: ["calendar_conflict_detected", "hold_expiring_soon"],
-  venue: ["venue_member_invited", "venue_member_removed"],
   opportunity: ["opportunity_published"],
 } as const;
 

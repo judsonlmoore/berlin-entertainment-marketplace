@@ -51,9 +51,7 @@ export async function actorSharesBookingWithVenue(
   venueId: string,
 ): Promise<boolean> {
   const db = getDb();
-  const ownVenueIds = actor.venueMemberships
-    .filter((m) => m.status === "active")
-    .map((m) => m.venueId);
+  const ownVenueIds = actor.venueId ? [actor.venueId] : [];
 
   if (ownVenueIds.includes(venueId)) {
     return true;

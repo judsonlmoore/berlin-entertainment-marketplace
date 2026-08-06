@@ -117,9 +117,22 @@ export const WORLD_LANGUAGES: WorldLanguage[] = (() => {
 })();
 
 export function languageLabel(code: string, locale: "en" | "de"): string {
-  const lang = byCode.get(code);
-  if (!lang) return code;
+  const lang = byCode.get(code.trim().toLowerCase());
+  if (!lang) return code.trim();
   return locale === "de" ? lang.labelDe : lang.labelEn;
+}
+
+/** Display stored codes (e.g. `de,en`) as localized full names. */
+export function formatLanguageList(
+  raw: string | null | undefined,
+  locale: "en" | "de",
+): string {
+  const codes = parseLanguageCodes(raw);
+  if (codes.length > 0) {
+    return codes.map((code) => languageLabel(code, locale)).join(", ");
+  }
+  // Legacy free-text values (e.g. "Other") — show as stored.
+  return raw?.trim() ?? "";
 }
 
 export function parseLanguageCodes(raw: string | null | undefined): string[] {

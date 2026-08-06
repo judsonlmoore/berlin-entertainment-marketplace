@@ -9,7 +9,6 @@ import {
   contactUnlocks,
   entertainerProfiles,
   riderFiles,
-  venueMemberships,
   venues,
 } from "@/src/db/schema/marketplace";
 
@@ -83,21 +82,25 @@ export async function getAdminOperationsSnapshot() {
     .orderBy(desc(auditEvents.createdAt))
     .limit(20);
 
-  const memberships = await db
-    .select({
-      id: venueMemberships.id,
-      venueId: venues.id,
-      venueName: venues.name,
-      role: venueMemberships.role,
-      status: venueMemberships.status,
-      userName: users.name,
-      userEmail: users.email,
-    })
-    .from(venueMemberships)
-    .innerJoin(venues, eq(venues.id, venueMemberships.venueId))
-    .innerJoin(users, eq(users.id, venueMemberships.userId))
-    .orderBy(desc(venueMemberships.createdAt))
-    .limit(24);
+  const memberships = (
+    await db
+      .select({
+        id: venues.id,
+        venueId: venues.id,
+        venueName: venues.name,
+        userName: users.name,
+        userEmail: users.email,
+        ownerUserId: venues.ownerUserId,
+      })
+      .from(venues)
+      .innerJoin(users, eq(users.id, venues.ownerUserId))
+      .orderBy(desc(venues.updatedAt))
+      .limit(24)
+  ).map((row) => ({
+    ...row,
+    role: "owner" as const,
+    status: "active" as const,
+  }));
 
   const riders = await db
     .select({
@@ -171,5 +174,25 @@ export async function listRiderFilesForProfile(entertainerProfileId: string) {
     })
     .from(riderFiles)
     .where(eq(riderFiles.entertainerProfileId, entertainerProfileId))
+    .orderBy(asc(riderFiles.sortOrder), desc(riderFiles.createdAt));
+}
+
+export async function listRiderFilesForVenue(venueId: string) {
+  const db = getDb();
+  return db
+    .select({
+      id: riderFiles.id,
+      title: riderFiles.title,
+      visibility: riderFiles.visibility,
+      sortOrder: riderFiles.sortOrder,
+      mimeType: riderFiles.mimeType,
+      sizeBytes: riderFiles.sizeBytes,
+      scanStatus: riderFiles.scanStatus,
+      createdAt: riderFiles.createdAt,
+      blobKey: riderFiles.blobKey,
+      originalFilename: riderFiles.originalFilename,
+    })
+    .from(riderFiles)
+    .where(eq(riderFiles.venueId, venueId))
     .orderBy(asc(riderFiles.sortOrder), desc(riderFiles.createdAt));
 }

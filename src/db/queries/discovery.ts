@@ -412,7 +412,7 @@ async function loadHeroImageIds(
     .orderBy(asc(portfolioItems.sortOrder), asc(portfolioItems.createdAt));
 
   for (const row of rows) {
-    if (heroes.has(row.profileId)) continue;
+    if (!row.profileId || heroes.has(row.profileId)) continue;
     if (isServablePortfolioImageKey(row.blobKey)) {
       heroes.set(row.profileId, row.id);
     }

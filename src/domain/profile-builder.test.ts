@@ -5,7 +5,7 @@ import {
   parseSubcategory,
   parseVenueType,
 } from "./profile-taxonomy";
-import { parseLanguageCodes, serializeLanguageCodes } from "./languages";
+import { parseLanguageCodes, serializeLanguageCodes, formatLanguageList } from "./languages";
 import { joinSocialPrefix, validatePlatformUrl } from "./social-urls";
 import {
   validateBerlinPostalCode,
@@ -35,6 +35,11 @@ describe("languages", () => {
   it("serializes known language codes", () => {
     expect(serializeLanguageCodes(["de", "en", "xx"])).toBe("de,en");
     expect(parseLanguageCodes("de, en;fr")).toEqual(["de", "en", "fr"]);
+  });
+
+  it("formats codes as full localized names", () => {
+    expect(formatLanguageList("de,en", "en")).toBe("German, English");
+    expect(formatLanguageList("de,en", "de")).toBe("Deutsch, Englisch");
   });
 });
 

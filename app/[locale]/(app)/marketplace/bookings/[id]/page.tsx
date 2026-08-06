@@ -72,12 +72,7 @@ export default async function BookingDetailPage({ params }: Props) {
     actor: access.actor,
   });
   const isEntertainer = booking.entertainerUserId === access.actor.userId;
-  const isVenue = access.actor.venueMemberships.some(
-    (m) =>
-      m.venueId === booking.venueId &&
-      m.status === "active" &&
-      (m.role === "owner" || m.role === "member"),
-  );
+  const isVenue = access.actor.venueId === booking.venueId;
   const isStaff = access.actor.isPlatformStaff;
 
   if (!isEntertainer && !isVenue && !isStaff) {
@@ -223,6 +218,7 @@ export default async function BookingDetailPage({ params }: Props) {
           id: string;
           state: string;
           note: string | null;
+          submittedByUserId: string;
           proposedStartsAt: Date | null;
           proposedEndsAt: Date | null;
           proposedFeeCents: number | null;
@@ -235,6 +231,17 @@ export default async function BookingDetailPage({ params }: Props) {
     (enquiry!.state === "interested" || enquiry!.state === "pending") &&
     lead != null &&
     (lead.leadStatus === "open" || lead.leadStatus === "pending");
+
+  const enquiryInitiatedByAct =
+    Boolean(enquiry) &&
+    enquiry!.submittedByUserId === booking.entertainerUserId;
+  const canRespondToEnquiry =
+    enquiry?.state === "pending" &&
+    (enquiryInitiatedByAct
+      ? can(access.actor, "profile_enquiry.respond", {
+          venueId: booking.venueId,
+        })
+      : isEntertainer && access.actor.entertainerVerified);
 
   const contactsUnlocked = lead ? leadContactsUnlocked(lead.leadStatus) : false;
 
@@ -315,10 +322,7 @@ export default async function BookingDetailPage({ params }: Props) {
         </div>
       ) : null}
 
-      {enquiry?.state === "pending" &&
-      can(access.actor, "profile_enquiry.respond", {
-        venueId: booking.venueId,
-      }) ? (
+      {canRespondToEnquiry && enquiry ? (
         <div className="panel grid gap-3 p-6">
           <h2 className="text-lg font-medium">{leadsT("respondTitle")}</h2>
           {enquiry.note ? (

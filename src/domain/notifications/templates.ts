@@ -278,9 +278,20 @@ const templates: Record<
   },
 
   profile_enquiry_received: {
-    getTitle: (locale) =>
-      locale === "de" ? `Neues Profil-Interesse` : `New profile enquiry`,
+    getTitle: (locale, params) =>
+      params.direction === "venue"
+        ? locale === "de"
+          ? `Neue Verbindungsanfrage`
+          : `New connection request`
+        : locale === "de"
+          ? `Neues Profil-Interesse`
+          : `New profile enquiry`,
     getBody: (locale, params) => {
+      if (params.direction === "venue") {
+        return locale === "de"
+          ? `${params.venueName} möchte Kontakt mit Ihnen aufnehmen.`
+          : `${params.venueName} wants to connect with you.`;
+      }
       return locale === "de"
         ? `${params.entertainerName} hat das Profil an ${params.venueName} gesendet.`
         : `${params.entertainerName} submitted their profile to ${params.venueName}.`;
@@ -294,9 +305,20 @@ const templates: Record<
   },
 
   profile_enquiry_interested: {
-    getTitle: (locale) =>
-      locale === "de" ? `Venue interessiert` : `Venue is interested`,
+    getTitle: (locale, params) =>
+      params.direction === "act"
+        ? locale === "de"
+          ? `Act interessiert`
+          : `Act is interested`
+        : locale === "de"
+          ? `Venue interessiert`
+          : `Venue is interested`,
     getBody: (locale, params) => {
+      if (params.direction === "act") {
+        return locale === "de"
+          ? `${params.entertainerName} möchte sprechen. Kontakte sind freigeschaltet.`
+          : `${params.entertainerName} wants to talk. Contacts are unlocked.`;
+      }
       return locale === "de"
         ? `${params.venueName} möchte mit Ihnen sprechen. Kontakte sind freigeschaltet.`
         : `${params.venueName} wants to talk. Contacts are unlocked.`;
@@ -313,6 +335,11 @@ const templates: Record<
     getTitle: (locale) =>
       locale === "de" ? `Kein Interesse` : `Not a fit right now`,
     getBody: (locale, params) => {
+      if (params.direction === "act") {
+        return locale === "de"
+          ? `${params.entertainerName} hat die Anfrage abgelehnt.`
+          : `${params.entertainerName} passed on the connection request.`;
+      }
       return locale === "de"
         ? `${params.venueName} hat Ihr Profil-Interesse abgelehnt.`
         : `${params.venueName} passed on your profile enquiry.`;

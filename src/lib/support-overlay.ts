@@ -20,24 +20,19 @@ export function applySupportOverlay(
       roles: ["entertainer"] satisfies MarketplaceRole[],
       entertainerVerified: subjectActor.entertainerVerified,
       venueVerified: false,
-      venueMemberships: [],
+      venueId: null,
     };
   }
 
+  const ownsSupportedVenue = subjectActor.venueId === support.entityId;
   return {
     userId: subjectActor.userId,
     isPlatformStaff: false,
     accountStatus: subjectActor.accountStatus ?? "active",
     roles: ["venue"] satisfies MarketplaceRole[],
     entertainerVerified: false,
-    venueVerified: subjectActor.venueMemberships.some(
-      (m) => m.venueId === support.entityId,
-    )
-      ? subjectActor.venueVerified
-      : false,
-    venueMemberships: subjectActor.venueMemberships.filter(
-      (m) => m.venueId === support.entityId && m.status === "active",
-    ),
+    venueVerified: ownsSupportedVenue ? subjectActor.venueVerified : false,
+    venueId: ownsSupportedVenue ? support.entityId : null,
   };
 }
 

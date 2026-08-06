@@ -1,6 +1,6 @@
 "use client";
 
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useMemo,
   type ReactNode,
   type SVGProps,
 } from "react";
@@ -115,6 +116,10 @@ function ToolbarButton({
       type="button"
       aria-label={label}
       aria-pressed={Boolean(active)}
+      onMouseDown={(event) => {
+        // Keep editor selection when clicking toolbar.
+        event.preventDefault();
+      }}
       onClick={onClick}
       className={`inline-flex size-8 items-center justify-center rounded-[var(--radius-sm)] ${
         active
@@ -158,9 +163,8 @@ export function ParagraphTextField({
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
+  const extensions = useMemo(
+    () => [
       StarterKit.configure({
         heading: false,
         code: false,
@@ -172,31 +176,60 @@ export function ParagraphTextField({
         placeholder: placeholder ?? "",
       }),
     ],
-    content: defaultValue || "<p></p>",
-    onUpdate: ({ editor: current }) => {
-      const next = sanitizeRichTextHtml(current.getHTML());
-      setHtml(next);
-      onChangeRef.current?.(next);
-      if (hiddenRef.current) {
-        hiddenRef.current.value = next;
-        hiddenRef.current.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-    },
-    editorProps: {
-      attributes: {
-        class: `${SIZE_CLASS[size]} px-3 py-3 text-sm leading-relaxed text-[var(--ink)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--text-muted)]`,
-      },
-      handlePaste(_view, event) {
-        const text = event.clipboardData?.getData("text/plain") ?? "";
-        // Block URL paste in prose; dedicated link fields own URLs.
-        // Markup pastes are allowlist-sanitized in onUpdate.
-        if (/https?:\/\//i.test(text) || /www\.\S+/i.test(text)) {
-          event.preventDefault();
-          return true;
+    // Placeholder copy is locale-stable for a given mount; avoid rebuilding the
+    // editor on parent re-renders (that was eating keystrokes / selection).
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+    [],
+  );
+
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      shouldRerenderOnTransaction: false,
+      extensions,
+      content: defaultValue || "<p></p>",
+      onUpdate: ({ editor: current }) => {
+        const next = sanitizeRichTextHtml(current.getHTML());
+        setHtml(next);
+        onChangeRef.current?.(next);
+        if (hiddenRef.current) {
+          hiddenRef.current.value = next;
+          hiddenRef.current.dispatchEvent(
+            new Event("input", { bubbles: true }),
+          );
         }
-        return false;
+      },
+      editorProps: {
+        attributes: {
+          class: `${SIZE_CLASS[size]} px-3 py-3 text-sm leading-relaxed text-[var(--ink)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--text-muted)]`,
+        },
       },
     },
+    [extensions],
+  );
+
+  // Keep editor chrome class in sync when size prop changes without remounting.
+  useEffect(() => {
+    if (!editor) return;
+    editor.setOptions({
+      editorProps: {
+        attributes: {
+          class: `${SIZE_CLASS[size]} px-3 py-3 text-sm leading-relaxed text-[var(--ink)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--text-muted)]`,
+        },
+      },
+    });
+  }, [editor, size]);
+
+  const activeMarks = useEditorState({
+    editor,
+    selector: ({ editor: current }) => ({
+      bold: Boolean(current?.isActive("bold")),
+      italic: Boolean(current?.isActive("italic")),
+      underline: Boolean(current?.isActive("underline")),
+      orderedList: Boolean(current?.isActive("orderedList")),
+      bulletList: Boolean(current?.isActive("bulletList")),
+      blockquote: Boolean(current?.isActive("blockquote")),
+    }),
   });
 
   const count = richTextPlainLength(html);
@@ -223,7 +256,7 @@ export function ParagraphTextField({
         >
           <ToolbarButton
             label={t("editorBold")}
-            active={Boolean(editor?.isActive("bold"))}
+            active={activeMarks?.bold}
             onClick={() => {
               editor?.chain().focus().toggleBold().run();
             }}
@@ -232,7 +265,7 @@ export function ParagraphTextField({
           </ToolbarButton>
           <ToolbarButton
             label={t("editorItalic")}
-            active={Boolean(editor?.isActive("italic"))}
+            active={activeMarks?.italic}
             onClick={() => {
               editor?.chain().focus().toggleItalic().run();
             }}
@@ -241,7 +274,7 @@ export function ParagraphTextField({
           </ToolbarButton>
           <ToolbarButton
             label={t("editorUnderline")}
-            active={Boolean(editor?.isActive("underline"))}
+            active={activeMarks?.underline}
             onClick={() => {
               editor?.chain().focus().toggleUnderline().run();
             }}
@@ -251,7 +284,7 @@ export function ParagraphTextField({
           <span aria-hidden className="mx-1 h-5 w-px bg-[var(--rule)]" />
           <ToolbarButton
             label={t("editorNumberedList")}
-            active={Boolean(editor?.isActive("orderedList"))}
+            active={activeMarks?.orderedList}
             onClick={() => {
               editor?.chain().focus().toggleOrderedList().run();
             }}
@@ -260,7 +293,7 @@ export function ParagraphTextField({
           </ToolbarButton>
           <ToolbarButton
             label={t("editorBulletList")}
-            active={Boolean(editor?.isActive("bulletList"))}
+            active={activeMarks?.bulletList}
             onClick={() => {
               editor?.chain().focus().toggleBulletList().run();
             }}
@@ -270,7 +303,7 @@ export function ParagraphTextField({
           <span aria-hidden className="mx-1 h-5 w-px bg-[var(--rule)]" />
           <ToolbarButton
             label={t("editorQuote")}
-            active={Boolean(editor?.isActive("blockquote"))}
+            active={activeMarks?.blockquote}
             onClick={() => {
               editor?.chain().focus().toggleBlockquote().run();
             }}
