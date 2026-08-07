@@ -506,15 +506,21 @@ export async function getDiscoverableEntertainerDetail(input: {
   entertainerProfileId: string;
   viewerUserId: string;
   includePortfolio?: boolean;
+  /** Owner may open draft/suspended for profile preview. */
+  allowOwnerDraft?: boolean;
 }): Promise<EntertainerDiscoveryDetail | null> {
   const db = getDb();
   const profile = await db.query.entertainerProfiles.findFirst({
-    where: and(
-      eq(entertainerProfiles.id, input.entertainerProfileId),
-      eq(entertainerProfiles.publicationState, "approved"),
-    ),
+    where: eq(entertainerProfiles.id, input.entertainerProfileId),
   });
   if (!profile) {
+    return null;
+  }
+  const isOwner = profile.userId === input.viewerUserId;
+  if (
+    profile.publicationState !== "approved" &&
+    !(input.allowOwnerDraft && isOwner)
+  ) {
     return null;
   }
 
@@ -597,15 +603,21 @@ export async function getDiscoverableEntertainerDetail(input: {
 export async function getDiscoverableVenueDetail(input: {
   venueId: string;
   viewerUserId: string;
+  /** Owner may open draft/suspended for profile preview. */
+  allowOwnerDraft?: boolean;
 }): Promise<VenueDiscoveryDetail | null> {
   const db = getDb();
   const venue = await db.query.venues.findFirst({
-    where: and(
-      eq(venues.id, input.venueId),
-      eq(venues.publicationState, "approved"),
-    ),
+    where: eq(venues.id, input.venueId),
   });
   if (!venue) {
+    return null;
+  }
+  const isOwner = venue.ownerUserId === input.viewerUserId;
+  if (
+    venue.publicationState !== "approved" &&
+    !(input.allowOwnerDraft && isOwner)
+  ) {
     return null;
   }
 

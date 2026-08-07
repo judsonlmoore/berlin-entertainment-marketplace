@@ -10,9 +10,12 @@ import { resolveOnboardingDestination } from "@/src/lib/onboarding-gate";
 import { type AppLocale } from "@/src/i18n/routing";
 import { buildPrivateMetadata } from "@/src/lib/seo-metadata";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
-import { supportDiscoveryFlags } from "@/src/lib/support-overlay";
 import { getOnboardingChecklistView } from "@/src/db/queries/onboarding-checklist";
-import { loadRailRoleContext } from "@/src/lib/rail-role-context";
+import {
+  discoveryNavFlags,
+  loadRailRoleContext,
+} from "@/src/lib/rail-role-context";
+import { supportDiscoveryFlags } from "@/src/lib/support-overlay";
 
 type Props = {
   children: ReactNode;
@@ -97,8 +100,9 @@ export default async function AppLayout({ children, params }: Props) {
         canDiscoverEntertainers = discovery.canDiscoverEntertainers;
         canDiscoverVenues = discovery.canDiscoverVenues;
       } else {
-        canDiscoverEntertainers = can(effectiveActor, "discover.entertainers");
-        canDiscoverVenues = can(effectiveActor, "discover.venues");
+        const flags = discoveryNavFlags(effectiveActor);
+        canDiscoverEntertainers = flags.canDiscoverEntertainers;
+        canDiscoverVenues = flags.canDiscoverVenues;
       }
     }
   }

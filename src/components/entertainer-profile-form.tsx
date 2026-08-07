@@ -13,6 +13,7 @@ import { LanguageMultiSelect } from "@/src/components/profile/language-multi-sel
 import { LocationAutocomplete } from "@/src/components/profile/location-autocomplete";
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
 import { PublicationControl } from "@/src/components/profile/publication-control";
+import { ProfilePreviewButton } from "@/src/components/profile/profile-preview-button";
 import {
   ParagraphTextField,
   toParagraphEditorHtml,
@@ -52,6 +53,8 @@ type SocialLinks = Partial<
 
 type Props = {
   locale: "en" | "de";
+  /** Existing profile id — enables marketplace preview. */
+  profileId?: string;
   mediaSlot?: ReactNode;
   defaultValues?: {
     actName: string;
@@ -151,6 +154,7 @@ function canOwnerPublish(state: string | undefined): boolean {
 
 export function EntertainerProfileForm({
   locale,
+  profileId,
   mediaSlot,
   defaultValues,
   publicationState,
@@ -261,6 +265,13 @@ export function EntertainerProfileForm({
                 phase={autosave.phase}
                 errorMessage={autosave.errorMessage}
               />
+              {profileId ? (
+                <ProfilePreviewButton
+                  href={`/marketplace/entertainers/${profileId}?preview=1`}
+                  onBeforeNavigate={() => autosave.saveNow()}
+                  disabled={autosave.phase === "saving"}
+                />
+              ) : null}
               <PublicationControl
                 state={pubState}
                 unpublishedLabel={t("statusUnpublished")}

@@ -309,6 +309,10 @@
     "publishingProfile": "Wird veröffentlicht…",
     "publishProfileHint": "Profile können veröffentlicht werden, sobald die folgenden Elemente bereitgestellt sind: Foto, Beschreibung, Kategorie, Standort, Preise und mindestens ein Link. Sie können jederzeit zurückziehen.",
     "publishProfileFailed": "Veröffentlichen fehlgeschlagen — Checkliste zuerst erfüllen.",
+    "previewProfile": "Vorschau",
+    "previewOpening": "Wird geöffnet…",
+    "previewModeBanner": "Vorschau — so erscheint Ihr Profil, wenn es veröffentlicht ist.",
+    "exitPreview": "Vorschau beenden",
     "editorToolbar": "Textformatierung",
     "editorBold": "Fett",
     "editorItalic": "Kursiv",
@@ -550,6 +554,7 @@
     "back": "Zurück zum Marktplatz",
     "backToEntertainers": "Zurück zu Entertainern",
     "backToVenues": "Zurück zu Venues",
+    "backToProfile": "Zurück zum Profil-Editor",
     "empty": "Noch keine passenden Profile.",
     "applyFilters": "Filter anwenden",
     "search": "Suchen",
@@ -1017,7 +1022,7 @@
     "entityVenue": "Venue",
     "actAs": "Als {label} agieren",
     "exitSupport": "Support-Session beenden",
-    "banner": "Sie agieren als {label} ({entityType}). Ihr Account-Avatar bleibt unverändert.",
+    "banner": "Sie agieren als {label} ({entityType}).",
     "activeSession": "Aktuell als {label} aktiv."
   },
   "cookies": {

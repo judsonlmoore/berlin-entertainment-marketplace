@@ -22,6 +22,7 @@ import {
 } from "@/src/components/profile/paragraph-text-field";
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
 import { PublicationControl } from "@/src/components/profile/publication-control";
+import { ProfilePreviewButton } from "@/src/components/profile/profile-preview-button";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
 import { VenuePlacesSearch } from "@/src/components/profile/venue-places-search";
 import {
@@ -381,6 +382,13 @@ export function VenueProfileForm({
                 phase={autosave.phase}
                 errorMessage={autosave.errorMessage}
               />
+              {venueId ? (
+                <ProfilePreviewButton
+                  href={`/marketplace/venues/${venueId}?preview=1`}
+                  onBeforeNavigate={() => autosave.saveNow()}
+                  disabled={autosave.phase === "saving"}
+                />
+              ) : null}
               <PublicationControl
                 state={pubState}
                 unpublishedLabel={t("statusUnpublished")}

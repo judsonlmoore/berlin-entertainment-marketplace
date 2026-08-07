@@ -2,6 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
 import { VenueProfileContactPanel } from "@/src/components/venue-profile-contact-panel";
+import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
 import { getDiscoverableVenueDetail } from "@/src/db/queries/discovery";
 import {
   canViewVenueDiscoveryDetail,
@@ -43,7 +44,12 @@ const SOCIAL_LABELS: Record<string, string> = {
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function venueTypeLabel(raw: string, locale: "en" | "de"): string {
   const parsed = parseVenueType(raw);
@@ -60,8 +66,13 @@ function venueTypeLabel(raw: string, locale: "en" | "de"): string {
   return catLabel;
 }
 
-export default async function VenueDiscoveryDetailPage({ params }: Props) {
+export default async function VenueDiscoveryDetailPage({
+  params,
+  searchParams,
+}: Props) {
   const { locale, id } = await params;
+  const query = await searchParams;
+  const isPreview = first(query.preview) === "1";
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
   const access = await requireDiscoveryAccess();
@@ -88,10 +99,14 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
   const venue = await getDiscoverableVenueDetail({
     venueId: id,
     viewerUserId: access.actor.userId,
+    allowOwnerDraft: true,
   });
   if (!venue) {
     notFound();
   }
+
+  const isOwnVenue = access.actor.venueId === id;
+  const showPreviewBanner = isPreview && isOwnVenue;
 
   const productionNotes =
     typeof venue.productionResources.notes === "string"
@@ -195,10 +210,11 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
 
   return (
     <>
+      {showPreviewBanner ? <ProfilePreviewExitBanner /> : null}
       <OnboardingChecklistTracker step="openedResult" />
       <PublicProfileView
-        backHref="/marketplace/venues"
-        backLabel={t("backToVenues")}
+        backHref={showPreviewBanner ? "/profile" : "/marketplace/venues"}
+        backLabel={showPreviewBanner ? t("backToProfile") : t("backToVenues")}
         eyebrow={t("venueEyebrow")}
         title={venue.name}
         subtitle={`${venue.district} · ${venueTypeLabel(venue.venueType, appLocale)}`}
@@ -222,7 +238,7 @@ export default async function VenueDiscoveryDetailPage({ params }: Props) {
         videoTitle={t("videoTitle")}
         linksTitle={t("linksTitle")}
       >
-        {isEntertainer ? (
+        {isEntertainer && !showPreviewBanner ? (
           <VenueProfileContactPanel
             locale={appLocale}
             venueId={id}

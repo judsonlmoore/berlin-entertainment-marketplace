@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ConnectionRequestButton } from "@/src/components/connection-request-button";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
 import { ProfileDocumentList } from "@/src/components/profile-document-list";
+import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
@@ -36,7 +37,12 @@ const SOCIAL_LABELS: Record<string, string> = {
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function categoryLabel(categoryId: string, locale: "en" | "de"): string {
   const node = getCategoryNode(ENTERTAINER_CATEGORIES, categoryId);
@@ -58,8 +64,13 @@ function subcategoryLabel(
   return child ? taxonomyLabel(child, locale) : genres;
 }
 
-export default async function EntertainerDetailPage({ params }: Props) {
+export default async function EntertainerDetailPage({
+  params,
+  searchParams,
+}: Props) {
   const { locale, id } = await params;
+  const query = await searchParams;
+  const isPreview = first(query.preview) === "1";
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
   const access = await requireDiscoveryAccess();
@@ -78,6 +89,7 @@ export default async function EntertainerDetailPage({ params }: Props) {
     entertainerProfileId: id,
     viewerUserId: access.actor.userId,
     includePortfolio: true,
+    allowOwnerDraft: true,
   });
   if (!profile) {
     notFound();
@@ -93,6 +105,8 @@ export default async function EntertainerDetailPage({ params }: Props) {
       </section>
     );
   }
+
+  const showPreviewBanner = isPreview && isOwnProfile;
 
   const operableVenues = (await listVenuesForUser(access.actor.userId)).filter(
     (venue) =>
@@ -203,10 +217,13 @@ export default async function EntertainerDetailPage({ params }: Props) {
 
   return (
     <>
+      {showPreviewBanner ? <ProfilePreviewExitBanner /> : null}
       <OnboardingChecklistTracker step="openedResult" />
       <PublicProfileView
-        backHref="/marketplace/entertainers"
-        backLabel={t("backToEntertainers")}
+        backHref={showPreviewBanner ? "/profile" : "/marketplace/entertainers"}
+        backLabel={
+          showPreviewBanner ? t("backToProfile") : t("backToEntertainers")
+        }
         eyebrow={t("entertainerEyebrow")}
         title={profile.actName}
         subtitle={subtitle}

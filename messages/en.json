@@ -309,6 +309,10 @@
     "publishingProfile": "Publishing…",
     "publishProfileHint": "Profile can be published once the following items are provided: photo, description, category, location, prices, and at least one link. You can unpublish anytime.",
     "publishProfileFailed": "Couldn’t publish — finish the required checklist first.",
+    "previewProfile": "Preview",
+    "previewOpening": "Opening…",
+    "previewModeBanner": "Preview — this is how your profile looks when published.",
+    "exitPreview": "Exit preview",
     "editorToolbar": "Text formatting",
     "editorBold": "Bold",
     "editorItalic": "Italic",
@@ -550,6 +554,7 @@
     "back": "Back to marketplace",
     "backToEntertainers": "Back to entertainers",
     "backToVenues": "Back to venues",
+    "backToProfile": "Back to profile editor",
     "empty": "No matching profiles yet.",
     "applyFilters": "Apply filters",
     "search": "Search",
@@ -1017,7 +1022,7 @@
     "entityVenue": "Venue",
     "actAs": "Act as {label}",
     "exitSupport": "Exit support session",
-    "banner": "Acting as {label} ({entityType}). Your account avatar is unchanged.",
+    "banner": "Acting as {label} ({entityType}).",
     "activeSession": "Currently acting as {label}."
   },
   "cookies": {

@@ -113,6 +113,7 @@ export default async function ProfilePage({ params }: Props) {
         accountEmail={accountEmail}
         {...(entertainerProfile
           ? {
+              profileId: entertainerProfile.id,
               publicationState: entertainerProfile.publicationState,
               mediaSlot: (
                 <PortfolioEditor
