@@ -3,6 +3,7 @@ import {
   canViewDocumentVisibility,
   computeDocumentAccessFlags,
   filterDocumentsForViewer,
+  hasBookingScopedEngagementAccess,
   isEngagementWindowOpen,
   normalizeDocumentTitle,
   resolveDocumentOwnerFromIds,
@@ -221,6 +222,54 @@ describe("profile-document domain", () => {
       isEngagementWindowOpen({
         now,
         endsAt: new Date("2026-08-06T11:00:00Z"),
+      }),
+    ).toBe(false);
+  });
+
+  it("scopes pending engagement docs to the offer sender on that booking", () => {
+    const now = new Date("2026-08-06T12:00:00Z");
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "requested",
+        openOfferProposedByOwner: true,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "requested",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(false);
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "applied",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(false);
+  });
+
+  it("allows both sides after unlock until endsAt", () => {
+    const now = new Date("2026-08-06T12:00:00Z");
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "shortlisted",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "confirmed",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: new Date("2026-08-06T11:00:00Z"),
+        now,
       }),
     ).toBe(false);
   });

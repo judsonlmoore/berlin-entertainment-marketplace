@@ -183,12 +183,14 @@ export default async function BookingDetailPage({ params }: Props) {
     entertainerProfileId: booking.entertainerProfileId,
     ownerUserId: booking.entertainerUserId,
     publicationState: booking.entertainerPublicationState,
+    bookingId: booking.id,
   });
   const venueDocuments = await listDocumentsVisibleToActor({
     actor: access.actor,
     venueId: booking.venueId,
     ownerUserId: booking.venueOwnerUserId,
     publicationState: booking.venuePublicationState,
+    bookingId: booking.id,
   });
   const bookingScopedDocuments = await listDocumentsForBooking(booking.id);
 

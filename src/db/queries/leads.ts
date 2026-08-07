@@ -16,6 +16,7 @@ import type { BookingState } from "@/src/domain/booking";
 import {
   projectLeadStatus,
   resolveBookingNeedsAction,
+  resolveLeadDirection,
   type BookingNeedsAction,
   type LeadOriginChannel,
   type LeadStatus,
@@ -217,6 +218,7 @@ export async function listLeadsForActor(
               proposedStartsAt: profileEnquiries.proposedStartsAt,
               proposedEndsAt: profileEnquiries.proposedEndsAt,
               proposedFormat: profileEnquiries.proposedFormat,
+              submittedByUserId: profileEnquiries.submittedByUserId,
             })
             .from(profileEnquiries)
             .where(inArray(profileEnquiries.id, enquiryIds))
@@ -285,23 +287,21 @@ export async function listLeadsForActor(
       performanceEndsAt,
     });
 
-    let direction: "incoming" | "outgoing" = "outgoing";
-    if (
-      row.originType === "profile_enquiry" ||
-      row.originType === "application"
-    ) {
-      direction = venueIdSet.has(row.venueId) ? "incoming" : "outgoing";
-    } else {
-      direction =
-        actProfileId && row.entertainerProfileId === actProfileId
-          ? "incoming"
-          : "outgoing";
-    }
-
     const isVenueParty = venueIdSet.has(row.venueId);
     const isEntertainerParty = Boolean(
       actProfileId && row.entertainerProfileId === actProfileId,
     );
+    const enquiry =
+      row.originType === "profile_enquiry"
+        ? enquiryMap.get(row.originId)
+        : undefined;
+    const direction = resolveLeadDirection({
+      originType: row.originType as LeadOriginChannel,
+      actorUserId: actor.userId,
+      isVenueParty,
+      isEntertainerParty,
+      profileEnquirySubmittedByUserId: enquiry?.submittedByUserId ?? null,
+    });
 
     const needsAction = resolveBookingNeedsAction({
       actorUserId: actor.userId,

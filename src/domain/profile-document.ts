@@ -172,6 +172,41 @@ export function isEngagementWindowOpen(input: {
   return input.endsAt.getTime() > input.now.getTime();
 }
 
+/**
+ * Booking-scoped engagement ACL for a specific booking being viewed.
+ *
+ * Pending: only the open offer *sender's* engagement docs are visible.
+ * After unlock (shortlisted…confirmed): both sides, until the performance window ends.
+ * Pair-level concurrent offers must not grant access on a different booking.
+ */
+export function hasBookingScopedEngagementAccess(input: {
+  bookingState: string;
+  /** True when this booking has an open (unaccepted, unsuperseded) offer from the document owner. */
+  openOfferProposedByOwner: boolean;
+  engagementEndsAt: Date | null;
+  now?: Date;
+}): boolean {
+  const now = input.now ?? new Date();
+  if (
+    (DOCUMENT_ENGAGEMENT_BOOKING_STATES as readonly string[]).includes(
+      input.bookingState,
+    )
+  ) {
+    return isEngagementWindowOpen({
+      now,
+      endsAt: input.engagementEndsAt,
+    });
+  }
+  if (
+    (DOCUMENT_PENDING_OFFER_BOOKING_STATES as readonly string[]).includes(
+      input.bookingState,
+    )
+  ) {
+    return input.openOfferProposedByOwner;
+  }
+  return false;
+}
+
 export function filenameFromTitle(title: string): string {
   const base = sanitizeRiderFilename(`${title}.pdf`);
   return base.toLowerCase().endsWith(".pdf") ? base : `${base}.pdf`;

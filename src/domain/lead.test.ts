@@ -4,6 +4,7 @@ import {
   normalizeLeadStatusFilter,
   projectLeadStatus,
   resolveBookingNeedsAction,
+  resolveLeadDirection,
 } from "./lead";
 
 describe("projectLeadStatus", () => {
@@ -154,5 +155,84 @@ describe("resolveBookingNeedsAction", () => {
         isVenueParty: true,
       }),
     ).toBe("review_application");
+  });
+});
+
+describe("resolveLeadDirection", () => {
+  it("treats applications as talent → venue", () => {
+    expect(
+      resolveLeadDirection({
+        originType: "application",
+        actorUserId: "venue-1",
+        isVenueParty: true,
+        isEntertainerParty: false,
+      }),
+    ).toBe("incoming");
+    expect(
+      resolveLeadDirection({
+        originType: "application",
+        actorUserId: "talent-1",
+        isVenueParty: false,
+        isEntertainerParty: true,
+      }),
+    ).toBe("outgoing");
+  });
+
+  it("treats direct requests as venue → talent", () => {
+    expect(
+      resolveLeadDirection({
+        originType: "direct_request",
+        actorUserId: "talent-1",
+        isVenueParty: false,
+        isEntertainerParty: true,
+      }),
+    ).toBe("incoming");
+    expect(
+      resolveLeadDirection({
+        originType: "direct_request",
+        actorUserId: "venue-1",
+        isVenueParty: true,
+        isEntertainerParty: false,
+      }),
+    ).toBe("outgoing");
+  });
+
+  it("derives profile enquiry direction from submitter, not booking state", () => {
+    expect(
+      resolveLeadDirection({
+        originType: "profile_enquiry",
+        actorUserId: "venue-1",
+        isVenueParty: true,
+        isEntertainerParty: false,
+        profileEnquirySubmittedByUserId: "venue-1",
+      }),
+    ).toBe("outgoing");
+    expect(
+      resolveLeadDirection({
+        originType: "profile_enquiry",
+        actorUserId: "talent-1",
+        isVenueParty: false,
+        isEntertainerParty: true,
+        profileEnquirySubmittedByUserId: "venue-1",
+      }),
+    ).toBe("incoming");
+    expect(
+      resolveLeadDirection({
+        originType: "profile_enquiry",
+        actorUserId: "talent-1",
+        isVenueParty: false,
+        isEntertainerParty: true,
+        profileEnquirySubmittedByUserId: "talent-1",
+      }),
+    ).toBe("outgoing");
+    expect(
+      resolveLeadDirection({
+        originType: "profile_enquiry",
+        actorUserId: "venue-1",
+        isVenueParty: true,
+        isEntertainerParty: false,
+        profileEnquirySubmittedByUserId: "talent-1",
+      }),
+    ).toBe("incoming");
   });
 });

@@ -85,6 +85,35 @@ export function bookingContactsUnlocked(bookingState: BookingState): boolean {
   return CONTACTS_UNLOCKED_BOOKING_STATES.has(bookingState);
 }
 
+/**
+ * Inbox direction cue: who initiated this lead relative to the viewing actor.
+ *
+ * - application: talent → venue (venue incoming, talent outgoing)
+ * - direct_request: venue → talent (talent incoming, venue outgoing)
+ * - profile_enquiry: either side may send — use enquiry submitter, not booking state
+ */
+export function resolveLeadDirection(input: {
+  originType: LeadOriginChannel;
+  actorUserId: string;
+  isVenueParty: boolean;
+  isEntertainerParty: boolean;
+  profileEnquirySubmittedByUserId?: string | null;
+}): "incoming" | "outgoing" {
+  if (input.originType === "profile_enquiry") {
+    if (
+      input.profileEnquirySubmittedByUserId &&
+      input.profileEnquirySubmittedByUserId === input.actorUserId
+    ) {
+      return "outgoing";
+    }
+    return "incoming";
+  }
+  if (input.originType === "application") {
+    return input.isVenueParty ? "incoming" : "outgoing";
+  }
+  return input.isEntertainerParty ? "incoming" : "outgoing";
+}
+
 /** Map legacy filter query values to current LeadStatus | all. */
 export function normalizeLeadStatusFilter(
   raw: string | undefined,

@@ -13,6 +13,7 @@ import {
   canViewDocumentVisibility,
   computeDocumentAccessFlags,
   filterDocumentsForViewer,
+  hasBookingScopedEngagementAccess,
   isEngagementWindowOpen,
   resolveDocumentOwnerFromIds,
   type ProfileDocumentAccessContext,
@@ -182,6 +183,57 @@ async function hasOpenEngagementWithVenue(input: {
   });
 }
 
+/**
+ * Engagement ACL for one booking: pending unlocks only the offer sender's
+ * profile docs; unlocked pipeline unlocks both until endsAt.
+ */
+async function hasOpenEngagementOnBooking(input: {
+  bookingId: string;
+  ownerUserId: string;
+  now: Date;
+}): Promise<boolean> {
+  const db = getDb();
+  const booking = await db.query.bookings.findFirst({
+    where: eq(bookings.id, input.bookingId),
+    columns: { id: true, state: true },
+  });
+  if (!booking) return false;
+
+  const termRows = await db
+    .select({
+      endsAt: bookingTerms.endsAt,
+      acceptedAt: bookingTerms.acceptedAt,
+      proposedByUserId: bookingTerms.proposedByUserId,
+      supersededAt: bookingTerms.supersededAt,
+    })
+    .from(bookingTerms)
+    .where(eq(bookingTerms.bookingId, input.bookingId));
+
+  let engagementEndsAt: Date | null = null;
+  let openOfferProposedByOwner = false;
+  for (const row of termRows) {
+    if (row.acceptedAt && row.endsAt) {
+      if (!engagementEndsAt || row.endsAt > engagementEndsAt) {
+        engagementEndsAt = row.endsAt;
+      }
+    }
+    if (
+      !row.acceptedAt &&
+      !row.supersededAt &&
+      row.proposedByUserId === input.ownerUserId
+    ) {
+      openOfferProposedByOwner = true;
+    }
+  }
+
+  return hasBookingScopedEngagementAccess({
+    bookingState: booking.state,
+    openOfferProposedByOwner,
+    engagementEndsAt,
+    now: input.now,
+  });
+}
+
 export type DocumentAccessOwnerInput =
   | {
       entertainerProfileId: string;
@@ -208,6 +260,9 @@ function assertDocumentOwner(
  * or pending offer sent by that entertainer.
  * Venue owners: marketplace via discover.venues; engagement via open booking or pending
  * offer sent by the venue side.
+ *
+ * Pass `bookingId` on booking detail so concurrent offers between the same pair
+ * do not leak the other offer's sender engagement docs into this booking view.
  */
 export async function getDocumentAccessContext(
   input: {
@@ -215,6 +270,8 @@ export async function getDocumentAccessContext(
     ownerUserId: string;
     publicationState: string;
     now?: Date;
+    /** When set, engagement ACL is scoped to this booking only. */
+    bookingId?: string;
   } & DocumentAccessOwnerInput,
 ): Promise<ProfileDocumentAccessContext> {
   const now = input.now ?? new Date();
@@ -226,11 +283,17 @@ export async function getDocumentAccessContext(
     const hasOpenEngagement =
       isOwner || isStaff
         ? true
-        : await hasOpenEngagementWithVenue({
-            actor: input.actor,
-            venueId: owner.venueId,
-            now,
-          });
+        : input.bookingId
+          ? await hasOpenEngagementOnBooking({
+              bookingId: input.bookingId,
+              ownerUserId: input.ownerUserId,
+              now,
+            })
+          : await hasOpenEngagementWithVenue({
+              actor: input.actor,
+              venueId: owner.venueId,
+              now,
+            });
 
     return computeDocumentAccessFlags({
       isOwner,
@@ -244,12 +307,18 @@ export async function getDocumentAccessContext(
   const hasOpenEngagement =
     isOwner || isStaff
       ? true
-      : await hasOpenEngagementWithProfile({
-          actor: input.actor,
-          entertainerProfileId: owner.entertainerProfileId,
-          entertainerUserId: input.ownerUserId,
-          now,
-        });
+      : input.bookingId
+        ? await hasOpenEngagementOnBooking({
+            bookingId: input.bookingId,
+            ownerUserId: input.ownerUserId,
+            now,
+          })
+        : await hasOpenEngagementWithProfile({
+            actor: input.actor,
+            entertainerProfileId: owner.entertainerProfileId,
+            entertainerUserId: input.ownerUserId,
+            now,
+          });
 
   return computeDocumentAccessFlags({
     isOwner,
@@ -406,6 +475,8 @@ export async function listDocumentsVisibleToActor(
      * viewer sees — marketplace docs only, not engagement-only attachments.
      */
     asMarketplacePreview?: boolean;
+    /** Scope engagement ACL to this booking (booking detail). */
+    bookingId?: string;
   } & DocumentAccessOwnerInput,
 ) {
   const owner = assertDocumentOwner(input);
@@ -422,6 +493,7 @@ export async function listDocumentsVisibleToActor(
         actor: input.actor,
         ownerUserId: input.ownerUserId,
         publicationState: input.publicationState,
+        ...(input.bookingId ? { bookingId: input.bookingId } : {}),
         ...owner,
       });
   return filterDocumentsForViewer(docs, ctx);

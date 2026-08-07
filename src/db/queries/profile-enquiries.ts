@@ -608,41 +608,72 @@ export async function expireStaleProfileOffers(input?: {
     if (!canTransitionBooking(row.bookingState as BookingState, "expired")) {
       continue;
     }
-    await db.transaction(async (tx) => {
-      await tx
-        .update(profileEnquiries)
-        .set({ state: "withdrawn", updatedAt: now })
-        .where(eq(profileEnquiries.id, row.enquiryId));
+    // Claim with conditional UPDATEs so Accept/Counter between select and
+    // write cannot be overwritten into expired/withdrawn.
+    try {
+      const claimed = await db.transaction(async (tx) => {
+        const [claimedBooking] = await tx
+          .update(bookings)
+          .set({
+            state: "expired",
+            version: row.bookingVersion + 1,
+            updatedAt: now,
+          })
+          .where(
+            and(
+              eq(bookings.id, row.bookingId),
+              inArray(bookings.state, [...PENDING_BOOKING_STATES]),
+              eq(bookings.version, row.bookingVersion),
+            ),
+          )
+          .returning({ id: bookings.id });
+        if (!claimedBooking) return false;
 
-      await tx
-        .update(bookings)
-        .set({
-          state: "expired",
-          version: row.bookingVersion + 1,
-          updatedAt: now,
-        })
-        .where(eq(bookings.id, row.bookingId));
+        const [claimedEnquiry] = await tx
+          .update(profileEnquiries)
+          .set({ state: "withdrawn", updatedAt: now })
+          .where(
+            and(
+              eq(profileEnquiries.id, row.enquiryId),
+              eq(profileEnquiries.state, PENDING_ENQUIRY_STATE),
+            ),
+          )
+          .returning({ id: profileEnquiries.id });
+        if (!claimedEnquiry) {
+          // Roll back booking claim — enquiry already left pending.
+          throw new AppError(
+            "conflict",
+            "Enquiry state changed during offer expiry",
+          );
+        }
 
-      await tx
-        .update(bookingTerms)
-        .set({ supersededAt: now })
-        .where(
-          and(
-            eq(bookingTerms.bookingId, row.bookingId),
-            sql`${bookingTerms.acceptedAt} IS NULL`,
-            sql`${bookingTerms.supersededAt} IS NULL`,
-          ),
-        );
+        await tx
+          .update(bookingTerms)
+          .set({ supersededAt: now })
+          .where(
+            and(
+              eq(bookingTerms.bookingId, row.bookingId),
+              sql`${bookingTerms.acceptedAt} IS NULL`,
+              sql`${bookingTerms.supersededAt} IS NULL`,
+            ),
+          );
 
-      await tx.insert(auditEvents).values({
-        actorUserId: input?.actorUserId ?? null,
-        action: "profile_enquiry.expired",
-        subjectType: "profile_enquiry",
-        subjectId: row.enquiryId,
-        metadata: { bookingId: row.bookingId },
+        await tx.insert(auditEvents).values({
+          actorUserId: input?.actorUserId ?? null,
+          action: "profile_enquiry.expired",
+          subjectType: "profile_enquiry",
+          subjectId: row.enquiryId,
+          metadata: { bookingId: row.bookingId },
+        });
+        return true;
       });
-    });
-    expired += 1;
+      if (claimed) expired += 1;
+    } catch (error) {
+      if (error instanceof AppError && error.code === "conflict") {
+        continue;
+      }
+      throw error;
+    }
   }
 
   return { expired, checkedAt: now };
