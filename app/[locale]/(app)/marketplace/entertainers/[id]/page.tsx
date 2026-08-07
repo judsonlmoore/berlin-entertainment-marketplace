@@ -2,7 +2,6 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { ConnectionRequestButton } from "@/src/components/connection-request-button";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
-import { ProfileDocumentList } from "@/src/components/profile-document-list";
 import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
@@ -73,6 +72,7 @@ export default async function EntertainerDetailPage({
   const isPreview = first(query.preview) === "1";
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
+  const tProfile = await getTranslations("profile");
   const access = await requireDiscoveryAccess();
   const appLocale = locale as "en" | "de";
 
@@ -159,32 +159,34 @@ export default async function EntertainerDetailPage({
         : `${profile.travelRadiusKm} km`,
     },
   ];
-  if (profile.performanceFormats?.trim()) {
-    facts.push({
-      label: t("performanceFormats"),
-      value: profile.performanceFormats,
-    });
-  }
   if (profile.languages?.trim()) {
     facts.push({
       label: t("languages"),
       value: formatLanguageList(profile.languages, appLocale),
     });
   }
-  if (profile.technicalRequirements?.trim()) {
+  if (profile.performanceFormats?.trim()) {
     facts.push({
+      label: t("performanceFormats"),
+      value: profile.performanceFormats,
+    });
+  }
+
+  const sections: PublicProfileFact[] = [];
+  if (profile.technicalRequirements?.trim()) {
+    sections.push({
       label: t("technicalRequirements"),
       value: profile.technicalRequirements,
     });
   }
   if (profile.equipmentSupplied?.trim()) {
-    facts.push({
+    sections.push({
       label: t("equipmentSupplied"),
       value: profile.equipmentSupplied,
     });
   }
   if (profile.accessibilityNotes?.trim()) {
-    facts.push({
+    sections.push({
       label: t("accessibilityNotes"),
       value: profile.accessibilityNotes,
     });
@@ -230,6 +232,7 @@ export default async function EntertainerDetailPage({
         description={profile.description}
         media={media}
         facts={facts}
+        sections={sections}
         links={socialLinksToList(
           profile.socialLinks,
           (key) => SOCIAL_LABELS[key] ?? key,
@@ -246,19 +249,16 @@ export default async function EntertainerDetailPage({
         galleryTitle={t("galleryTitle")}
         videoTitle={t("videoTitle")}
         linksTitle={t("linksTitle")}
+        documentsTitle={tProfile("documentsTitle")}
+        documents={visibleDocuments.map((doc) => ({
+          id: doc.id,
+          title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+          ...(typeof doc.sizeBytes === "number"
+            ? { sizeBytes: doc.sizeBytes }
+            : {}),
+        }))}
         {...(headerAction ? { headerAction } : {})}
-      >
-        <ProfileDocumentList
-          locale={locale}
-          variant="public"
-          documents={visibleDocuments.map((doc) => ({
-            id: doc.id,
-            title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
-            visibility: doc.visibility,
-            sizeBytes: doc.sizeBytes,
-          }))}
-        />
-      </PublicProfileView>
+      />
     </>
   );
 }

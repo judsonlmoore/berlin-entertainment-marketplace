@@ -17,6 +17,12 @@ type ContactRow = {
   isPreferred?: boolean;
 };
 
+type DocumentRow = {
+  id: string;
+  title: string;
+  sizeBytes?: number;
+};
+
 export type PublicProfileViewProps = {
   backHref: string;
   backLabel: string;
@@ -25,7 +31,10 @@ export type PublicProfileViewProps = {
   subtitle: string;
   description: string;
   media: PublicProfileMedia;
+  /** Short metadata for the details sidebar card. */
   facts: PublicProfileFact[];
+  /** Longer rich-text blocks in the main column (About styling). */
+  sections?: PublicProfileFact[];
   links: PublicProfileLink[];
   websiteUrl?: string | null;
   websiteLabel: string;
@@ -34,6 +43,8 @@ export type PublicProfileViewProps = {
   contactLockedMessage: string;
   preferredLabel: string;
   contacts: ContactRow[] | null;
+  documents?: DocumentRow[];
+  documentsTitle?: string;
   aboutTitle: string;
   detailsTitle: string;
   galleryTitle: string;
@@ -58,6 +69,7 @@ export function PublicProfileView({
   description,
   media,
   facts,
+  sections = [],
   links,
   websiteUrl,
   websiteLabel,
@@ -66,6 +78,8 @@ export function PublicProfileView({
   contactLockedMessage: _contactLockedMessage,
   preferredLabel,
   contacts,
+  documents = [],
+  documentsTitle,
   aboutTitle,
   detailsTitle,
   galleryTitle,
@@ -88,6 +102,7 @@ export function PublicProfileView({
   ];
 
   const showContact = !contactLocked && contacts && contacts.length > 0;
+  const showDocuments = documents.length > 0 && Boolean(documentsTitle);
 
   return (
     <article className="mx-auto max-w-5xl">
@@ -137,6 +152,18 @@ export function PublicProfileView({
             </section>
           ) : null}
 
+          {sections.map((section) =>
+            section.value.trim() ? (
+              <section key={section.label} className="grid gap-3">
+                <h2 className="text-[1.15rem] font-semibold">{section.label}</h2>
+                <SafeRichText
+                  html={section.value}
+                  className="text-[1rem] leading-relaxed text-[var(--ink)]"
+                />
+              </section>
+            ) : null,
+          )}
+
           {media.youtube?.url ? (
             <section className="grid gap-3">
               <h2 className="text-[1.15rem] font-semibold">{videoTitle}</h2>
@@ -180,6 +207,30 @@ export function PublicProfileView({
         </div>
 
         <aside className="grid gap-4">
+          {/* Contact first when unlocked — highest-value sidebar content. */}
+          {showContact ? (
+            <section className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
+              <div className="border-b border-[var(--rule)] bg-[var(--canvas)] px-5 py-3">
+                <h2 className="text-[0.72rem] font-semibold tracking-[0.14em] text-[var(--ink)] uppercase">
+                  {contactTitle}
+                </h2>
+              </div>
+              <ul className="divide-y divide-[var(--rule)]">
+                {contacts.map((contact) => (
+                  <li key={contact.id} className="px-5 py-3.5 text-sm">
+                    <p className="text-xs font-semibold tracking-[0.06em] text-[var(--text-muted)] uppercase">
+                      {contact.kind}
+                      {contact.isPreferred ? ` · ${preferredLabel}` : ""}
+                    </p>
+                    <p className="mt-1 font-medium text-[var(--ink)]">
+                      {contact.value}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
           {facts.length > 0 ? (
             <section className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
               <div className="border-b border-[var(--rule)] bg-[var(--canvas)] px-5 py-3">
@@ -226,23 +277,27 @@ export function PublicProfileView({
             </section>
           ) : null}
 
-          {showContact ? (
+          {showDocuments ? (
             <section className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--line)] bg-[var(--surface)]">
               <div className="border-b border-[var(--rule)] bg-[var(--canvas)] px-5 py-3">
                 <h2 className="text-[0.72rem] font-semibold tracking-[0.14em] text-[var(--ink)] uppercase">
-                  {contactTitle}
+                  {documentsTitle}
                 </h2>
               </div>
               <ul className="divide-y divide-[var(--rule)]">
-                {contacts.map((contact) => (
-                  <li key={contact.id} className="px-5 py-3.5 text-sm">
-                    <p className="text-xs font-semibold tracking-[0.06em] text-[var(--text-muted)] uppercase">
-                      {contact.kind}
-                      {contact.isPreferred ? ` · ${preferredLabel}` : ""}
-                    </p>
-                    <p className="mt-1 font-medium text-[var(--ink)]">
-                      {contact.value}
-                    </p>
+                {documents.map((doc) => (
+                  <li key={doc.id}>
+                    <a
+                      href={`/api/riders/${doc.id}`}
+                      className="flex min-h-11 items-center justify-between gap-3 px-5 py-2.5 text-sm font-medium text-[var(--primary)] no-underline hover:bg-[var(--canvas)]"
+                    >
+                      <span className="min-w-0 truncate">{doc.title}</span>
+                      {typeof doc.sizeBytes === "number" ? (
+                        <span className="shrink-0 text-[var(--text-muted)]">
+                          {Math.max(1, Math.round(doc.sizeBytes / 1024))} KB
+                        </span>
+                      ) : null}
+                    </a>
                   </li>
                 ))}
               </ul>

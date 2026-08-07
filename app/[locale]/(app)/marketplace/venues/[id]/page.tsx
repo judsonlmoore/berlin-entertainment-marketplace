@@ -1,7 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
-import { ProfileDocumentList } from "@/src/components/profile-document-list";
 import { VenueOpenCallsPanel } from "@/src/components/venue-open-calls-panel";
 import { VenueSubmitProfileButton } from "@/src/components/venue-submit-profile-button";
 import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
@@ -78,6 +77,7 @@ export default async function VenueDiscoveryDetailPage({
   const isPreview = first(query.preview) === "1";
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
+  const tProfile = await getTranslations("profile");
   const access = await requireDiscoveryAccess();
   const appLocale = locale as "en" | "de";
 
@@ -132,27 +132,34 @@ export default async function VenueDiscoveryDetailPage({
         ? `${venue.capacity} (${venue.capacityContext})`
         : String(venue.capacity),
     },
-    { label: t("audience"), value: venue.audienceDescription },
   ];
-  if (productionNotes) {
-    facts.push({ label: t("production"), value: productionNotes });
-  }
-  if (venue.loadInNotes?.trim()) {
-    facts.push({ label: t("loadInNotes"), value: venue.loadInNotes });
-  }
-  if (venue.houseRules?.trim()) {
-    facts.push({ label: t("houseRules"), value: venue.houseRules });
-  }
-  if (venue.accessibilityNotes?.trim()) {
-    facts.push({
-      label: t("accessibilityNotes"),
-      value: venue.accessibilityNotes,
-    });
-  }
   if (venue.latitude && venue.longitude) {
     facts.push({
       label: t("coordinates"),
       value: `${venue.latitude}, ${venue.longitude}`,
+    });
+  }
+
+  const sections: PublicProfileFact[] = [];
+  if (venue.audienceDescription?.trim()) {
+    sections.push({
+      label: t("audience"),
+      value: venue.audienceDescription,
+    });
+  }
+  if (productionNotes) {
+    sections.push({ label: t("production"), value: productionNotes });
+  }
+  if (venue.loadInNotes?.trim()) {
+    sections.push({ label: t("loadInNotes"), value: venue.loadInNotes });
+  }
+  if (venue.houseRules?.trim()) {
+    sections.push({ label: t("houseRules"), value: venue.houseRules });
+  }
+  if (venue.accessibilityNotes?.trim()) {
+    sections.push({
+      label: t("accessibilityNotes"),
+      value: venue.accessibilityNotes,
     });
   }
 
@@ -250,6 +257,7 @@ export default async function VenueDiscoveryDetailPage({
         description={venue.shortDescription}
         media={splitPortfolioMedia(venue.portfolio)}
         facts={facts}
+        sections={sections}
         links={socialLinksToList(
           venue.socialLinks,
           (key) => SOCIAL_LABELS[key] ?? key,
@@ -266,6 +274,14 @@ export default async function VenueDiscoveryDetailPage({
         galleryTitle={t("galleryTitle")}
         videoTitle={t("videoTitle")}
         linksTitle={t("linksTitle")}
+        documentsTitle={tProfile("documentsTitle")}
+        documents={visibleDocuments.map((doc) => ({
+          id: doc.id,
+          title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+          ...(typeof doc.sizeBytes === "number"
+            ? { sizeBytes: doc.sizeBytes }
+            : {}),
+        }))}
         {...(headerAction ? { headerAction } : {})}
       >
         {isEntertainer && !showPreviewBanner ? (
@@ -287,16 +303,6 @@ export default async function VenueDiscoveryDetailPage({
             defaultQuoteMaxEur={ownProfile ? ownProfile.priceMaxCents / 100 : 0}
           />
         ) : null}
-        <ProfileDocumentList
-          locale={locale}
-          variant="public"
-          documents={visibleDocuments.map((doc) => ({
-            id: doc.id,
-            title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
-            visibility: doc.visibility,
-            sizeBytes: doc.sizeBytes,
-          }))}
-        />
       </PublicProfileView>
     </>
   );
