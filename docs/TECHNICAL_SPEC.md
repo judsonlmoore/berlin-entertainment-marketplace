@@ -117,7 +117,7 @@ Representative pages:
 - Auth: `/[locale]/sign-in`, `/api/session/[...nextauth]` (Auth.js `basePath`; legacy `/api/auth/*` redirects to sign-in)
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
 - Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (**negotiation / contract builder**: overview, versioned offer/counter timeline, documents package, agreement; cancel danger zone), `/calendar`, `/profile` (incl. open-call manage), `/account` (locale, deletion, **legal/payment identity**). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
-- Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, `/api/places/autocomplete`, `/api/places/details`, authorized download route
+- Integrations: `/api/webhooks/esign`, `/api/agreements/[id]/package`, `/api/uploads/rider`, `/api/places/autocomplete`, `/api/places/details`, authorized document download routes
 
 Discovery authorization is role-scoped: `discover.entertainers` for venue operators/staff; `discover.venues` for entertainers/staff. Dual-role actors may hold both. Queries and pages must enforce this; navigation alone is insufficient.
 
@@ -147,7 +147,16 @@ Separate private contact data from discovery projections. Return view models wit
 
 ## 9. Agreement and e-signature boundary
 
-Define an `ESignProvider` interface for creating an envelope, retrieving status, obtaining authorized artifact references, and verifying/parsing webhooks. Provide a fake adapter only for tests/local demos. Local domain state remains authoritative after verified provider events. Store provider IDs and event hashes, not credentials. German and English documents must derive from one immutable terms version and template versions; the UI labels German controlling status. No production template is enabled before legal approval.
+Generate an immutable **agreement PDF package** with `pdf-lib`: bilingual two-column contract (DE controlling | EN convenience, paragraph-aligned) plus snapshotted addendum PDFs appended as pages. Store private Blob key, SHA-256 `package_fingerprint`, and `package_page_count` on `agreements`. Page footers include page `n / m` and a truncated fingerprint. Serve the package only via an authorized download route (booking parties and staff).
+
+Define an `ESignProvider` interface that:
+
+- `createEnvelope` — bind an envelope to the package artifact (fingerprint, blob key, page count, signers)
+- `recordSignerAcceptance` — validate locale confirmation phrase (`I agree` / `Ich stimme zu`) and package fingerprint, then record that signer
+- `getStatus` / `getPackageArtifactRef` — status and artifact lookup
+- `verifyWebhook` — authenticate and parse provider events for future remote adapters
+
+Provide a **sandbox** adapter for local/demo (typed confirm + local envelope state). Local domain state remains authoritative after verified provider events (booking confirm + calendar blocks). Store provider IDs, confirmation phrases, and event hashes — not credentials. German and English bodies derive from one immutable terms version and template versions; the UI labels German controlling status. No production template or live e-sign provider is enabled before legal approval.
 
 ## 9.1 Invoice artifact boundary
 

@@ -1,12 +1,33 @@
+import {
+  matchesConfirmationPhrase,
+  type AgreementConfirmLocale,
+} from "@/src/domain/agreement-confirm";
+
 export type CreateEnvelopeInput = {
   agreementId: string;
   germanControlling: true;
+  packageFingerprint: string;
+  packagePdfBlobKey: string;
+  packagePageCount: number;
   signerEmails: string[];
+};
+
+export type RecordSignerAcceptanceInput = {
+  providerEnvelopeId: string;
+  signerUserId: string;
+  signerEmail: string;
+  confirmationPhrase: string;
+  packageFingerprint: string;
+  locale: AgreementConfirmLocale;
 };
 
 export type EnvelopeStatus = {
   providerEnvelopeId: string;
   status: "created" | "sent" | "partially_signed" | "completed" | "voided";
+  packageFingerprint?: string;
+  packagePdfBlobKey?: string;
+  packagePageCount?: number;
+  acceptedSignerIds?: string[];
 };
 
 export type ESignWebhookEvent = {
@@ -16,18 +37,37 @@ export type ESignWebhookEvent = {
   eventHash: string;
 };
 
+export type PackageArtifactRef = {
+  blobKey: string;
+  fingerprint: string;
+};
+
 /**
  * E-signature provider boundary. Sandbox only until legal templates are approved.
  */
 export interface ESignProvider {
   readonly name: string;
   createEnvelope(input: CreateEnvelopeInput): Promise<EnvelopeStatus>;
+  recordSignerAcceptance(
+    input: RecordSignerAcceptanceInput,
+  ): Promise<EnvelopeStatus>;
   getStatus(providerEnvelopeId: string): Promise<EnvelopeStatus>;
+  getPackageArtifactRef(
+    providerEnvelopeId: string,
+  ): Promise<PackageArtifactRef>;
   verifyWebhook(
     rawBody: string,
     signatureHeader: string | null,
   ): Promise<ESignWebhookEvent>;
 }
+
+type SandboxEnvelope = EnvelopeStatus & {
+  packageFingerprint: string;
+  packagePdfBlobKey: string;
+  packagePageCount: number;
+  expectedSignerEmails: string[];
+  acceptedSignerIds: string[];
+};
 
 export class UnconfiguredESignProvider implements ESignProvider {
   readonly name = "unconfigured";
@@ -36,7 +76,15 @@ export class UnconfiguredESignProvider implements ESignProvider {
     throw new Error("E-signature provider is not configured");
   }
 
+  async recordSignerAcceptance(): Promise<EnvelopeStatus> {
+    throw new Error("E-signature provider is not configured");
+  }
+
   async getStatus(): Promise<EnvelopeStatus> {
+    throw new Error("E-signature provider is not configured");
+  }
+
+  async getPackageArtifactRef(): Promise<PackageArtifactRef> {
     throw new Error("E-signature provider is not configured");
   }
 
@@ -51,25 +99,78 @@ export class UnconfiguredESignProvider implements ESignProvider {
  */
 export class SandboxESignProvider implements ESignProvider {
   readonly name = "sandbox";
-  private readonly envelopes = new Map<string, EnvelopeStatus>();
+  private readonly envelopes = new Map<string, SandboxEnvelope>();
 
   async createEnvelope(input: CreateEnvelopeInput): Promise<EnvelopeStatus> {
     const providerEnvelopeId = `sandbox_${input.agreementId}`;
-    const status: EnvelopeStatus = {
+    const status: SandboxEnvelope = {
       providerEnvelopeId,
       status: "sent",
+      packageFingerprint: input.packageFingerprint,
+      packagePdfBlobKey: input.packagePdfBlobKey,
+      packagePageCount: input.packagePageCount,
+      expectedSignerEmails: input.signerEmails,
+      acceptedSignerIds: [],
     };
     this.envelopes.set(providerEnvelopeId, status);
-    return status;
+    return { ...status };
+  }
+
+  async recordSignerAcceptance(
+    input: RecordSignerAcceptanceInput,
+  ): Promise<EnvelopeStatus> {
+    if (!matchesConfirmationPhrase(input.confirmationPhrase, input.locale)) {
+      throw new Error("Confirmation phrase does not match");
+    }
+
+    let envelope = this.envelopes.get(input.providerEnvelopeId);
+    if (!envelope) {
+      // Stateless across serverless invocations: validate phrase + fingerprint only.
+      envelope = {
+        providerEnvelopeId: input.providerEnvelopeId,
+        status: "partially_signed",
+        packageFingerprint: input.packageFingerprint,
+        packagePdfBlobKey: "",
+        packagePageCount: 0,
+        expectedSignerEmails: [],
+        acceptedSignerIds: [input.signerUserId],
+      };
+      this.envelopes.set(input.providerEnvelopeId, envelope);
+      return { ...envelope };
+    }
+
+    if (envelope.packageFingerprint !== input.packageFingerprint) {
+      throw new Error("Package fingerprint mismatch");
+    }
+    if (!envelope.acceptedSignerIds.includes(input.signerUserId)) {
+      envelope.acceptedSignerIds.push(input.signerUserId);
+    }
+    envelope.status =
+      envelope.acceptedSignerIds.length >= 2 ? "completed" : "partially_signed";
+    this.envelopes.set(input.providerEnvelopeId, envelope);
+    return { ...envelope };
   }
 
   async getStatus(providerEnvelopeId: string): Promise<EnvelopeStatus> {
-    return (
-      this.envelopes.get(providerEnvelopeId) ?? {
-        providerEnvelopeId,
-        status: "sent",
-      }
-    );
+    const envelope = this.envelopes.get(providerEnvelopeId);
+    if (envelope) return { ...envelope };
+    return {
+      providerEnvelopeId,
+      status: "sent",
+    };
+  }
+
+  async getPackageArtifactRef(
+    providerEnvelopeId: string,
+  ): Promise<PackageArtifactRef> {
+    const envelope = this.envelopes.get(providerEnvelopeId);
+    if (!envelope) {
+      throw new Error("Unknown sandbox envelope");
+    }
+    return {
+      blobKey: envelope.packagePdfBlobKey,
+      fingerprint: envelope.packageFingerprint,
+    };
   }
 
   async verifyWebhook(

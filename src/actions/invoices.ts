@@ -29,6 +29,8 @@ import { getInvoiceProvider } from "@/src/integrations/invoice/provider";
 const schema = z.object({
   bookingId: z.string().uuid(),
   locale: z.enum(["en", "de"]).default("en"),
+  /** Rebuild PDF when an invoice already exists (sandbox specimen). */
+  force: z.boolean().optional(),
 });
 
 function toPartySnapshot(identity: LegalIdentityFields) {
@@ -43,6 +45,7 @@ function toPartySnapshot(identity: LegalIdentityFields) {
     taxId: identity.taxId,
     invoiceEmail: identity.invoiceEmail,
     iban: identity.iban,
+    bic: identity.bic,
     paymentNote: identity.paymentNote,
   };
 }
@@ -78,7 +81,11 @@ export async function generateBookingInvoice(
     const existing = await db.query.bookingInvoices.findFirst({
       where: eq(bookingInvoices.bookingId, booking.id),
     });
-    if (existing?.status === "generated" && existing.blobKey) {
+    if (
+      existing?.status === "generated" &&
+      existing.blobKey &&
+      !parsed.data.force
+    ) {
       throw new AppError("conflict", "Invoice already generated");
     }
 
@@ -116,7 +123,7 @@ export async function generateBookingInvoice(
           .values({
             bookingId: booking.id,
             status: "draft",
-            format: "sandbox_txt",
+            format: "sandbox_pdf",
             sellerSnapshot: toPartySnapshot(sellerLegal!),
             buyerSnapshot: toPartySnapshot(buyerLegal!),
           })

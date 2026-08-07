@@ -3,9 +3,17 @@ import {
   canGenerateAgreement,
   renderAgreementDocuments,
   signatureProgress,
+  bookingDocumentsLocked,
 } from "./agreement";
 
 describe("agreement domain", () => {
+  it("locks booking documents once the agreement package exists", () => {
+    expect(bookingDocumentsLocked("terms_agreed")).toBe(false);
+    expect(bookingDocumentsLocked("agreement_generated")).toBe(true);
+    expect(bookingDocumentsLocked("partially_signed")).toBe(true);
+    expect(bookingDocumentsLocked("confirmed")).toBe(true);
+  });
+
   it("renders German controlling and English convenience text from one terms snapshot", () => {
     const rendered = renderAgreementDocuments({
       germanTemplate: {
@@ -37,6 +45,7 @@ describe("agreement domain", () => {
     expect(rendered.germanControlling).toBe(true);
     expect(rendered.germanBody).toContain("450.00 EUR");
     expect(rendered.englishBody).toContain("Kiez Quartet");
+    expect(rendered.germanBody).not.toMatch(/T18:00:00/);
     expect(rendered.germanTemplateVersion).toBe("de-sandbox-1");
   });
 

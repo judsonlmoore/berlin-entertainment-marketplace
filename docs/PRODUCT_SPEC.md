@@ -191,16 +191,16 @@ The booking detail surface is a **shared negotiation / contract builder**:
 - Both parties see act and venue imagery and names once the booking is Open.
 - **Offers / counters:** Either party may send a versioned commercial offer (dates, fee, format, cancellation, production, deposit terms, optional change note). At most one open offer exists at a time. The counterparty **Accepts** (→ `terms_agreed`), **Counters** (supersedes the open offer and sends the next version), or **Declines** while Pending. The proposer waits until the other party responds; there is no second “agree” from the proposer. Draft fields stay local until **Send offer** / **Send counter** (not autosaved into new versions). Profile-origin connection starts with Send offer (v1 on the pending booking); Accept or Counter establishes the connection (contacts + mutual engagement docs). After Open, negotiation continues on this timeline until Accept → agreement generation.
 - **Documents package:** marketplace/engagement profile PDFs from both act and venue, plus booking-scoped uploads by either party (uploader may delete their own booking upload). While a profile-origin offer is open and Pending, only the **sender’s** engagement PDFs are visible to the receiver. After Accept/Counter unlock, both sides’ engagement docs are visible. Before generate, each file receives a stable **Addendum N** order (act profile → venue profile → booking uploads by upload time). Profile docs are managed on Profile; booking uploads are for night-specific PDFs.
-- **Agreement package** = generated agreement (DE controlling + EN convenience) **plus** the numbered addenda snapshot. Addendum file IDs/titles are frozen on the agreement row so later profile edits do not change the signed package.
-- Section order: Overview → Offers → Documents package → Agreement. Cancel is a danger-zone control. Deposit **terms** live inside each offer; deposit **status** recording is outside this negotiation surface (post-contract).
+- **Agreement package** = a single immutable **PDF**: cover page naming venue and act (plus Salon convenience disclaimer), bilingual two-column contract (German controlling on the left, English convenience on the right, paragraphs aligned on the same baseline), **plus** numbered addenda pages appended in the same file. Every page carries a large **MUSTER** watermark until counsel-approved production templates replace specimen copy. Addendum file IDs/titles are frozen on the agreement row; the package fingerprint (SHA-256 of PDF bytes) and page numbers appear in page footers and on the booking UI. Later profile edits do not change the signed package.
+- **Section order** after terms are locked (`terms_agreed` and later): Overview → **Agreement** → Documents package → Offers. Agreement is the next primary action (generate / review PDF / sign). Cancel is a danger-zone control. Deposit **terms** live inside each offer; deposit **status** recording is outside this negotiation surface (post-contract).
 
 ## 8. Agreement, signatures, deposits, and invoices
 
-- Generated agreements have German controlling text and an English convenience translation linked to the same versioned terms.
-- The product defines an e-signature provider boundary and test/sandbox status. It does not deliver production legal documents or live e-signatures until provisioned and counsel-approved.
+- Generated agreements are a **PDF package** (not on-page plain text): cover with parties + Salon disclaimer, German controlling text and an English convenience translation linked to the same versioned terms, addenda appended as pages, and a **MUSTER** watermark on specimen packages.
+- Signing is **double opt-in**: each designated signer reviews the package, types the locale confirmation phrase (`I agree` / `Ich stimme zu`), and presses Sign. Both must complete this on the **same package fingerprint** for `confirmed`.
+- The product defines an `ESignProvider` boundary (create envelope around the package artifact, record signer acceptance, status, artifact ref, webhooks). Sandbox adapter supports the full local flow; it does not deliver production legal documents or live/QES e-signatures until provisioned and counsel-approved.
 - Legal text requires qualified German counsel before production use.
-- Both designated signers must sign the same agreement version for `confirmed`.
-- Signature-provider webhooks must be authenticated, idempotent, and reconciled with local state.
+- Signature-provider webhooks must be authenticated, idempotent, and reconciled with local state (local DB remains authoritative for booking confirmation and calendar blocks).
 - Deposit status is separate: `not_required`, `pending`, `received`, `refunded`, or `disputed`.
 - A deposit never confirms a booking and lack of a deposit never prevents signature-based confirmation.
 - Salon does not collect, hold, escrow, route, or refund money in the current product.
@@ -258,7 +258,7 @@ No consumer event pages, public profile directory, public listings, public revie
 - All origins converge on one enforced booking state machine projected as a lead pipeline.
 - Contact unlock occurs only at mutual opt-in (shortlist / direct-request accept / profile-offer Accept or Counter) and is audited.
 - Undated open leads do not create calendar holds until a performance window exists.
-- Both signatures on the current agreement version confirm the booking and atomically block both calendars.
+- Both designated signers complete double opt-in on the same agreement package fingerprint to confirm the booking and atomically block both calendars.
 - Deposit status can change independently without confirming a booking.
 - Expired holds stop blocking; overlapping confirmations are rejected under concurrent requests.
 - English and German cover all critical flows, with the agreement-language hierarchy visible.

@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import {
   type ActionResult,
   requireActor,
@@ -9,7 +10,7 @@ import {
   bumpBookingVersion,
   loadBookingAccess,
 } from "@/src/actions/_booking-access";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
@@ -35,6 +36,7 @@ import {
   agreements,
   auditEvents,
   bookingTerms,
+  riderFiles,
   signatures,
   venues,
 } from "@/src/db/schema/marketplace";
@@ -43,6 +45,8 @@ import {
   renderAgreementDocuments,
   signatureProgress,
 } from "@/src/domain/agreement";
+import { matchesConfirmationPhrase } from "@/src/domain/agreement-confirm";
+import { buildAgreementPackagePdf } from "@/src/domain/agreement-package-pdf";
 import {
   canActorTransitionBooking,
   type BookingState,
@@ -53,6 +57,7 @@ import {
   type LegalIdentityFields,
 } from "@/src/domain/legal-identity";
 import { can } from "@/src/domain/permissions";
+import { loadDocumentFile, saveDocumentFile } from "@/src/integrations/document-file-store";
 import { getESignProviderForGeneration } from "@/src/integrations/esign";
 
 function snapshotLegal(identity: LegalIdentityFields) {
@@ -74,86 +79,83 @@ function snapshotLegal(identity: LegalIdentityFields) {
   };
 }
 
-function formatAddendaAppendix(
-  addenda: Array<{
-    addendumNumber: number;
-    title: string;
-    source: string;
-  }>,
-  locale: "de" | "en",
-): string {
-  if (addenda.length === 0) {
-    return locale === "de"
-      ? "Anlagen: keine."
-      : "Addenda: none.";
-  }
-  const header = locale === "de" ? "Anlagen:" : "Addenda:";
-  const lines = addenda.map((item) => {
-    const sourceLabel =
-      locale === "de"
-        ? item.source === "act_profile"
-          ? "Act-Profil"
-          : item.source === "venue_profile"
-            ? "Venue-Profil"
-            : "Buchung"
-        : item.source === "act_profile"
-          ? "act profile"
-          : item.source === "venue_profile"
-            ? "venue profile"
-            : "booking";
-    return `${item.addendumNumber}. ${item.title} (${sourceLabel})`;
-  });
-  return [header, ...lines].join("\n");
-}
-
 async function ensureTemplates() {
-  let { german, english } = await getLatestSandboxTemplates();
-  if (german && english) return { german, english };
+  const latest = await getLatestSandboxTemplates();
+  const hasMuster =
+    latest.german?.version.includes("muster") &&
+    latest.english?.version.includes("muster");
+  if (hasMuster && latest.german && latest.english) {
+    return { german: latest.german, english: latest.english };
+  }
 
   const db = getDb();
-  if (!german) {
-    const [created] = await db
-      .insert(agreementTemplates)
-      .values({
-        locale: "de",
-        version: "de-sandbox-1",
-        legalReviewStatus: "sandbox",
-        body: [
-          "SANDBOX — kein rechtsverbindliches Dokument.",
-          "Vereinbarung v{{termsVersion}} zwischen {{venueName}} und {{actName}}.",
-          "Leistung: {{startsAt}}–{{endsAt}} ({{timezone}}).",
-          "Honorar: {{fee}}. Format: {{performanceFormat}}.",
-          "Storno: {{cancellationTerms}}.",
-          "Produktion: {{productionObligations}}.",
-          "Kaution: {{depositTerms}}.",
-          "Deutscher Text ist maßgeblich.",
-        ].join("\n"),
-      })
-      .returning();
-    german = created!;
-  }
-  if (!english) {
-    const [created] = await db
-      .insert(agreementTemplates)
-      .values({
-        locale: "en",
-        version: "en-sandbox-1",
-        legalReviewStatus: "sandbox",
-        body: [
-          "SANDBOX — not a legally binding document.",
-          "Agreement v{{termsVersion}} between {{venueName}} and {{actName}}.",
-          "Performance: {{startsAt}}–{{endsAt}} ({{timezone}}).",
-          "Fee: {{fee}}. Format: {{performanceFormat}}.",
-          "Cancellation: {{cancellationTerms}}.",
-          "Production: {{productionObligations}}.",
-          "Deposit: {{depositTerms}}.",
-          "German text is controlling; English is a convenience translation.",
-        ].join("\n"),
-      })
-      .returning();
-    english = created!;
-  }
-  return { german, english };
+  const [german] = await db
+    .insert(agreementTemplates)
+    .values({
+      locale: "de",
+      version: "de-muster-1",
+      legalReviewStatus: "draft",
+      body: [
+        "Vereinbarung Version {{termsVersion}}",
+        "",
+        "Zwischen {{venueName}} (Veranstaltungsort) und {{actName}} (Act).",
+        "",
+        "Leistung",
+        "{{startsAt}} – {{endsAt}} ({{timezone}})",
+        "",
+        "Honorar",
+        "{{fee}}",
+        "",
+        "Format",
+        "{{performanceFormat}}",
+        "",
+        "Storno",
+        "{{cancellationTerms}}",
+        "",
+        "Produktion",
+        "{{productionObligations}}",
+        "",
+        "Kaution",
+        "{{depositTerms}}",
+        "",
+        "Der deutsche Text ist maßgeblich.",
+      ].join("\n"),
+    })
+    .returning();
+  const [english] = await db
+    .insert(agreementTemplates)
+    .values({
+      locale: "en",
+      version: "en-muster-1",
+      legalReviewStatus: "draft",
+      body: [
+        "Agreement version {{termsVersion}}",
+        "",
+        "Between {{venueName}} (venue) and {{actName}} (act).",
+        "",
+        "Performance",
+        "{{startsAt}} – {{endsAt}} ({{timezone}})",
+        "",
+        "Fee",
+        "{{fee}}",
+        "",
+        "Format",
+        "{{performanceFormat}}",
+        "",
+        "Cancellation",
+        "{{cancellationTerms}}",
+        "",
+        "Production",
+        "{{productionObligations}}",
+        "",
+        "Deposit",
+        "{{depositTerms}}",
+        "",
+        "German text is controlling; English is a convenience translation.",
+      ].join("\n"),
+    })
+    .returning();
+  return { german: german!, english: english! };
 }
 
 const generateSchema = z.object({
@@ -296,8 +298,8 @@ export async function generateAgreement(
       },
     });
 
-    const germanBody = `${rendered.germanBody}\n\n${formatAddendaAppendix(addendaSnapshot, "de")}`;
-    const englishBody = `${rendered.englishBody}\n\n${formatAddendaAppendix(addendaSnapshot, "en")}`;
+    const germanBody = rendered.germanBody;
+    const englishBody = rendered.englishBody;
     const legalIdentitySnapshot = {
       entertainer: snapshotLegal(entertainerLegal!),
       venue: snapshotLegal(venueLegal!),
@@ -313,6 +315,43 @@ export async function generateAgreement(
       Boolean,
     ) as string[];
 
+    const docsById = new Map(
+      [...actDocs, ...venueDocs, ...bookingDocs].map((d) => [d.id, d]),
+    );
+    const addendaForPdf = await Promise.all(
+      addendaSnapshot.map(async (item) => {
+        const doc = docsById.get(item.id);
+        let pdfBytes: Uint8Array | null = null;
+        if (doc?.blobKey) {
+          const loaded = await loadDocumentFile(doc.blobKey);
+          pdfBytes = loaded?.bytes ?? null;
+        }
+        return {
+          addendumNumber: item.addendumNumber,
+          title: item.title,
+          pdfBytes,
+        };
+      }),
+    );
+
+    // Pre-create agreement id for PDF footer / cover reference
+    const agreementIdForPdf = randomUUID();
+    const packagePdf = await buildAgreementPackagePdf({
+      agreementId: agreementIdForPdf,
+      actName: profile.actName,
+      venueName: venue.name,
+      termsVersion: agreed.version,
+      germanBody,
+      englishBody,
+      addenda: addendaForPdf,
+    });
+
+    const stored = await saveDocumentFile({
+      ownerUserId: actor.userId,
+      mimeType: "application/pdf",
+      bytes: packagePdf.bytes,
+    });
+
     const provider = getESignProviderForGeneration();
     let agreementId: string | undefined;
 
@@ -320,6 +359,7 @@ export async function generateAgreement(
       const [created] = await tx
         .insert(agreements)
         .values({
+          id: agreementIdForPdf,
           bookingId: booking.id,
           bookingTermsId: agreed.id,
           germanTemplateVersion: rendered.germanTemplateVersion,
@@ -328,6 +368,9 @@ export async function generateAgreement(
           englishBody,
           addendaSnapshot,
           legalIdentitySnapshot,
+          packagePdfBlobKey: stored.blobKey,
+          packageFingerprint: packagePdf.fingerprint,
+          packagePageCount: packagePdf.pageCount,
           provider: provider.name,
           status: "sent",
         })
@@ -340,6 +383,9 @@ export async function generateAgreement(
       const envelope = await provider.createEnvelope({
         agreementId: created.id,
         germanControlling: true,
+        packageFingerprint: packagePdf.fingerprint,
+        packagePdfBlobKey: stored.blobKey,
+        packagePageCount: packagePdf.pageCount,
         signerEmails,
       });
 
@@ -383,6 +429,8 @@ export async function generateAgreement(
           sandbox: provider.name === "sandbox",
           germanTemplateVersion: rendered.germanTemplateVersion,
           englishTemplateVersion: rendered.englishTemplateVersion,
+          packageFingerprint: packagePdf.fingerprint,
+          packagePageCount: packagePdf.pageCount,
         },
       });
     });
@@ -397,10 +445,218 @@ export async function generateAgreement(
   }
 }
 
+const ensurePackageSchema = z.object({
+  bookingId: z.string().uuid(),
+  agreementId: z.string().uuid(),
+  locale: z.enum(["en", "de"]).default("en"),
+  /** Rebuild cover/layout before any signature is recorded. */
+  force: z.boolean().optional(),
+});
+
+/**
+ * Backfill or rebuild the agreement package PDF (cover, MUSTER watermark, addenda).
+ * Force rebuild is allowed only while no signature is signed.
+ */
+export async function ensureAgreementPackage(
+  input: z.infer<typeof ensurePackageSchema>,
+): Promise<ActionResult> {
+  try {
+    const { actor, auditUserId } = await requireActor();
+    const parsed = ensurePackageSchema.safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid package request");
+    }
+    if (!can(actor, "booking.generate_agreement")) {
+      throw new AppError("forbidden", "Cannot build agreement package");
+    }
+
+    const { booking, profile, party } = await loadBookingAccess(
+      actor,
+      parsed.data.bookingId,
+    );
+    if (party !== "venue" && party !== "entertainer" && party !== "staff") {
+      throw new AppError("forbidden", "Not a party to this booking");
+    }
+
+    const agreementBundle = await getAgreementForBooking(booking.id);
+    if (
+      !agreementBundle ||
+      agreementBundle.agreement.id !== parsed.data.agreementId
+    ) {
+      throw new AppError("not_found", "Agreement not found");
+    }
+    const agreement = agreementBundle.agreement;
+    const anySigned = agreementBundle.signatures.some(
+      (row) => row.status === "signed",
+    );
+    if (
+      agreement.packagePdfBlobKey &&
+      agreement.packageFingerprint &&
+      !parsed.data.force
+    ) {
+      return { ok: true, id: agreement.id };
+    }
+    if (parsed.data.force && anySigned) {
+      throw new AppError(
+        "conflict",
+        "Cannot rebuild the package after a signature has been recorded",
+      );
+    }
+
+    const db = getDb();
+    const venue = await db.query.venues.findFirst({
+      where: eq(venues.id, booking.venueId),
+      columns: { id: true, name: true },
+    });
+    if (!venue) {
+      throw new AppError("not_found", "Venue not found");
+    }
+
+    const [agreed] = await db
+      .select()
+      .from(bookingTerms)
+      .where(eq(bookingTerms.bookingId, booking.id))
+      .orderBy(desc(bookingTerms.version));
+    if (!agreed?.acceptedAt) {
+      throw new AppError("validation", "Accepted terms required");
+    }
+
+    const { german, english } = await ensureTemplates();
+    const rendered = renderAgreementDocuments({
+      germanTemplate: german,
+      englishTemplate: english,
+      terms: {
+        actName: profile.actName,
+        venueName: venue.name,
+        startsAtIso: agreed.startsAt.toISOString(),
+        endsAtIso: agreed.endsAt.toISOString(),
+        timezone: agreed.timezone,
+        feeCents: agreed.feeCents,
+        currency: agreed.currency,
+        performanceFormat: agreed.performanceFormat,
+        cancellationTerms: agreed.cancellationTerms,
+        productionObligations: agreed.productionObligations,
+        depositTerms: agreed.depositTerms,
+        termsVersion: agreed.version,
+      },
+    });
+    const germanBody = rendered.germanBody;
+    const englishBody = rendered.englishBody;
+
+    const snapshot = (agreement.addendaSnapshot ?? []) as Array<{
+      id: string;
+      title: string;
+      source: "act_profile" | "venue_profile" | "booking";
+      addendumNumber: number;
+    }>;
+    const docIds = snapshot.map((item) => item.id);
+    const docs =
+      docIds.length > 0
+        ? await db.query.riderFiles.findMany({
+            where: inArray(riderFiles.id, docIds),
+            columns: { id: true, blobKey: true },
+          })
+        : [];
+    const docsById = new Map(docs.map((d) => [d.id, d]));
+
+    const addendaForPdf = await Promise.all(
+      snapshot.map(async (item) => {
+        const doc = docsById.get(item.id);
+        let pdfBytes: Uint8Array | null = null;
+        if (doc?.blobKey) {
+          const loaded = await loadDocumentFile(doc.blobKey);
+          pdfBytes = loaded?.bytes ?? null;
+        }
+        return {
+          addendumNumber: item.addendumNumber,
+          title: item.title,
+          pdfBytes,
+        };
+      }),
+    );
+
+    const packagePdf = await buildAgreementPackagePdf({
+      agreementId: agreement.id,
+      actName: profile.actName,
+      venueName: venue.name,
+      termsVersion: agreed.version,
+      germanBody,
+      englishBody,
+      addenda: addendaForPdf,
+    });
+
+    const stored = await saveDocumentFile({
+      ownerUserId: actor.userId,
+      mimeType: "application/pdf",
+      bytes: packagePdf.bytes,
+    });
+
+    const provider = getESignProviderForGeneration();
+    const venueOwnerUserId = await getVenueOwnerUserId(booking.venueId);
+    const venueOwner = venueOwnerUserId
+      ? await db.query.users.findFirst({ where: eq(users.id, venueOwnerUserId) })
+      : null;
+    const entertainerUser = await db.query.users.findFirst({
+      where: eq(users.id, profile.userId),
+    });
+    const signerEmails = [venueOwner?.email, entertainerUser?.email].filter(
+      Boolean,
+    ) as string[];
+
+    const envelope = await provider.createEnvelope({
+      agreementId: agreement.id,
+      germanControlling: true,
+      packageFingerprint: packagePdf.fingerprint,
+      packagePdfBlobKey: stored.blobKey,
+      packagePageCount: packagePdf.pageCount,
+      signerEmails,
+    });
+
+    await db
+      .update(agreements)
+      .set({
+        germanBody,
+        englishBody,
+        germanTemplateVersion: rendered.germanTemplateVersion,
+        englishTemplateVersion: rendered.englishTemplateVersion,
+        packagePdfBlobKey: stored.blobKey,
+        packageFingerprint: packagePdf.fingerprint,
+        packagePageCount: packagePdf.pageCount,
+        providerEnvelopeId:
+          agreement.providerEnvelopeId ?? envelope.providerEnvelopeId,
+        updatedAt: new Date(),
+      })
+      .where(eq(agreements.id, agreement.id));
+
+    await db.insert(auditEvents).values({
+      actorUserId: auditUserId,
+      action: "booking.agreement_package_built",
+      subjectType: "booking",
+      subjectId: booking.id,
+      metadata: {
+        agreementId: agreement.id,
+        packageFingerprint: packagePdf.fingerprint,
+        packagePageCount: packagePdf.pageCount,
+        backfill: !parsed.data.force,
+        rebuild: Boolean(parsed.data.force),
+      },
+    });
+
+    revalidatePath(`/${parsed.data.locale}/marketplace/bookings`);
+    revalidatePath(
+      `/${parsed.data.locale}/marketplace/bookings/${parsed.data.bookingId}`,
+    );
+    return { ok: true, id: agreement.id };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
 const signSchema = z.object({
   bookingId: z.string().uuid(),
   agreementId: z.string().uuid(),
   expectedVersion: z.coerce.number().int().positive(),
+  confirmationPhrase: z.string().min(1).max(120),
   locale: z.enum(["en", "de"]).default("en"),
 });
 
@@ -415,6 +671,19 @@ export async function signAgreementSandbox(
     }
     if (!can(actor, "booking.sign_agreement")) {
       throw new AppError("forbidden", "Cannot sign agreement");
+    }
+    if (
+      !matchesConfirmationPhrase(
+        parsed.data.confirmationPhrase,
+        parsed.data.locale,
+      )
+    ) {
+      throw new AppError(
+        "validation",
+        parsed.data.locale === "de"
+          ? 'Bitte geben Sie genau „Ich stimme zu“ ein'
+          : 'Please type exactly “I agree”',
+      );
     }
 
     const { booking, party } = await loadBookingAccess(
@@ -438,6 +707,12 @@ export async function signAgreementSandbox(
         "Only sandbox signatures are available until a provider is configured",
       );
     }
+    if (!agreementBundle.agreement.packageFingerprint) {
+      throw new AppError("validation", "Agreement package fingerprint missing");
+    }
+    if (!agreementBundle.agreement.providerEnvelopeId) {
+      throw new AppError("validation", "Agreement envelope missing");
+    }
 
     const target = agreementBundle.signatures.find(
       (row) => row.signerUserId === actor.userId,
@@ -452,6 +727,20 @@ export async function signAgreementSandbox(
       throw new AppError("conflict", "Already signed");
     }
 
+    const provider = getESignProviderForGeneration();
+    const signerUser = await getDb().query.users.findFirst({
+      where: eq(users.id, actor.userId),
+      columns: { email: true },
+    });
+    await provider.recordSignerAcceptance({
+      providerEnvelopeId: agreementBundle.agreement.providerEnvelopeId,
+      signerUserId: actor.userId,
+      signerEmail: signerUser?.email ?? actor.userId,
+      confirmationPhrase: parsed.data.confirmationPhrase,
+      packageFingerprint: agreementBundle.agreement.packageFingerprint,
+      locale: parsed.data.locale,
+    });
+
     const db = getDb();
     const agreed = await db.query.bookingTerms.findFirst({
       where: eq(bookingTerms.id, agreementBundle.agreement.bookingTermsId),
@@ -465,6 +754,7 @@ export async function signAgreementSandbox(
         .update(signatures)
         .set({
           status: "signed",
+          confirmationPhrase: parsed.data.confirmationPhrase.trim(),
           signedAt: new Date(),
           updatedAt: new Date(),
         })
@@ -520,10 +810,10 @@ export async function signAgreementSandbox(
           throw new AppError("invalid_transition", "Cannot confirm booking");
         }
 
-        const venue = await tx.query.venues.findFirst({
+        const venueRow = await tx.query.venues.findFirst({
           where: eq(venues.id, booking.venueId),
         });
-        if (!venue) {
+        if (!venueRow) {
           throw new AppError("not_found", "Venue not found");
         }
 
@@ -531,7 +821,7 @@ export async function signAgreementSandbox(
         if (!spaceId) {
           const space = await ensureDefaultVenueSpace(
             booking.venueId,
-            venue.name,
+            venueRow.name,
           );
           spaceId = space.id;
         }
@@ -594,6 +884,7 @@ export async function signAgreementSandbox(
           signatureId: target.id,
           partyRole: target.partyRole,
           progress,
+          packageFingerprint: agreementBundle.agreement.packageFingerprint,
           note: "Sandbox signature — not a production legal e-signature",
         },
       });

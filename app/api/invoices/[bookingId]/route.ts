@@ -35,11 +35,16 @@ export async function GET(_request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, error: "missing_blob" }, { status: 404 });
   }
 
-  const filename = `salon-invoice-${bookingId.slice(0, 8)}.txt`;
+  const isPdf =
+    detail.invoice.format === "sandbox_pdf" ||
+    (file.mimeType?.includes("pdf") ?? false);
+  const filename = `salon-invoice-${bookingId.slice(0, 8)}.${isPdf ? "pdf" : "txt"}`;
   return new NextResponse(Buffer.from(file.bytes), {
     status: 200,
     headers: {
-      "Content-Type": file.mimeType || "text/plain; charset=utf-8",
+      "Content-Type":
+        file.mimeType ||
+        (isPdf ? "application/pdf" : "text/plain; charset=utf-8"),
       "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "private, no-store",
     },

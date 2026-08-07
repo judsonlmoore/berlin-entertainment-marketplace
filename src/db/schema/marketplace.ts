@@ -857,6 +857,11 @@ export const agreements = pgTable(
       entertainer: Record<string, unknown>;
       venue: Record<string, unknown>;
     } | null>(),
+    /** Private Blob / local-doc key for the immutable package PDF. */
+    packagePdfBlobKey: text("package_pdf_blob_key"),
+    /** SHA-256 hex of final package PDF bytes. */
+    packageFingerprint: text("package_fingerprint"),
+    packagePageCount: integer("package_page_count"),
     provider: text("provider"),
     providerEnvelopeId: text("provider_envelope_id"),
     status: text("status").notNull().default("draft"),
@@ -888,6 +893,8 @@ export const signatures = pgTable(
     partyRole: text("party_role").notNull(),
     providerReference: text("provider_reference"),
     status: text("status").notNull().default("pending"),
+    /** Locale confirmation phrase typed at sign (double opt-in). */
+    confirmationPhrase: text("confirmation_phrase"),
     signedAt: timestamp("signed_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()

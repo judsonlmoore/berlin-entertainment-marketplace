@@ -8,6 +8,7 @@ import {
   venues,
 } from "@/src/db/schema/marketplace";
 import { can } from "@/src/domain/permissions";
+import { bookingDocumentsLocked } from "@/src/domain/agreement";
 import {
   PROFILE_DOCUMENT_MAX,
   titleFromFilename,
@@ -132,12 +133,24 @@ export async function POST(request: Request) {
         id: true,
         venueId: true,
         entertainerProfileId: true,
+        state: true,
       },
     });
     if (!booking) {
       return NextResponse.json(
         { ok: false, error: "booking_not_found" },
         { status: 404 },
+      );
+    }
+    if (bookingDocumentsLocked(booking.state)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "documents_locked",
+          message:
+            "Documents are locked after the agreement package is generated",
+        },
+        { status: 409 },
       );
     }
 

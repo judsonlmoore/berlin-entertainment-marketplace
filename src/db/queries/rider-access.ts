@@ -359,6 +359,7 @@ const documentListColumns = {
   originalFilename: riderFiles.originalFilename,
   sizeBytes: riderFiles.sizeBytes,
   scanStatus: riderFiles.scanStatus,
+  blobKey: riderFiles.blobKey,
   createdAt: riderFiles.createdAt,
   ownerUserId: riderFiles.ownerUserId,
   entertainerProfileId: riderFiles.entertainerProfileId,

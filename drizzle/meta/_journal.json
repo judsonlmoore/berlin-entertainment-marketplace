@@ -155,6 +155,13 @@
       "when": 1787200000000,
       "tag": "0021_profile_offers_multi_engagement",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1787300000000,
+      "tag": "0022_agreement_package_pdf",
+      "breakpoints": true
     }
   ]
 }

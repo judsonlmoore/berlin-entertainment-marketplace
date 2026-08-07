@@ -3,6 +3,8 @@
  * Salon never processes payments.
  */
 
+import { buildInvoicePdf } from "@/src/domain/invoice-pdf";
+
 export type InvoicePartySnapshot = {
   legalName: string;
   tradingName?: string | null;
@@ -14,6 +16,7 @@ export type InvoicePartySnapshot = {
   taxId?: string | null;
   invoiceEmail: string;
   iban?: string | null;
+  bic?: string | null;
   paymentNote?: string | null;
 };
 
@@ -32,7 +35,6 @@ export type InvoiceGenerateInput = {
 
 export type InvoiceGenerateResult = {
   format: string;
-  /** UTF-8 text/plain or PDF bytes as base64 for sandbox Blob upload. */
   bytes: Uint8Array;
   contentType: string;
   filename: string;
@@ -48,49 +50,17 @@ export class SandboxInvoiceProvider implements InvoiceProvider {
   readonly name = "sandbox";
 
   async generate(input: InvoiceGenerateInput): Promise<InvoiceGenerateResult> {
-    const fee = (input.feeCents / 100).toFixed(2);
-    const lines = [
-      "SALON SANDBOX INVOICE",
-      "Not a production tax document.",
-      "",
-      `Invoice id: ${input.invoiceId}`,
-      `Booking: ${input.bookingId}`,
-      `Locale: ${input.locale}`,
-      "",
-      "SELLER",
-      input.seller.legalName,
-      input.seller.addressLine1,
-      `${input.seller.postalCode} ${input.seller.city}`,
-      input.seller.countryCode,
-      input.seller.taxId ? `Tax: ${input.seller.taxId}` : "",
-      input.seller.invoiceEmail,
-      input.seller.iban ? `IBAN: ${input.seller.iban}` : "",
-      input.seller.paymentNote ?? "",
-      "",
-      "BUYER",
-      input.buyer.legalName,
-      input.buyer.addressLine1,
-      `${input.buyer.postalCode} ${input.buyer.city}`,
-      input.buyer.countryCode,
-      input.buyer.taxId ? `Tax: ${input.buyer.taxId}` : "",
-      input.buyer.invoiceEmail,
-      "",
-      "SERVICE",
-      input.performanceFormat,
-      `${input.startsAtIso} → ${input.endsAtIso}`,
-      `Fee: ${fee} ${input.currency}`,
-      "",
-      "Salon does not collect, hold, or route this payment.",
-    ]
-      .filter((line) => line !== undefined)
-      .join("\n");
+    const bytes = await buildInvoicePdf({
+      ...input,
+      vatRatePercent: 0,
+    });
 
     return {
-      format: "sandbox_txt",
-      bytes: new TextEncoder().encode(lines),
-      contentType: "text/plain; charset=utf-8",
-      filename: `salon-invoice-${input.bookingId.slice(0, 8)}.txt`,
-      validationNotes: "sandbox_only",
+      format: "sandbox_pdf",
+      bytes,
+      contentType: "application/pdf",
+      filename: `salon-invoice-${input.bookingId.slice(0, 8)}.pdf`,
+      validationNotes: "sandbox_specimen_pdf",
     };
   }
 }

@@ -11,6 +11,7 @@ import { z } from "zod";
 import { getDb } from "@/src/db/client";
 import { loadBookingAccess } from "@/src/actions/_booking-access";
 import { auditEvents, riderFiles } from "@/src/db/schema/marketplace";
+import { bookingDocumentsLocked } from "@/src/domain/agreement";
 import { AppError } from "@/src/domain/errors";
 import { deleteDocumentFile } from "@/src/integrations/document-file-store";
 
@@ -31,9 +32,18 @@ export async function removeBookingDocument(
       throw new AppError("validation", "Invalid document removal");
     }
 
-    const { party } = await loadBookingAccess(actor, parsed.data.bookingId);
+    const { booking, party } = await loadBookingAccess(
+      actor,
+      parsed.data.bookingId,
+    );
     if (party !== "venue" && party !== "entertainer" && party !== "staff") {
       throw new AppError("forbidden", "Not a party to this booking");
+    }
+    if (bookingDocumentsLocked(booking.state)) {
+      throw new AppError(
+        "validation",
+        "Documents are locked after the agreement package is generated",
+      );
     }
 
     const db = getDb();

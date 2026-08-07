@@ -3,9 +3,12 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
   CancelBookingForm,
+  BuildAgreementPackageButton,
+  DownloadAgreementPackageButton,
+  DownloadInvoiceButton,
   GenerateAgreementButton,
   GenerateInvoiceButton,
-  SignAgreementButton,
+  SignAgreementForm,
 } from "@/src/components/booking-actions";
 import { BookingDocumentUpload } from "@/src/components/booking-document-upload";
 import { BookingLifecycleTrack } from "@/src/components/booking-lifecycle-track";
@@ -47,7 +50,7 @@ import {
   type BookingParty,
   type BookingState,
 } from "@/src/domain/booking";
-import { canGenerateAgreement } from "@/src/domain/agreement";
+import { bookingDocumentsLocked, canGenerateAgreement } from "@/src/domain/agreement";
 import {
   isLegalIdentityComplete,
 } from "@/src/domain/legal-identity";
@@ -139,6 +142,19 @@ export default async function BookingDetailPage({ params }: Props) {
   const canGenerate =
     canGenerateAgreement(booking.state) &&
     (party === "venue" || party === "entertainer" || party === "staff");
+  const elevateAgreement =
+    Boolean(agreedTerms) &&
+    (booking.state === "terms_agreed" ||
+      booking.state === "agreement_generated" ||
+      booking.state === "partially_signed" ||
+      booking.state === "confirmed" ||
+      Boolean(agreement));
+  const documentsLocked = bookingDocumentsLocked(booking.state);
+  const showOffersPanel =
+    (party === "venue" || party === "entertainer") &&
+    (offerActionResolved.kind !== "none" ||
+      Boolean(openTerms) ||
+      offerHistory.length > 0);
   const myPendingSignature = agreement?.signatures.find(
     (row) =>
       row.signerUserId === access.actor.userId && row.status === "pending",
@@ -459,17 +475,6 @@ export default async function BookingDetailPage({ params }: Props) {
                 ? t("nextConfirmed")
                 : t("nextSteps")}
         </p>
-        {agreedTerms && canGenerate && !agreement ? (
-          <GenerateAgreementButton
-            locale={locale as "en" | "de"}
-            bookingId={booking.id}
-            expectedVersion={booking.version}
-            disabled={!bothLegalComplete}
-            disabledReason={
-              bothLegalComplete ? null : t("legalRequiredToGenerate")
-            }
-          />
-        ) : null}
       </div>
 
       {canRespondToEnquiry && enquiry && !openTerms ? (
@@ -520,10 +525,145 @@ export default async function BookingDetailPage({ params }: Props) {
         <p className="text-sm text-[var(--text-muted)]">{leadsT("openHint")}</p>
       ) : null}
 
-      {(party === "venue" || party === "entertainer") &&
-      (offerActionResolved.kind !== "none" ||
-        openTerms ||
-        offerHistory.length > 0) ? (
+      {/* Agreement elevated after terms lock (next primary action) */}
+      {elevateAgreement ? (
+        <div className="panel grid gap-4 p-6">
+          <h2 className="text-sm font-semibold tracking-[0.12em] uppercase">
+            {t("sectionAgreement")}
+          </h2>
+          {canGenerate && !agreement ? (
+            <div className="grid gap-3 text-sm">
+              <p className="text-[var(--text-muted)]">{t("nextGenerate")}</p>
+              <GenerateAgreementButton
+                locale={locale as "en" | "de"}
+                bookingId={booking.id}
+                expectedVersion={booking.version}
+                disabled={!bothLegalComplete}
+                disabledReason={
+                  bothLegalComplete ? null : t("legalRequiredToGenerate")
+                }
+              />
+            </div>
+          ) : null}
+          {agreement ? (
+            <div className="grid gap-4 text-sm">
+              <div className="grid gap-2 border-[var(--info-soft)] bg-[var(--info-soft)]/50 p-4">
+                <h3 className="font-medium">{t("agreementNoticeTitle")}</h3>
+                <p>{t("agreementNoticeBody")}</p>
+                <p>
+                  <span className="font-semibold">
+                    {t("agreementNoticeDeLabel")}
+                  </span>
+                  {" · "}
+                  <span className="text-[var(--text-muted)]">
+                    {t("agreementNoticeEnLabel")}
+                  </span>
+                </p>
+              </div>
+              <h3 className="text-lg font-medium">{t("agreementTitle")}</h3>
+              <p>
+                {t("agreementStatus")}: {agreement.status} · {agreement.provider}
+              </p>
+              {agreement.packageFingerprint ? (
+                <p className="font-mono text-xs text-[var(--text-muted)]">
+                  {t("packageFingerprint")}:{" "}
+                  {agreement.packageFingerprint.slice(0, 16)}…
+                  {agreement.packagePageCount
+                    ? ` · ${t("packagePages", { count: agreement.packagePageCount })}`
+                    : ""}
+                </p>
+              ) : null}
+              {agreement.packagePdfBlobKey ? (
+                <div className="flex flex-wrap items-start gap-3">
+                  <DownloadAgreementPackageButton agreementId={agreement.id} />
+                  {!agreement.signatures.some((s) => s.status === "signed") ? (
+                    <BuildAgreementPackageButton
+                      locale={locale as "en" | "de"}
+                      bookingId={booking.id}
+                      agreementId={agreement.id}
+                      force
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <BuildAgreementPackageButton
+                  locale={locale as "en" | "de"}
+                  bookingId={booking.id}
+                  agreementId={agreement.id}
+                />
+              )}
+              {agreement.addendaSnapshot &&
+              agreement.addendaSnapshot.length > 0 ? (
+                <ul className="grid gap-1">
+                  {agreement.addendaSnapshot.map((item) => (
+                    <li key={`${item.id}-${item.addendumNumber}`}>
+                      {t("addendumLabel", { n: item.addendumNumber })}:{" "}
+                      {item.title}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              <ul className="grid gap-1">
+                {agreement.signatures.map((signature) => (
+                  <li key={signature.id}>
+                    {signature.partyRole}: {signature.status}
+                    {signature.signedAt
+                      ? ` · ${dateFmt.format(signature.signedAt)}`
+                      : ""}
+                  </li>
+                ))}
+              </ul>
+              {canSign ? (
+                <SignAgreementForm
+                  locale={locale as "en" | "de"}
+                  bookingId={booking.id}
+                  agreementId={agreement.id}
+                  expectedVersion={booking.version}
+                />
+              ) : agreement.status !== "completed" ? (
+                <p className="text-[var(--text-muted)]">
+                  {t("waitingSignatures")}
+                </p>
+              ) : (
+                <p className="text-[var(--primary)]">{t("confirmedCalendars")}</p>
+              )}
+            </div>
+          ) : null}
+
+          {booking.state === "confirmed" ? (
+            <div
+              className={`grid gap-3 text-sm ${
+                agreement ? "border-t border-[var(--rule)] pt-4" : ""
+              }`}
+            >
+              <h3 className="font-medium">{t("invoiceTitle")}</h3>
+              <p className="text-[var(--text-muted)]">{t("invoiceBody")}</p>
+              {invoice?.status === "generated" && invoice.blobKey ? (
+                <div className="grid gap-3">
+                  <p className="text-[var(--text-muted)]">
+                    {t("invoiceGenerated")}
+                  </p>
+                  <div className="flex flex-wrap items-start gap-3">
+                    <DownloadInvoiceButton bookingId={booking.id} />
+                    <GenerateInvoiceButton
+                      locale={locale as "en" | "de"}
+                      bookingId={booking.id}
+                      force
+                    />
+                  </div>
+                </div>
+              ) : (
+                <GenerateInvoiceButton
+                  locale={locale as "en" | "de"}
+                  bookingId={booking.id}
+                />
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {!elevateAgreement && showOffersPanel ? (
         <BookingOffersPanel
           locale={locale as "en" | "de"}
           bookingId={booking.id}
@@ -606,7 +746,9 @@ export default async function BookingDetailPage({ params }: Props) {
         <div className="grid gap-2">
           <h3 className="font-medium">{t("documentsBooking")}</h3>
           <p className="text-sm text-[var(--text-muted)]">
-            {t("documentsBookingHint")}
+            {documentsLocked
+              ? t("documentsLockedBody")
+              : t("documentsBookingHint")}
           </p>
           {bookingAddenda.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">—</p>
@@ -628,7 +770,8 @@ export default async function BookingDetailPage({ params }: Props) {
                       {docTitle(doc)}
                     </a>
                   </span>
-                  {doc.ownerUserId === access.actor.userId ? (
+                  {!documentsLocked &&
+                  doc.ownerUserId === access.actor.userId ? (
                     <DeleteBookingDocumentButton
                       locale={locale as "en" | "de"}
                       bookingId={booking.id}
@@ -639,14 +782,14 @@ export default async function BookingDetailPage({ params }: Props) {
               ))}
             </ul>
           )}
-          {isEntertainer ? (
+          {!documentsLocked && isEntertainer ? (
             <BookingDocumentUpload
               locale={locale as "en" | "de"}
               bookingId={booking.id}
               entertainerProfileId={booking.entertainerProfileId}
             />
           ) : null}
-          {isVenue ? (
+          {!documentsLocked && isVenue ? (
             <BookingDocumentUpload
               locale={locale as "en" | "de"}
               bookingId={booking.id}
@@ -656,120 +799,27 @@ export default async function BookingDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Agreement (only after generate) + optional invoice when confirmed */}
-      {agreement || booking.state === "confirmed" ? (
-        <div className="panel grid gap-4 p-6">
-          <h2 className="text-sm font-semibold tracking-[0.12em] uppercase">
-            {t("sectionAgreement")}
-          </h2>
-          {agreement ? (
-            <div className="grid gap-4 text-sm">
-              <div className="grid gap-2 border-[var(--info-soft)] bg-[var(--info-soft)]/50 p-4">
-                <h3 className="font-medium">{t("agreementNoticeTitle")}</h3>
-                <p>{t("agreementNoticeBody")}</p>
-                <p>
-                  <span className="font-semibold">
-                    {t("agreementNoticeDeLabel")}
-                  </span>
-                  {" · "}
-                  <span className="text-[var(--text-muted)]">
-                    {t("agreementNoticeEnLabel")}
-                  </span>
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-lg font-medium">{t("agreementTitle")}</h3>
-                <StatusLabel tone="warning">{t("sandboxBadge")}</StatusLabel>
-              </div>
-              <p className="text-[var(--text-muted)]">{t("sandboxBody")}</p>
-              <p>
-                {t("agreementStatus")}: {agreement.status} · {agreement.provider}
-              </p>
-              {agreement.addendaSnapshot &&
-              agreement.addendaSnapshot.length > 0 ? (
-                <ul className="grid gap-1">
-                  {agreement.addendaSnapshot.map((item) => (
-                    <li key={`${item.id}-${item.addendumNumber}`}>
-                      {t("addendumLabel", { n: item.addendumNumber })}:{" "}
-                      {item.title}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              <ul className="grid gap-1">
-                {agreement.signatures.map((signature) => (
-                  <li key={signature.id}>
-                    {signature.partyRole}: {signature.status}
-                    {signature.signedAt
-                      ? ` · ${dateFmt.format(signature.signedAt)}`
-                      : ""}
-                  </li>
-                ))}
-              </ul>
-              {agreement.rendered ? (
-                <div className="grid gap-4 border-t border-[var(--rule)] pt-4">
-                  <div>
-                    <p className="font-semibold">
-                      {t("agreementNoticeDeLabel")}
-                    </p>
-                    <pre className="mt-2 font-sans text-xs leading-relaxed whitespace-pre-wrap text-[var(--text-muted)]">
-                      {agreement.rendered.germanBody}
-                    </pre>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-[var(--text-muted)]">
-                      {t("agreementNoticeEnLabel")}
-                    </p>
-                    <pre className="mt-2 font-sans text-xs leading-relaxed whitespace-pre-wrap text-[var(--text-muted)]">
-                      {agreement.rendered.englishBody}
-                    </pre>
-                  </div>
-                </div>
-              ) : null}
-              {canSign ? (
-                <SignAgreementButton
-                  locale={locale as "en" | "de"}
-                  bookingId={booking.id}
-                  agreementId={agreement.id}
-                  expectedVersion={booking.version}
-                />
-              ) : agreement.status !== "completed" ? (
-                <p className="text-[var(--text-muted)]">
-                  {t("waitingSignatures")}
-                </p>
-              ) : (
-                <p className="text-[var(--primary)]">{t("confirmedCalendars")}</p>
-              )}
-            </div>
-          ) : null}
-
-          {booking.state === "confirmed" ? (
-            <div
-              className={`grid gap-3 text-sm ${
-                agreement ? "border-t border-[var(--rule)] pt-4" : ""
-              }`}
-            >
-              <h3 className="font-medium">{t("invoiceTitle")}</h3>
-              <p className="text-[var(--text-muted)]">{t("invoiceBody")}</p>
-              {invoice?.status === "generated" && invoice.blobKey ? (
-                <p>
-                  {t("invoiceGenerated")} ·{" "}
-                  <a
-                    href={`/api/invoices/${booking.id}`}
-                    className="underline"
-                  >
-                    {t("downloadInvoice")}
-                  </a>
-                </p>
-              ) : (
-                <GenerateInvoiceButton
-                  locale={locale as "en" | "de"}
-                  bookingId={booking.id}
-                />
-              )}
-            </div>
-          ) : null}
-        </div>
+      {elevateAgreement && showOffersPanel ? (
+        <BookingOffersPanel
+          locale={locale as "en" | "de"}
+          bookingId={booking.id}
+          expectedVersion={booking.version}
+          entertainerUserId={booking.entertainerUserId}
+          offerAction={offerActionResolved.kind}
+          openOffer={openTerms}
+          history={offerHistory}
+          defaults={defaults}
+          canAccept={Boolean(canAccept)}
+          ownLegalComplete={ownLegalComplete}
+          declineEnquiryId={declineEnquiryId}
+          bookingClosedWithoutAccept={
+            booking.state === "declined" ||
+            booking.state === "rejected" ||
+            booking.state === "expired" ||
+            booking.state === "withdrawn" ||
+            booking.state === "cancelled"
+          }
+        />
       ) : null}
 
       {showCancel ? (

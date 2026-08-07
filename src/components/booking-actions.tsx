@@ -8,6 +8,7 @@ import {
   recordDepositStatus,
 } from "@/src/actions/bookings";
 import {
+  ensureAgreementPackage,
   generateAgreement,
   signAgreementSandbox,
 } from "@/src/actions/agreements";
@@ -202,12 +203,203 @@ export function GenerateAgreementButton({
   );
 }
 
-export function GenerateInvoiceButton({
+export function DownloadAgreementPackageButton({
+  agreementId,
+}: {
+  agreementId: string;
+}) {
+  const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="grid gap-2">
+      <Button
+        type="button"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            try {
+              const res = await fetch(
+                `/api/agreements/${agreementId}/package`,
+              );
+              if (!res.ok) {
+                setError(t("downloadPackageFailed"));
+                return;
+              }
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement("a");
+              anchor.href = url;
+              anchor.download = `agreement-${agreementId.slice(0, 8)}.pdf`;
+              document.body.appendChild(anchor);
+              anchor.click();
+              anchor.remove();
+              URL.revokeObjectURL(url);
+            } catch {
+              setError(t("downloadPackageFailed"));
+            }
+          });
+        }}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        {t("downloadPackagePdf")}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function BuildAgreementPackageButton({
   locale,
   bookingId,
+  agreementId,
+  force = false,
 }: {
   locale: "en" | "de";
   bookingId: string;
+  agreementId: string;
+  force?: boolean;
+}) {
+  const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="grid gap-2">
+      {!force ? (
+        <p className="text-sm text-[var(--text-muted)]">
+          {t("packagePdfMissing")}
+        </p>
+      ) : null}
+      <Button
+        type="button"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant={force ? "secondary" : "primary"}
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            const result = await ensureAgreementPackage({
+              bookingId,
+              agreementId,
+              locale,
+              force,
+            });
+            if (!result.ok) {
+              setError(result.message);
+              return;
+            }
+            router.refresh();
+          });
+        }}
+      >
+        {force ? t("rebuildPackagePdf") : t("buildPackagePdf")}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function DownloadInvoiceButton({ bookingId }: { bookingId: string }) {
+  const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="grid gap-2">
+      <Button
+        type="button"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="primary"
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            try {
+              const res = await fetch(`/api/invoices/${bookingId}`);
+              if (!res.ok) {
+                setError(t("downloadInvoiceFailed"));
+                return;
+              }
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement("a");
+              anchor.href = url;
+              anchor.download = `salon-invoice-${bookingId.slice(0, 8)}.pdf`;
+              document.body.appendChild(anchor);
+              anchor.click();
+              anchor.remove();
+              URL.revokeObjectURL(url);
+            } catch {
+              setError(t("downloadInvoiceFailed"));
+            }
+          });
+        }}
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        {t("downloadInvoice")}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function GenerateInvoiceButton({
+  locale,
+  bookingId,
+  force = false,
+}: {
+  locale: "en" | "de";
+  bookingId: string;
+  force?: boolean;
 }) {
   const t = useTranslations("bookings");
   const ui = useTranslations("ui");
@@ -228,6 +420,7 @@ export function GenerateInvoiceButton({
             const result = await generateBookingInvoice({
               bookingId,
               locale,
+              force,
             });
             if (!result.ok) {
               setError(result.message);
@@ -237,7 +430,7 @@ export function GenerateInvoiceButton({
           });
         }}
       >
-        {t("generateInvoice")}
+        {force ? t("rebuildInvoice") : t("generateInvoice")}
       </Button>
       {error ? (
         <p role="alert" className="text-sm text-red-800">
@@ -248,7 +441,7 @@ export function GenerateInvoiceButton({
   );
 }
 
-export function SignAgreementButton({
+export function SignAgreementForm({
   locale,
   bookingId,
   agreementId,
@@ -264,14 +457,34 @@ export function SignAgreementButton({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [phrase, setPhrase] = useState("");
+  const required =
+    locale === "de" ? "Ich stimme zu" : "I agree";
+  const phraseOk =
+    phrase.trim().toLocaleLowerCase() === required.toLocaleLowerCase();
 
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-3 border-t border-[var(--rule)] pt-4">
+      <p className="text-sm text-[var(--text-muted)]">
+        {t("signConfirmHint", { phrase: required })}
+      </p>
+      <label className="grid gap-1 text-sm">
+        <span className="font-medium">{t("signConfirmLabel")}</span>
+        <input
+          type="text"
+          value={phrase}
+          onChange={(e) => setPhrase(e.target.value)}
+          autoComplete="off"
+          className="min-h-11 rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-3"
+          placeholder={required}
+        />
+      </label>
       <Button
         type="button"
         pending={pending}
         pendingLabel={ui("working")}
         variant="primary"
+        disabled={!phraseOk}
         onClick={() => {
           setError(null);
           startTransition(async () => {
@@ -279,6 +492,7 @@ export function SignAgreementButton({
               bookingId,
               agreementId,
               expectedVersion,
+              confirmationPhrase: phrase,
               locale,
             });
             if (!result.ok) {
@@ -298,6 +512,13 @@ export function SignAgreementButton({
       ) : null}
     </div>
   );
+}
+
+/** @deprecated Use SignAgreementForm */
+export function SignAgreementButton(
+  props: Parameters<typeof SignAgreementForm>[0],
+) {
+  return <SignAgreementForm {...props} />;
 }
 
 export function DepositStatusForm({
