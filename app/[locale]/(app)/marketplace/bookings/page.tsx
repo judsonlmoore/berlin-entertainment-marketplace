@@ -107,7 +107,13 @@ export default async function BookingsInboxPage({
       <div className="panel grid gap-3 p-6">
         <h2 className="page-title text-xl">{t("pipelineTitle")}</h2>
         {leads.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">{t("empty")}</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            {statusFilter === "all" || statusFilter === "open"
+              ? t("empty")
+              : t("emptyFiltered", {
+                  status: leadsT(`status.${statusFilter}`),
+                })}
+          </p>
         ) : (
           <ul className="grid gap-3">
             {leads.map((lead) => (
