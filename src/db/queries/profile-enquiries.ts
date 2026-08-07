@@ -10,10 +10,7 @@ import {
   profileEnquiries,
   venues,
 } from "@/src/db/schema/marketplace";
-import {
-  canTransitionBooking,
-  type BookingState,
-} from "@/src/domain/booking";
+import { canTransitionBooking, type BookingState } from "@/src/domain/booking";
 import type { ActorContext } from "@/src/domain/permissions";
 import { AppError } from "@/src/domain/errors";
 import {

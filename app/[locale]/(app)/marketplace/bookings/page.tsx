@@ -21,10 +21,7 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-const STATUS_FILTERS: Array<LeadStatus | "all"> = [
-  ...LEAD_STATUSES,
-  "all",
-];
+const STATUS_FILTERS: Array<LeadStatus | "all"> = [...LEAD_STATUSES, "all"];
 
 function needsActionMessageKey(action: BookingNeedsAction): string {
   switch (action) {

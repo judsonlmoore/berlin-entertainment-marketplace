@@ -4,19 +4,12 @@ import {
   type BookingState,
 } from "@/src/domain/booking";
 
-export const LEAD_STATUSES = [
-  "open",
-  "confirmed",
-  "done",
-  "lost",
-] as const;
+export const LEAD_STATUSES = ["open", "confirmed", "done", "lost"] as const;
 
 export type LeadStatus = (typeof LEAD_STATUSES)[number];
 
 export type LeadOriginChannel =
-  | "application"
-  | "direct_request"
-  | "profile_enquiry";
+  "application" | "direct_request" | "profile_enquiry";
 
 export const BOOKING_NEEDS_ACTIONS = [
   "respond_offer",
@@ -157,16 +150,10 @@ export function resolveBookingNeedsAction(input: {
   if (offerAction.kind === "respond") return "respond_offer";
 
   if (input.originType === "direct_request" && input.directRequestState) {
-    if (
-      input.directRequestState === "requested" &&
-      input.isEntertainerParty
-    ) {
+    if (input.directRequestState === "requested" && input.isEntertainerParty) {
       return "respond_request";
     }
-    if (
-      input.directRequestState === "changes_proposed" &&
-      input.isVenueParty
-    ) {
+    if (input.directRequestState === "changes_proposed" && input.isVenueParty) {
       return "respond_request";
     }
   }

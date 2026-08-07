@@ -30,9 +30,9 @@ describe("booking state machine", () => {
     expect(
       canActorTransitionBooking("shortlisted", "terms_agreed", "entertainer"),
     ).toBe(true);
-    expect(
-      canActorTransitionBooking("applied", "terms_agreed", "venue"),
-    ).toBe(true);
+    expect(canActorTransitionBooking("applied", "terms_agreed", "venue")).toBe(
+      true,
+    );
     expect(
       canActorTransitionBooking("requested", "terms_agreed", "entertainer"),
     ).toBe(true);

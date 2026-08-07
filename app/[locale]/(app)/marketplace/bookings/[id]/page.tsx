@@ -50,10 +50,11 @@ import {
   type BookingParty,
   type BookingState,
 } from "@/src/domain/booking";
-import { bookingDocumentsLocked, canGenerateAgreement } from "@/src/domain/agreement";
 import {
-  isLegalIdentityComplete,
-} from "@/src/domain/legal-identity";
+  bookingDocumentsLocked,
+  canGenerateAgreement,
+} from "@/src/domain/agreement";
+import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import { bookingContactsUnlocked } from "@/src/domain/lead";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
@@ -112,8 +113,7 @@ export default async function BookingDetailPage({ params }: Props) {
       ? "venue"
       : "staff";
 
-  const openTerms =
-    terms.find((row) => isOpenTermsOffer(row)) ?? null;
+  const openTerms = terms.find((row) => isOpenTermsOffer(row)) ?? null;
   const agreedTerms = terms.find((row) => row.acceptedAt) ?? null;
   const offerHistory = terms.filter(
     (row) => row.acceptedAt || row.supersededAt,
@@ -372,7 +372,7 @@ export default async function BookingDetailPage({ params }: Props) {
         <p className="text-sm">
           <Link href="/marketplace/bookings">{t("back")}</Link>
         </p>
-        <p className="mt-4 text-xs font-semibold tracking-[0.14em] uppercase text-[var(--text-muted)]">
+        <p className="mt-4 text-xs font-semibold tracking-[0.14em] text-[var(--text-muted)] uppercase">
           {t("negotiationEyebrow")}
         </p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -397,9 +397,7 @@ export default async function BookingDetailPage({ params }: Props) {
             ["application", "direct_request", "profile_enquiry"] as const
           ).includes(
             booking.originType as
-              | "application"
-              | "direct_request"
-              | "profile_enquiry",
+              "application" | "direct_request" | "profile_enquiry",
           )
             ? leadsT(
                 `channel.${booking.originType as "application" | "direct_request" | "profile_enquiry"}`,
@@ -564,7 +562,8 @@ export default async function BookingDetailPage({ params }: Props) {
               </div>
               <h3 className="text-lg font-medium">{t("agreementTitle")}</h3>
               <p>
-                {t("agreementStatus")}: {agreement.status} · {agreement.provider}
+                {t("agreementStatus")}: {agreement.status} ·{" "}
+                {agreement.provider}
               </p>
               {agreement.packageFingerprint ? (
                 <p className="font-mono text-xs text-[var(--text-muted)]">
@@ -627,7 +626,9 @@ export default async function BookingDetailPage({ params }: Props) {
                   {t("waitingSignatures")}
                 </p>
               ) : (
-                <p className="text-[var(--primary)]">{t("confirmedCalendars")}</p>
+                <p className="text-[var(--primary)]">
+                  {t("confirmedCalendars")}
+                </p>
               )}
             </div>
           ) : null}
@@ -757,10 +758,7 @@ export default async function BookingDetailPage({ params }: Props) {
           ) : (
             <ul className="grid gap-2 text-sm">
               {bookingAddenda.map((doc) => (
-                <li
-                  key={doc.id}
-                  className="flex flex-wrap items-center gap-3"
-                >
+                <li key={doc.id} className="flex flex-wrap items-center gap-3">
                   <span>
                     <span className="text-[var(--text-muted)]">
                       {t("addendumLabel", { n: doc.addendumNumber })} ·{" "}

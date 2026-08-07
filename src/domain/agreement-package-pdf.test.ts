@@ -31,9 +31,7 @@ describe("splitParagraphs / pairParagraphs", () => {
       ),
     ).toBe("Leistung: Abend.");
     expect(
-      normalizeAgreementBody(
-        "SANDBOX — demo.\nLeistung: A.\nHonorar: B.",
-      ),
+      normalizeAgreementBody("SANDBOX — demo.\nLeistung: A.\nHonorar: B."),
     ).toBe("Leistung: A.\n\nHonorar: B.");
   });
 });
@@ -60,9 +58,8 @@ describe("confirmation phrase", () => {
 
 describe("buildAgreementPackagePdf", () => {
   it("builds a cover + bilingual PDF with fingerprint and pages", async () => {
-    const { buildAgreementPackagePdf } = await import(
-      "./agreement-package-pdf"
-    );
+    const { buildAgreementPackagePdf } =
+      await import("./agreement-package-pdf");
     const result = await buildAgreementPackagePdf({
       agreementId: "11111111-2222-3333-4444-555555555555",
       actName: "Dave Matthews Band",
@@ -80,9 +77,8 @@ describe("buildAgreementPackagePdf", () => {
 
   it("embeds readable addendum PDFs and notes unreadable ones", async () => {
     const { PDFDocument } = await import("pdf-lib");
-    const { buildAgreementPackagePdf } = await import(
-      "./agreement-package-pdf"
-    );
+    const { buildAgreementPackagePdf } =
+      await import("./agreement-package-pdf");
 
     const { StandardFonts } = await import("pdf-lib");
     const addendumDoc = await PDFDocument.create();

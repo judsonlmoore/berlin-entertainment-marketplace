@@ -59,7 +59,10 @@ import {
   type LegalIdentityFields,
 } from "@/src/domain/legal-identity";
 import { can } from "@/src/domain/permissions";
-import { loadDocumentFile, saveDocumentFile } from "@/src/integrations/document-file-store";
+import {
+  loadDocumentFile,
+  saveDocumentFile,
+} from "@/src/integrations/document-file-store";
 import { getESignProviderForGeneration } from "@/src/integrations/esign";
 
 function snapshotLegal(identity: LegalIdentityFields) {
@@ -596,7 +599,9 @@ export async function ensureAgreementPackage(
     const provider = getESignProviderForGeneration();
     const venueOwnerUserId = await getVenueOwnerUserId(booking.venueId);
     const venueOwner = venueOwnerUserId
-      ? await db.query.users.findFirst({ where: eq(users.id, venueOwnerUserId) })
+      ? await db.query.users.findFirst({
+          where: eq(users.id, venueOwnerUserId),
+        })
       : null;
     const entertainerUser = await db.query.users.findFirst({
       where: eq(users.id, profile.userId),
@@ -625,10 +630,7 @@ export async function ensureAgreementPackage(
         .select({ status: signatures.status })
         .from(signatures)
         .where(eq(signatures.agreementId, agreement.id));
-      if (
-        parsed.data.force &&
-        !canRebuildAgreementPackage(lockedSignatures)
-      ) {
+      if (parsed.data.force && !canRebuildAgreementPackage(lockedSignatures)) {
         throw new AppError(
           "conflict",
           "Cannot rebuild the package after a signature has been recorded",
@@ -705,8 +707,8 @@ export async function signAgreementSandbox(
       throw new AppError(
         "validation",
         parsed.data.locale === "de"
-          ? 'Bitte geben Sie genau „Ich stimme zu“ ein'
-          : 'Please type exactly “I agree”',
+          ? "Bitte geben Sie genau „Ich stimme zu“ ein"
+          : "Please type exactly “I agree”",
       );
     }
 
@@ -772,7 +774,10 @@ export async function signAgreementSandbox(
         .where(eq(agreements.id, agreementBundle.agreement.id))
         .for("update");
       if (!lockedAgreement?.packageFingerprint) {
-        throw new AppError("validation", "Agreement package fingerprint missing");
+        throw new AppError(
+          "validation",
+          "Agreement package fingerprint missing",
+        );
       }
       if (!lockedAgreement.providerEnvelopeId) {
         throw new AppError("validation", "Agreement envelope missing");

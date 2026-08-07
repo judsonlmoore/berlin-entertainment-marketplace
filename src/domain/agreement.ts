@@ -180,10 +180,7 @@ export function isBookingArtifactParty(input: {
   bookingEntertainerUserId?: string | null;
 }): boolean {
   if (input.isPlatformStaff) return true;
-  if (
-    input.actorVenueId &&
-    input.actorVenueId === input.bookingVenueId
-  ) {
+  if (input.actorVenueId && input.actorVenueId === input.bookingVenueId) {
     return true;
   }
   if (

@@ -43,41 +43,38 @@ export function BookingTermsForm({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
 
-  const readPayload = useCallback(
-    (form: FormData): Payload | null => {
-      const startsAt = String(form.get("startsAt") ?? "").trim();
-      const endsAt = String(form.get("endsAt") ?? "").trim();
-      const performanceFormat = String(
-        form.get("performanceFormat") ?? "",
-      ).trim();
-      const cancellationTerms = String(
-        form.get("cancellationTerms") ?? "",
-      ).trim();
-      const productionObligations = String(
-        form.get("productionObligations") ?? "",
-      ).trim();
-      if (
-        !startsAt ||
-        !endsAt ||
-        !performanceFormat ||
-        !cancellationTerms ||
-        !productionObligations
-      ) {
-        return null;
-      }
-      const depositTerms = String(form.get("depositTerms") ?? "").trim();
-      return {
-        startsAt: new Date(startsAt).toISOString(),
-        endsAt: new Date(endsAt).toISOString(),
-        feeEur: Number(form.get("feeEur") ?? 0),
-        performanceFormat,
-        cancellationTerms,
-        productionObligations,
-        ...(depositTerms ? { depositTerms } : {}),
-      };
-    },
-    [],
-  );
+  const readPayload = useCallback((form: FormData): Payload | null => {
+    const startsAt = String(form.get("startsAt") ?? "").trim();
+    const endsAt = String(form.get("endsAt") ?? "").trim();
+    const performanceFormat = String(
+      form.get("performanceFormat") ?? "",
+    ).trim();
+    const cancellationTerms = String(
+      form.get("cancellationTerms") ?? "",
+    ).trim();
+    const productionObligations = String(
+      form.get("productionObligations") ?? "",
+    ).trim();
+    if (
+      !startsAt ||
+      !endsAt ||
+      !performanceFormat ||
+      !cancellationTerms ||
+      !productionObligations
+    ) {
+      return null;
+    }
+    const depositTerms = String(form.get("depositTerms") ?? "").trim();
+    return {
+      startsAt: new Date(startsAt).toISOString(),
+      endsAt: new Date(endsAt).toISOString(),
+      feeEur: Number(form.get("feeEur") ?? 0),
+      performanceFormat,
+      cancellationTerms,
+      productionObligations,
+      ...(depositTerms ? { depositTerms } : {}),
+    };
+  }, []);
 
   const autosave = useProfileAutosave({
     formRef,

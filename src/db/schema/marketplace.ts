@@ -73,7 +73,9 @@ export const accountLegalIdentities = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" })
       .unique(),
-    entityType: legalEntityTypeEnum("entity_type").notNull().default("individual"),
+    entityType: legalEntityTypeEnum("entity_type")
+      .notNull()
+      .default("individual"),
     legalName: text("legal_name").notNull().default(""),
     tradingName: text("trading_name"),
     addressLine1: text("address_line1").notNull().default(""),

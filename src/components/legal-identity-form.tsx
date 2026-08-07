@@ -16,34 +16,36 @@ export function LegalIdentityForm({ locale, initial }: Props) {
   const t = useTranslations("accountPage");
   const formRef = useRef<HTMLFormElement>(null);
 
-  const readPayload = useCallback((form: FormData) => {
-    return {
-      entityType: String(form.get("entityType") ?? "individual") as
-        | "individual"
-        | "freelancer"
-        | "registered_business",
-      legalName: String(form.get("legalName") ?? ""),
-      tradingName: String(form.get("tradingName") ?? "") || null,
-      addressLine1: String(form.get("addressLine1") ?? ""),
-      addressLine2: String(form.get("addressLine2") ?? "") || null,
-      postalCode: String(form.get("postalCode") ?? ""),
-      city: String(form.get("city") ?? ""),
-      countryCode: String(form.get("countryCode") ?? "DE"),
-      taxId: String(form.get("taxId") ?? "") || null,
-      companyRegisterId: String(form.get("companyRegisterId") ?? "") || null,
-      invoiceEmail: String(form.get("invoiceEmail") ?? ""),
-      iban: String(form.get("iban") ?? "") || null,
-      bic: String(form.get("bic") ?? "") || null,
-      paymentNote: String(form.get("paymentNote") ?? "") || null,
-      locale,
-    };
-  }, [locale]);
+  const readPayload = useCallback(
+    (form: FormData) => {
+      return {
+        entityType: String(form.get("entityType") ?? "individual") as
+          "individual" | "freelancer" | "registered_business",
+        legalName: String(form.get("legalName") ?? ""),
+        tradingName: String(form.get("tradingName") ?? "") || null,
+        addressLine1: String(form.get("addressLine1") ?? ""),
+        addressLine2: String(form.get("addressLine2") ?? "") || null,
+        postalCode: String(form.get("postalCode") ?? ""),
+        city: String(form.get("city") ?? ""),
+        countryCode: String(form.get("countryCode") ?? "DE"),
+        taxId: String(form.get("taxId") ?? "") || null,
+        companyRegisterId: String(form.get("companyRegisterId") ?? "") || null,
+        invoiceEmail: String(form.get("invoiceEmail") ?? ""),
+        iban: String(form.get("iban") ?? "") || null,
+        bic: String(form.get("bic") ?? "") || null,
+        paymentNote: String(form.get("paymentNote") ?? "") || null,
+        locale,
+      };
+    },
+    [locale],
+  );
 
   const autosave = useProfileAutosave({
     formRef,
     readPayload: (form) => {
       const payload = readPayload(form);
-      if (!payload.legalName.trim() || !payload.invoiceEmail.trim()) return null;
+      if (!payload.legalName.trim() || !payload.invoiceEmail.trim())
+        return null;
       return payload;
     },
     save: (payload) => saveLegalIdentityAction(payload),
@@ -165,7 +167,11 @@ export function LegalIdentityForm({ locale, initial }: Props) {
       </label>
       <label className="label">
         <span className="field-label">{t("iban")}</span>
-        <input name="iban" className="field" defaultValue={initial?.iban ?? ""} />
+        <input
+          name="iban"
+          className="field"
+          defaultValue={initial?.iban ?? ""}
+        />
       </label>
       <label className="label">
         <span className="field-label">{t("bic")}</span>

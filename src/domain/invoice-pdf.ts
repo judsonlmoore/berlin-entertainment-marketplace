@@ -417,7 +417,14 @@ export async function buildInvoicePdf(
       drawText(page, descLines[i]!, cols.description + 4, rowY, font, 9);
     }
     if (i === 0) {
-      drawText(page, formatDate(input.startsAtIso, input.locale), cols.date, rowY, font, 9);
+      drawText(
+        page,
+        formatDate(input.startsAtIso, input.locale),
+        cols.date,
+        rowY,
+        font,
+        9,
+      );
       drawText(page, "1", cols.qty + 8, rowY, font, 9);
       drawText(page, unitLabel, cols.unit, rowY, font, 9);
       drawText(page, vatLabel, cols.vat, rowY, font, 9);
@@ -511,9 +518,7 @@ export async function buildInvoicePdf(
       input.seller.addressLine1,
       `${input.seller.postalCode} ${input.seller.city}`,
       input.seller.countryCode,
-      input.seller.taxId
-        ? `${copy.vatNo}: ${input.seller.taxId}`
-        : "",
+      input.seller.taxId ? `${copy.vatNo}: ${input.seller.taxId}` : "",
     ],
     col1,
     y,

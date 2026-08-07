@@ -2,13 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
-import {
-  PDFDocument,
-  degrees,
-  rgb,
-  type PDFFont,
-  type PDFPage,
-} from "pdf-lib";
+import { PDFDocument, degrees, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 
 export type AgreementPackageAddendum = {
   addendumNumber: number;
@@ -443,12 +437,7 @@ export async function buildAgreementPackagePdf(
       thickness: 0.75,
       color: RULE,
     });
-    const titleLines = wrapText(
-      addendum.title,
-      font,
-      12,
-      width - MARGIN * 2,
-    );
+    const titleLines = wrapText(addendum.title, font, 12, width - MARGIN * 2);
     let ty = height - MARGIN - 52;
     for (const line of titleLines) {
       banner.drawText(line, {
@@ -489,13 +478,16 @@ export async function buildAgreementPackagePdf(
     } else {
       const note = pdf.addPage();
       drawMusterWatermark(note, font);
-      note.drawText("Addendum file bytes were not available at generate time.", {
-        x: MARGIN,
-        y: note.getSize().height - MARGIN - 20,
-        size: FONT_SIZE,
-        font,
-        color: rgb(0.5, 0.2, 0.2),
-      });
+      note.drawText(
+        "Addendum file bytes were not available at generate time.",
+        {
+          x: MARGIN,
+          y: note.getSize().height - MARGIN - 20,
+          size: FONT_SIZE,
+          font,
+          color: rgb(0.5, 0.2, 0.2),
+        },
+      );
     }
   }
 

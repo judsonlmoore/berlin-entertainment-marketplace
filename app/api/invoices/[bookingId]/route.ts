@@ -11,13 +11,19 @@ type Params = { params: Promise<{ bookingId: string }> };
 export async function GET(_request: Request, { params }: Params) {
   const session = await auth();
   if (!session?.user?.id) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401 },
+    );
   }
 
   const { bookingId } = await params;
   const resolved = await resolveEffectiveActor(session.user.id);
   if (!resolved) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
   }
 
   const { actor } = resolved;
@@ -25,12 +31,18 @@ export async function GET(_request: Request, { params }: Params) {
     !actor.isPlatformStaff &&
     (actor.accountStatus === null || !hasMarketplaceAccess(actor.accountStatus))
   ) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
   }
 
   const detail = await getBookingDetail(bookingId);
   if (!detail?.invoice?.blobKey) {
-    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "not_found" },
+      { status: 404 },
+    );
   }
 
   const isParty = isBookingArtifactParty({
@@ -41,12 +53,18 @@ export async function GET(_request: Request, { params }: Params) {
     bookingEntertainerUserId: detail.booking.entertainerUserId,
   });
   if (!isParty) {
-    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "forbidden" },
+      { status: 403 },
+    );
   }
 
   const file = await loadDocumentFile(detail.invoice.blobKey);
   if (!file) {
-    return NextResponse.json({ ok: false, error: "missing_blob" }, { status: 404 });
+    return NextResponse.json(
+      { ok: false, error: "missing_blob" },
+      { status: 404 },
+    );
   }
 
   const isPdf =

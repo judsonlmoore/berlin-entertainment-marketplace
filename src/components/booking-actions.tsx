@@ -224,9 +224,7 @@ export function DownloadAgreementPackageButton({
           setError(null);
           startTransition(async () => {
             try {
-              const res = await fetch(
-                `/api/agreements/${agreementId}/package`,
-              );
+              const res = await fetch(`/api/agreements/${agreementId}/package`);
               if (!res.ok) {
                 setError(t("downloadPackageFailed"));
                 return;
@@ -458,8 +456,7 @@ export function SignAgreementForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [phrase, setPhrase] = useState("");
-  const required =
-    locale === "de" ? "Ich stimme zu" : "I agree";
+  const required = locale === "de" ? "Ich stimme zu" : "I agree";
   const phraseOk =
     phrase.trim().toLocaleLowerCase() === required.toLocaleLowerCase();
 

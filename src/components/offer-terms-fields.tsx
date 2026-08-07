@@ -81,9 +81,7 @@ export function OfferTermsFields({
           rows={3}
           className="field"
           required
-          defaultValue={
-            defaults.cancellationTerms ?? t("cancellationDefault")
-          }
+          defaultValue={defaults.cancellationTerms ?? t("cancellationDefault")}
         />
       </label>
       <label className="label">

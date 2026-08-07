@@ -2,9 +2,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import type { accountLegalIdentities } from "@/src/db/schema/marketplace";
 
 export type LegalEntityType =
-  | "individual"
-  | "freelancer"
-  | "registered_business";
+  "individual" | "freelancer" | "registered_business";
 
 export type LegalIdentityFields = {
   entityType: LegalEntityType;
@@ -71,9 +69,10 @@ export function isLegalIdentityComplete(
   return true;
 }
 
-export function publicLegalIdentityView(
-  identity: LegalIdentityFields,
-): Omit<LegalIdentityFields, "iban" | "bic" | "paymentNote"> & {
+export function publicLegalIdentityView(identity: LegalIdentityFields): Omit<
+  LegalIdentityFields,
+  "iban" | "bic" | "paymentNote"
+> & {
   hasPaymentInstructions: boolean;
 } {
   return {

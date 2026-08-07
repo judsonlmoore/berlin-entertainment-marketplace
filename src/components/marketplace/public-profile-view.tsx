@@ -155,7 +155,9 @@ export function PublicProfileView({
           {sections.map((section) =>
             section.value.trim() ? (
               <section key={section.label} className="grid gap-3">
-                <h2 className="text-[1.15rem] font-semibold">{section.label}</h2>
+                <h2 className="text-[1.15rem] font-semibold">
+                  {section.label}
+                </h2>
                 <SafeRichText
                   html={section.value}
                   className="text-[1rem] leading-relaxed text-[var(--ink)]"

@@ -69,16 +69,10 @@ describe("agreement domain", () => {
       ]),
     ).toBe(true);
     expect(
-      canRebuildAgreementPackage([
-        { status: "signed" },
-        { status: "pending" },
-      ]),
+      canRebuildAgreementPackage([{ status: "signed" }, { status: "pending" }]),
     ).toBe(false);
     expect(
-      canRebuildAgreementPackage([
-        { status: "signed" },
-        { status: "signed" },
-      ]),
+      canRebuildAgreementPackage([{ status: "signed" }, { status: "signed" }]),
     ).toBe(false);
   });
 
@@ -139,11 +133,7 @@ describe("agreement domain", () => {
     ).toBe(true);
     expect(canTransitionBooking("partially_signed", "confirmed")).toBe(true);
     expect(
-      canActorTransitionBooking(
-        "partially_signed",
-        "confirmed",
-        "system",
-      ),
+      canActorTransitionBooking("partially_signed", "confirmed", "system"),
     ).toBe(true);
     expect(
       canActorTransitionBooking("partially_signed", "confirmed", "venue"),

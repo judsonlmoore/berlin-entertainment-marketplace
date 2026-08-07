@@ -107,15 +107,15 @@ function OfferFacts({
     <div className="grid gap-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <p className="text-xs font-semibold tracking-[0.1em] uppercase text-[var(--text-muted)]">
+          <p className="text-xs font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
             {t("fee")}
           </p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--ink)]">
+          <p className="mt-1 text-2xl font-semibold text-[var(--ink)] tabular-nums">
             {formatEur(offer.feeCents, locale)}
           </p>
         </div>
         <div>
-          <p className="text-xs font-semibold tracking-[0.1em] uppercase text-[var(--text-muted)]">
+          <p className="text-xs font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
             {t("window")}
           </p>
           <p className="mt-1 text-sm font-medium text-[var(--ink)]">
@@ -154,7 +154,7 @@ function OfferFacts({
 
       {offer.changeNote ? (
         <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--canvas)] px-4 py-3">
-          <p className="text-xs font-semibold tracking-[0.1em] uppercase text-[var(--text-muted)]">
+          <p className="text-xs font-semibold tracking-[0.1em] text-[var(--text-muted)] uppercase">
             {t("changeNote")}
           </p>
           <p className="mt-1 text-sm text-[var(--ink)]">{offer.changeNote}</p>

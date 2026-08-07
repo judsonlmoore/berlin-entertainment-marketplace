@@ -17,7 +17,9 @@ export async function getLegalIdentityForUser(userId: string) {
 }
 
 /** Require complete Account legal identity before sending or accepting offers. */
-export async function assertLegalIdentityComplete(userId: string): Promise<void> {
+export async function assertLegalIdentityComplete(
+  userId: string,
+): Promise<void> {
   const identity = await getLegalIdentityForUser(userId);
   if (!isLegalIdentityComplete(identity)) {
     throw new AppError(
