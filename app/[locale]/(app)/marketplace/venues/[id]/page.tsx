@@ -219,7 +219,7 @@ export default async function VenueDiscoveryDetailPage({
         title={venue.name}
         subtitle={`${venue.district} · ${venueTypeLabel(venue.venueType, appLocale)}`}
         description={venue.shortDescription}
-        media={splitPortfolioMedia(null)}
+        media={splitPortfolioMedia(venue.portfolio)}
         facts={facts}
         links={socialLinksToList(
           venue.socialLinks,
