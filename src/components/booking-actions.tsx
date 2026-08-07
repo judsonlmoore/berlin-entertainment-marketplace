@@ -189,8 +189,8 @@ export function GenerateAgreementButton({
       {disabled && disabledReason ? (
         <p className="text-sm text-[var(--text-muted)]">
           {disabledReason}{" "}
-          <Link href="/account" className="font-medium underline">
-            {t("goToAccount")}
+          <Link href="/profile" className="font-medium underline">
+            {t("goToProfile")}
           </Link>
         </p>
       ) : null}

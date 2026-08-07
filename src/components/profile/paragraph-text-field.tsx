@@ -29,6 +29,8 @@ export type ParagraphTextFieldProps = {
   onChange?: (html: string) => void;
   /** Visual height of the editing surface. */
   size?: "short" | "medium" | "tall";
+  /** Server/client validation message shown under the editor. */
+  error?: string | null;
 };
 
 function IconBold(props: SVGProps<SVGSVGElement>) {
@@ -151,6 +153,7 @@ export function ParagraphTextField({
   placeholder,
   onChange,
   size = "medium",
+  error = null,
 }: ParagraphTextFieldProps) {
   const t = useTranslations("profile");
   const [html, setHtml] = useState(() =>
@@ -237,18 +240,30 @@ export function ParagraphTextField({
   const under = count > 0 && count < min;
 
   return (
-    <div className="grid gap-1 text-sm">
+    <div
+      className="grid gap-1 text-sm"
+      data-field={name || undefined}
+      id={name ? `field-${name}` : undefined}
+    >
       <div className="flex items-end justify-between gap-3">
         <span className="font-medium text-[var(--ink)]">{label}</span>
         <span
           className={`text-xs tabular-nums ${
-            over || under ? "text-[var(--danger)]" : "text-[var(--text-muted)]"
+            over || under || error
+              ? "text-[var(--danger)]"
+              : "text-[var(--text-muted)]"
           }`}
         >
           {count}/{max}
         </span>
       </div>
-      <div className="overflow-hidden rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--primary)]">
+      <div
+        className={`overflow-hidden rounded-[var(--radius-md)] border bg-[var(--surface)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--primary)] ${
+          error
+            ? "border-[var(--danger)]"
+            : "border-[var(--rule)]"
+        }`}
+      >
         <div
           role="toolbar"
           aria-label={t("editorToolbar")}
@@ -320,9 +335,14 @@ export function ParagraphTextField({
           name={name}
           value={html}
           readOnly
+          aria-invalid={error ? true : undefined}
         />
       ) : null}
-      {count > 0 && (over || under) ? (
+      {error ? (
+        <span role="alert" className="text-xs text-[var(--danger)]">
+          {error}
+        </span>
+      ) : count > 0 && (over || under) ? (
         <span role="alert" className="text-xs text-[var(--danger)]">
           {over ? `Maximum ${max} characters` : `Minimum ${min} characters`}
         </span>

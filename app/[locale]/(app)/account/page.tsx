@@ -1,13 +1,11 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { auth } from "@/src/auth";
 import { AccountDeletionSection } from "@/src/components/account-deletion-section";
-import { LegalIdentityForm } from "@/src/components/legal-identity-form";
 import { LocaleSwitcher } from "@/src/components/locale-switcher";
 import { Avatar } from "@/src/components/ui/monogram";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { getActorContext } from "@/src/db/queries/actor";
-import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -27,9 +25,6 @@ export default async function AccountPage({ params }: Props) {
 
   const actor = process.env.DATABASE_URL
     ? await getActorContext(session.user.id)
-    : null;
-  const legalIdentity = process.env.DATABASE_URL
-    ? await getLegalIdentityForUser(session.user.id)
     : null;
   const displayName = session.user.name ?? session.user.email ?? "Member";
   const roleLabel = actor?.roles.includes("entertainer")
@@ -81,13 +76,6 @@ export default async function AccountPage({ params }: Props) {
             </dd>
           </div>
         </dl>
-      </div>
-
-      <div className="panel grid gap-4 p-6">
-        <LegalIdentityForm
-          locale={locale as "en" | "de"}
-          initial={legalIdentity}
-        />
       </div>
 
       <div className="panel grid gap-4 p-6">

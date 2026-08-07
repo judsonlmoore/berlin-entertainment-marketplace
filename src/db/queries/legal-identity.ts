@@ -16,7 +16,7 @@ export async function getLegalIdentityForUser(userId: string) {
   return toLegalIdentityFields(row);
 }
 
-/** Require complete Account legal identity before sending or accepting offers. */
+/** Require complete Profile legal identity before sending or accepting offers. */
 export async function assertLegalIdentityComplete(
   userId: string,
 ): Promise<void> {
@@ -24,7 +24,7 @@ export async function assertLegalIdentityComplete(
   if (!isLegalIdentityComplete(identity)) {
     throw new AppError(
       "validation",
-      "Complete legal identity on Account before continuing",
+      "Complete legal identity on Profile before continuing",
     );
   }
 }

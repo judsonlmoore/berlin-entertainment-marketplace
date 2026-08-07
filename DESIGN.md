@@ -90,7 +90,7 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 
 ### Layout
 - **Onboarding:** Narrow focused steps (shell without app rail). Short path. Final “you’re in / pending verification” screen stays until the user clicks Continue (no auto-redirect).
-- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later. Account language/deletion live under `/account`, not profile.
+- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later; **legal & payment identity** near the end (required to publish; hidden from counterparties until terms are agreed). Account language/deletion live under `/account`, not profile.
 
 ### Autosave & publication status
 - Autosave while editing. Status copy: **Unsaved changes**, **Saving…**, and **Saved.** (no clock time). Warn before leaving the page when there are unsaved changes.

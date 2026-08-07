@@ -25,6 +25,8 @@ import { PublicationControl } from "@/src/components/profile/publication-control
 import { ProfilePreviewButton } from "@/src/components/profile/profile-preview-button";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
 import { VenuePlacesSearch } from "@/src/components/profile/venue-places-search";
+import { LegalIdentityForm } from "@/src/components/legal-identity-form";
+import type { LegalIdentityFields } from "@/src/domain/legal-identity";
 import {
   canOwnerPublishProfile,
   canOwnerUnpublishProfile,
@@ -71,6 +73,7 @@ type Props = {
   defaultContactPhone?: string;
   mediaSlot?: ReactNode;
   documentsSlot?: ReactNode;
+  legalIdentity?: LegalIdentityFields | null;
   defaultValues?: {
     name: string;
     shortDescription: string;
@@ -175,6 +178,7 @@ export function VenueProfileForm({
   defaultContactPhone = "",
   mediaSlot,
   documentsSlot,
+  legalIdentity = null,
   defaultValues,
 }: Props) {
   const t = useTranslations("profile");
@@ -205,6 +209,7 @@ export function VenueProfileForm({
     parsedType.subcategoryRaw,
   );
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isPublishing, startPublish] = useTransition();
   const social = defaultValues?.socialLinks ?? {};
   const pubState = (publicationState ?? "draft") as ProfilePublicationState;
@@ -324,8 +329,24 @@ export function VenueProfileForm({
     },
   });
 
+  function focusPublishField(field: string | undefined) {
+    if (!field || typeof document === "undefined") return;
+    requestAnimationFrame(() => {
+      const target =
+        document.getElementById(`field-${field}`) ??
+        document.querySelector<HTMLElement>(`[data-field="${field}"]`) ??
+        document.querySelector<HTMLElement>(`[name="${field}"]`);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = target?.matches("input,select,textarea")
+        ? target
+        : target?.querySelector<HTMLElement>("input,select,textarea,.ProseMirror");
+      focusable?.focus?.();
+    });
+  }
+
   function publishProfile() {
     setPublishError(null);
+    setFieldErrors({});
     startPublish(async () => {
       const saved = await autosave.saveNow();
       if (!saved?.ok) {
@@ -339,7 +360,10 @@ export function VenueProfileForm({
       }
       const result = await publishVenueProfile(id, locale);
       if (!result.ok) {
+        const fields = result.fields ?? {};
+        setFieldErrors(fields);
         setPublishError(result.message || t("publishProfileFailed"));
+        focusPublishField(result.field ?? Object.keys(fields)[0]);
         return;
       }
       router.refresh();
@@ -407,12 +431,19 @@ export function VenueProfileForm({
             </div>
           </div>
           {publishError ? (
-            <p role="alert" className="mt-3 text-sm text-[var(--danger)]">
-              {publishError}
-            </p>
+            <div role="alert" className="mt-3 text-sm text-[var(--danger)]">
+              <p>{publishError}</p>
+              {Object.keys(fieldErrors).length > 1 ? (
+                <ul className="mt-2 list-disc space-y-1 pl-5">
+                  {Object.values(fieldErrors).map((message) => (
+                    <li key={message}>{message}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           ) : showPublish ? (
             <p className="mt-3 text-sm text-[var(--text-muted)]">
-              {t("publishProfileHint")}
+              {t("publishVenueProfileHint")}
             </p>
           ) : published ? (
             <p className="mt-3 text-sm text-[var(--text-muted)]">
@@ -436,15 +467,29 @@ export function VenueProfileForm({
         <Section title={t("sectionBasics")}>
           <VenuePlacesSearch locale={locale} onPrefill={applyPrefill} />
 
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1 text-sm" id="field-name" data-field="name">
             <span className="font-medium">{t("venueName")}</span>
             <input
               name="name"
               required
-              className="field"
+              className={`field${fieldErrors.name ? " border-[var(--danger)]" : ""}`}
+              aria-invalid={fieldErrors.name ? true : undefined}
               value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
+              onChange={(event) => {
+                setDisplayName(event.target.value);
+                setFieldErrors((prev) => {
+                  if (!prev.name) return prev;
+                  const next = { ...prev };
+                  delete next.name;
+                  return next;
+                });
+              }}
             />
+            {fieldErrors.name ? (
+              <span role="alert" className="text-xs text-[var(--danger)]">
+                {fieldErrors.name}
+              </span>
+            ) : null}
           </label>
 
           <CategorySubcategorySelect
@@ -458,6 +503,15 @@ export function VenueProfileForm({
             categoryLabel={t("venueType")}
             subcategoryLabel={t("subcategory")}
             otherLabel={t("subcategoryOther")}
+            error={fieldErrors.venueCategory ?? null}
+            onSelectionChange={() => {
+              setFieldErrors((prev) => {
+                if (!prev.venueCategory) return prev;
+                const next = { ...prev };
+                delete next.venueCategory;
+                return next;
+              });
+            }}
           />
 
           <ParagraphTextField
@@ -470,18 +524,45 @@ export function VenueProfileForm({
             max={SHORT_DESCRIPTION_MAX}
             placeholder={t("descriptionPlaceholder")}
             size="medium"
+            error={fieldErrors.shortDescription ?? null}
+            onChange={() => {
+              setFieldErrors((prev) => {
+                if (!prev.shortDescription) return prev;
+                const next = { ...prev };
+                delete next.shortDescription;
+                return next;
+              });
+            }}
           />
         </Section>
 
         <Section title={t("sectionLocation")}>
-          <label className="grid gap-1 text-sm">
+          <label
+            className="grid gap-1 text-sm"
+            id="field-addressLine1"
+            data-field="addressLine1"
+          >
             <span className="font-medium">{t("addressLine1")}</span>
             <input
               name="addressLine1"
-              className="field"
+              className={`field${fieldErrors.addressLine1 ? " border-[var(--danger)]" : ""}`}
+              aria-invalid={fieldErrors.addressLine1 ? true : undefined}
               value={addressLine1}
-              onChange={(event) => setAddressLine1(event.target.value)}
+              onChange={(event) => {
+                setAddressLine1(event.target.value);
+                setFieldErrors((prev) => {
+                  if (!prev.addressLine1) return prev;
+                  const next = { ...prev };
+                  delete next.addressLine1;
+                  return next;
+                });
+              }}
             />
+            {fieldErrors.addressLine1 ? (
+              <span role="alert" className="text-xs text-[var(--danger)]">
+                {fieldErrors.addressLine1}
+              </span>
+            ) : null}
           </label>
           <label className="grid gap-1 text-sm">
             <span className="font-medium">{t("addressLine2")}</span>
@@ -493,23 +574,59 @@ export function VenueProfileForm({
             />
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
+            <label
+              className="grid gap-1 text-sm"
+              id="field-district"
+              data-field="district"
+            >
               <span className="font-medium">{t("district")}</span>
               <input
                 name="district"
-                className="field"
+                className={`field${fieldErrors.district ? " border-[var(--danger)]" : ""}`}
+                aria-invalid={fieldErrors.district ? true : undefined}
                 value={district}
-                onChange={(event) => setDistrict(event.target.value)}
+                onChange={(event) => {
+                  setDistrict(event.target.value);
+                  setFieldErrors((prev) => {
+                    if (!prev.district) return prev;
+                    const next = { ...prev };
+                    delete next.district;
+                    return next;
+                  });
+                }}
               />
+              {fieldErrors.district ? (
+                <span role="alert" className="text-xs text-[var(--danger)]">
+                  {fieldErrors.district}
+                </span>
+              ) : null}
             </label>
-            <label className="grid gap-1 text-sm">
+            <label
+              className="grid gap-1 text-sm"
+              id="field-postalCode"
+              data-field="postalCode"
+            >
               <span className="font-medium">{t("postalCode")}</span>
               <input
                 name="postalCode"
-                className="field"
+                className={`field${fieldErrors.postalCode ? " border-[var(--danger)]" : ""}`}
+                aria-invalid={fieldErrors.postalCode ? true : undefined}
                 value={postalCode}
-                onChange={(event) => setPostalCode(event.target.value)}
+                onChange={(event) => {
+                  setPostalCode(event.target.value);
+                  setFieldErrors((prev) => {
+                    if (!prev.postalCode) return prev;
+                    const next = { ...prev };
+                    delete next.postalCode;
+                    return next;
+                  });
+                }}
               />
+              {fieldErrors.postalCode ? (
+                <span role="alert" className="text-xs text-[var(--danger)]">
+                  {fieldErrors.postalCode}
+                </span>
+              ) : null}
             </label>
           </div>
           <input type="hidden" name="latitude" value={latitude} />
@@ -519,7 +636,11 @@ export function VenueProfileForm({
 
         <Section title={t("sectionDetails")}>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
+            <label
+              className="grid gap-1 text-sm"
+              id="field-capacity"
+              data-field="capacity"
+            >
               <span className="font-medium">{t("capacity")}</span>
               <input
                 name="capacity"
@@ -527,8 +648,22 @@ export function VenueProfileForm({
                 min={1}
                 required
                 defaultValue={defaultValues?.capacity ?? 50}
-                className="field"
+                className={`field${fieldErrors.capacity ? " border-[var(--danger)]" : ""}`}
+                aria-invalid={fieldErrors.capacity ? true : undefined}
+                onChange={() => {
+                  setFieldErrors((prev) => {
+                    if (!prev.capacity) return prev;
+                    const next = { ...prev };
+                    delete next.capacity;
+                    return next;
+                  });
+                }}
               />
+              {fieldErrors.capacity ? (
+                <span role="alert" className="text-xs text-[var(--danger)]">
+                  {fieldErrors.capacity}
+                </span>
+              ) : null}
             </label>
             <label className="grid gap-1 text-sm">
               <span className="font-medium">{t("capacityContext")}</span>
@@ -563,9 +698,18 @@ export function VenueProfileForm({
             defaultValue={toParagraphEditorHtml(
               defaultValues?.audienceDescription ?? "",
             )}
-            min={0}
+            min={DESCRIPTION_MIN}
             max={NOTES_MAX}
             size="medium"
+            error={fieldErrors.audienceDescription ?? null}
+            onChange={() => {
+              setFieldErrors((prev) => {
+                if (!prev.audienceDescription) return prev;
+                const next = { ...prev };
+                delete next.audienceDescription;
+                return next;
+              });
+            }}
           />
           <label className="grid gap-1 text-sm">
             <span className="font-medium">{t("contactPhone")}</span>
@@ -667,6 +811,12 @@ export function VenueProfileForm({
           </div>
         </Section>
       </form>
+
+      <LegalIdentityForm
+        locale={locale}
+        initial={legalIdentity}
+        error={fieldErrors.legalIdentity ?? null}
+      />
 
       {documentsSlot ? <div className="panel p-6">{documentsSlot}</div> : null}
     </div>

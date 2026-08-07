@@ -18,7 +18,10 @@ import {
   venues,
 } from "@/src/db/schema/marketplace";
 import { AppError } from "@/src/domain/errors";
+import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 import { checkEntertainerPublishReadiness } from "@/src/domain/entertainer-publish-readiness";
+import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
+import { checkVenuePublishReadiness } from "@/src/domain/venue-publish-readiness";
 import { can } from "@/src/domain/permissions";
 import {
   canOwnerTransitionProfile,
@@ -26,7 +29,6 @@ import {
 } from "@/src/domain/profile-publication";
 import {
   DESCRIPTION_MAX,
-  DESCRIPTION_MIN,
   LONG_NOTES_MAX,
   NOTES_MAX,
   SHORT_DESCRIPTION_MAX,
@@ -221,55 +223,35 @@ function sanitizeVenueProse(data: z.infer<typeof venueSchema>) {
   };
 }
 
-function assertVenueReadyForPublish(venue: {
-  name: string;
-  shortDescription: string;
-  addressLine1: string;
-  district: string;
-  postalCode: string;
-  latitude: string | null;
-  longitude: string | null;
-  venueType: string;
-  audienceDescription: string;
-  capacity: number;
-}) {
-  if (!venue.name.trim()) {
-    throw new AppError("validation", "Venue name is required");
-  }
-  const shortDescriptionCheck = validateRichTextField(venue.shortDescription, {
-    min: DESCRIPTION_MIN,
-    max: SHORT_DESCRIPTION_MAX,
+function assertVenueReadyForPublish(
+  venue: {
+    name: string;
+    shortDescription: string;
+    addressLine1: string;
+    district: string;
+    postalCode: string;
+    venueType: string;
+    audienceDescription: string;
+    capacity: number;
+  },
+  legalIdentityComplete: boolean,
+) {
+  const readiness = checkVenuePublishReadiness({
+    ...venue,
+    legalIdentityComplete,
   });
-  if (!shortDescriptionCheck.ok) {
-    throw new AppError("validation", shortDescriptionCheck.reason);
-  }
-  if (!venue.addressLine1.trim()) {
-    throw new AppError("validation", "Address is required");
-  }
-  if (!venue.district.trim()) {
-    throw new AppError("validation", "District is required");
-  }
-  if (!venue.postalCode.trim()) {
-    throw new AppError("validation", "Postal code is required");
-  }
-  if (!venue.latitude?.trim() || !venue.longitude?.trim()) {
+  if (!readiness.ok) {
+    const fields = Object.fromEntries(
+      readiness.issues.map((issue) => [issue.field, issue.message]),
+    );
     throw new AppError(
       "validation",
-      "Map coordinates are required (use Places search or enter them)",
+      readiness.issues[0]?.message ?? "Venue profile incomplete",
+      {
+        field: readiness.issues[0]?.field,
+        fields,
+      },
     );
-  }
-  if (!venue.venueType.trim()) {
-    throw new AppError("validation", "Venue type is required");
-  }
-  if (!Number.isFinite(venue.capacity) || venue.capacity < 1) {
-    throw new AppError("validation", "Capacity is required");
-  }
-  const audienceCheck = validateRichTextField(venue.audienceDescription, {
-    min: DESCRIPTION_MIN,
-    max: NOTES_MAX,
-  });
-  if (!audienceCheck.ok) {
-    throw new AppError("validation", audienceCheck.reason);
   }
 }
 
@@ -459,6 +441,7 @@ export async function publishEntertainerProfile(
       (item) => item.kind === "youtube" || item.kind === "link",
     );
 
+    const legal = await getLegalIdentityForUser(actor.userId);
     const readiness = checkEntertainerPublishReadiness({
       actName: profile.actName,
       category: profile.category,
@@ -474,11 +457,26 @@ export async function publishEntertainerProfile(
         (profile.socialLinks as Record<string, string> | null) ?? null,
       imageCount: imageRow?.value ?? 0,
       hasExternalOrVideoLink,
+      legalIdentityComplete: isLegalIdentityComplete(legal),
     });
     if (!readiness.ok) {
+      const legalMissing = readiness.reasons.some((r) =>
+        /legal and payment identity/i.test(r),
+      );
       throw new AppError(
         "validation",
         readiness.reasons[0] ?? "Profile incomplete",
+        legalMissing
+          ? {
+              field: "legalIdentity",
+              fields: {
+                legalIdentity:
+                  readiness.reasons.find((r) =>
+                    /legal and payment identity/i.test(r),
+                  ) ?? readiness.reasons[0]!,
+              },
+            }
+          : undefined,
       );
     }
 
@@ -801,7 +799,10 @@ export async function publishVenueProfile(
       throw new AppError("not_found", "Venue not found");
     }
 
-    assertVenueReadyForPublish(venue);
+    const legal = venue.ownerUserId
+      ? await getLegalIdentityForUser(venue.ownerUserId)
+      : null;
+    assertVenueReadyForPublish(venue, isLegalIdentityComplete(legal));
 
     const from = venue.publicationState as ProfilePublicationState;
     if (!canOwnerTransitionProfile(from, "approved")) {

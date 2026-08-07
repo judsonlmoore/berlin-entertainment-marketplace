@@ -79,7 +79,7 @@ One account → one venue → one room (calendar resource). Profile builder matc
 Required before self-serve publication:
 
 - Public-to-members venue name and short description
-- Structured Berlin address, district, and map coordinates (Places prefill or manual)
+- Structured Berlin address and district (Places prefill optional; map coordinates optional when available)
 - Venue type and audience description
 - Capacity (and optional seated/standing context)
 - Production resources: PA, mixer, microphones, backline, lighting, stage dimensions, power, accessibility/load-in notes
@@ -144,7 +144,7 @@ An approved venue operator sends a request to an approved entertainer for a venu
 
 ### 6.3 Profile offers (connection)
 
-An approved entertainer may **Send offer** to an approved venue from the venue discovery page. An approved venue may likewise **Send offer** from an act profile. The CTA opens a modal composer for commercial terms (dates, fee, format, cancellation, production, optional deposit terms / note), not a “may I contact you” request. Sending requires complete **legal identity** on Account (otherwise the CTA directs to `/account`). Sending creates a pending booking with `booking_terms` v1 and makes the **sender’s** engagement PDFs visible to the receiver with that open offer. Contacts stay locked until the receiver **Accepts** or **Counters**. **Decline** (Pass) closes the booking as lost without unlocking contacts and does not require legal identity. Accept and Counter require the receiver’s complete legal identity on Account. Accept locks terms (`terms_agreed`). Counter unlocks contacts, opens the booking, and continues the offer/counter timeline. After unlock, both parties’ engagement documents are visible.
+An approved entertainer may **Send offer** to an approved venue from the venue discovery page. An approved venue may likewise **Send offer** from an act profile. The CTA opens a modal composer for commercial terms (dates, fee, format, cancellation, production, optional deposit terms / note), not a “may I contact you” request. Sending requires complete **legal identity** on Profile (otherwise the CTA directs to `/profile`). Sending creates a pending booking with `booking_terms` v1 and makes the **sender’s** engagement PDFs visible to the receiver with that open offer. Contacts stay locked until the receiver **Accepts** or **Counters**. **Decline** (Pass) closes the booking as lost without unlocking contacts and does not require legal identity. Accept and Counter require the receiver’s complete legal identity on Profile. Accept locks terms (`terms_agreed`). Counter unlocks contacts, opens the booking, and continues the offer/counter timeline. After unlock, both parties’ engagement documents are visible.
 
 **Multiple engagements:** the same act↔venue pair may have many concurrent open offers (e.g. a weekly series). Profile CTAs stay **Send offer** plus **See offer** / **See offers (N)** linking to unanswered pending bookings — there is no re-send cooldown and no single-active-pair uniqueness. The initiator may **withdraw** a pending offer before the receiver responds. Unanswered pending offers **expire after 7 days** (cron + domain filter); expiry closes the booking as expired without unlocking contacts.
 
@@ -204,7 +204,7 @@ The booking detail surface is a **shared negotiation / contract builder**:
 - Deposit status is separate: `not_required`, `pending`, `received`, `refunded`, or `disputed`.
 - A deposit never confirms a booking and lack of a deposit never prevents signature-based confirmation.
 - Salon does not collect, hold, escrow, route, or refund money in the current product.
-- **Legal / payment identity** lives on the member account (individual / freelancer / registered business). Fields support agreement parties and optional invoice artifacts (see `docs/INVOICE_LIBRARY_SPIKE.md`). Counterparty legal/payment details are revealed only at/after `terms_agreed` (not at contact unlock). Identity is snapshotted onto the agreement at generate time.
+- **Legal / payment identity** lives on the member **Profile** (individual / freelancer / registered business), not Account settings. It is **required to publish** and appear in the marketplace. Fields support agreement parties and optional invoice artifacts (see `docs/INVOICE_LIBRARY_SPIKE.md`). Counterparty legal/payment details are revealed only at/after `terms_agreed` (not at contact unlock) and are never shown on the public discovery profile. Identity is snapshotted onto the agreement at generate time.
 - **Invoices** are optional post-`confirmed` PDF/e-invoice **artifacts** for the parties (talent seller → venue buyer by default). Generation uses an `InvoiceProvider` boundary (sandbox first). Invoices are not checkout, escrow, or payouts.
 
 ## 9. Availability and calendar
@@ -250,7 +250,7 @@ No consumer event pages, public profile directory, public listings, public revie
 - Staff can suspend/reactivate accounts and suspend/restore profile publication with an audit trail (operational tooling; not a member `/admin` UI).
 - Unpublished members can search the opposite side but cannot contact (apply / direct request) until their profile is published; unpublished profiles are invisible in discovery.
 - An owner can invite/manage venue members.
-- Venue and entertainer profiles capture required fields and support self-serve publish/unpublish with a built-in checklist.
+- Venue and entertainer profiles capture required fields (including legal/payment identity) and support self-serve publish/unpublish with a built-in checklist.
 - Entertainers cannot browse other entertainers; venues cannot browse other venues (server-enforced).
 - A published entertainer can apply once to an open call (including one-click from the venue profile); a venue can shortlist or reject.
 - A published entertainer or venue can Send offer on the opposite profile; the receiver Accepts, Counters, or Declines.

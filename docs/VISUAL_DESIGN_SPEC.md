@@ -219,6 +219,7 @@ Reference preview: `~/.gstack/projects/judsonlmoore-berlin-entertainment-marketp
 - Rich-text description with counter (shared with onboarding)
 - Full-URL social/website fields with placeholders + platform host validation; Valid/Invalid inside the field
 - Account settings (locale, deletion) on `/account`, not profile
+- Legal & payment identity on `/profile` (required to publish; counterparty-hidden until terms agreed)
 
 **Responsive:** single column on mobile; media grid 2-up; keep 44px targets and label/error association.
 

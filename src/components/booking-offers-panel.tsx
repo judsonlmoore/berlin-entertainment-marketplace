@@ -213,8 +213,8 @@ function LegalRequiredForRespond() {
   return (
     <p className="text-sm text-[var(--text-muted)]">
       {t("legalRequiredToRespond")}{" "}
-      <Link href="/account" className="font-medium underline">
-        {t("goToAccount")}
+      <Link href="/profile" className="font-medium underline">
+        {t("goToProfile")}
       </Link>
     </p>
   );

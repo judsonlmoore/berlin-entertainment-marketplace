@@ -15,6 +15,7 @@ const ready = {
   socialLinks: null,
   imageCount: 1,
   hasExternalOrVideoLink: false,
+  legalIdentityComplete: true,
 };
 
 describe("checkEntertainerPublishReadiness", () => {
@@ -53,5 +54,18 @@ describe("checkEntertainerPublishReadiness", () => {
         hasExternalOrVideoLink: true,
       }).ok,
     ).toBe(true);
+  });
+
+  it("requires complete legal identity", () => {
+    const result = checkEntertainerPublishReadiness({
+      ...ready,
+      legalIdentityComplete: false,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reasons.some((r) => /legal and payment identity/i.test(r))).toBe(
+        true,
+      );
+    }
   });
 });

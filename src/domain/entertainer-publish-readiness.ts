@@ -24,6 +24,8 @@ export type EntertainerPublishSnapshot = {
   socialLinks: Record<string, string> | null;
   imageCount: number;
   hasExternalOrVideoLink: boolean;
+  /** Required to appear in the marketplace; private until terms are agreed. */
+  legalIdentityComplete: boolean;
 };
 
 export type PublishReadinessResult =
@@ -112,6 +114,12 @@ export function checkEntertainerPublishReadiness(
   if (!hasPublicUrl(snapshot)) {
     reasons.push(
       "Add at least one public link (website, social, or featured video).",
+    );
+  }
+
+  if (!snapshot.legalIdentityComplete) {
+    reasons.push(
+      "Complete legal and payment identity before publishing to the marketplace.",
     );
   }
 

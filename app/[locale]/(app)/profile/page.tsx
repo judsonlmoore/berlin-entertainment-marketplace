@@ -24,6 +24,7 @@ import { isDocumentStoreConfigured } from "@/src/integrations/document-file-stor
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 import { Link } from "@/src/i18n/navigation";
 import { listDocumentsForOwner } from "@/src/db/queries/rider-access";
+import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -104,12 +105,16 @@ export default async function ProfilePage({ params }: Props) {
     venue && can(effectiveActor, "opportunity.manage", { venueId: venue.id }),
   );
   const storeConfigured = isDocumentStoreConfigured();
+  const legalIdentity = process.env.DATABASE_URL
+    ? await getLegalIdentityForUser(profileUserId)
+    : null;
 
   const entertainerPanel = showEntertainer ? (
     <div className="grid gap-8">
       <EntertainerProfileForm
         locale={locale as "en" | "de"}
         accountEmail={accountEmail}
+        legalIdentity={legalIdentity}
         {...(entertainerProfile
           ? {
               profileId: entertainerProfile.id,
@@ -189,6 +194,7 @@ export default async function ProfilePage({ params }: Props) {
       <VenueProfileForm
         locale={locale as "en" | "de"}
         accountEmail={accountEmail}
+        legalIdentity={legalIdentity}
         {...(venue
           ? {
               venueId: venue.id,

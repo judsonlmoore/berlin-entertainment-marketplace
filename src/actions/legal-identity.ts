@@ -33,13 +33,13 @@ export async function saveLegalIdentityAction(
   input: z.infer<typeof schema>,
 ): Promise<ActionResult> {
   try {
-    const { session } = await requireActor();
+    const { actor } = await requireActor();
     const parsed = schema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid legal identity");
     }
 
-    await upsertLegalIdentity(session.user.id, {
+    await upsertLegalIdentity(actor.userId, {
       entityType: parsed.data.entityType as LegalEntityType,
       legalName: parsed.data.legalName,
       tradingName: parsed.data.tradingName ?? null,
@@ -56,8 +56,9 @@ export async function saveLegalIdentityAction(
       paymentNote: parsed.data.paymentNote ?? null,
     });
 
-    revalidatePath("/account");
-    revalidatePath("/[locale]/account", "page");
+    const locale = parsed.data.locale ?? "en";
+    revalidatePath(`/${locale}/profile`);
+    revalidatePath(`/${locale}/account`);
     return { ok: true };
   } catch (error) {
     return toActionError(error);

@@ -27,6 +27,7 @@ type Props = {
     subcategoryId: string;
     otherLabel: string;
   }) => void;
+  error?: string | null;
 };
 
 export function CategorySubcategorySelect({
@@ -40,6 +41,7 @@ export function CategorySubcategorySelect({
   subcategoryLabel,
   otherLabel,
   onSelectionChange,
+  error = null,
 }: Props) {
   const t = useTranslations("profile");
   const locale = useLocale() === "de" ? "de" : "en";
@@ -75,13 +77,18 @@ export function CategorySubcategorySelect({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div
+      className="grid gap-3 sm:grid-cols-2"
+      data-field={categoryName}
+      id={`field-${categoryName}`}
+    >
       <label className="grid gap-1 text-sm">
         <span className="font-medium text-[var(--ink)]">{categoryLabel}</span>
         <select
           name={categoryName}
           required
-          className="field"
+          className={`field${error ? " border-[var(--danger)]" : ""}`}
+          aria-invalid={error ? true : undefined}
           value={categoryId}
           onChange={(event) => {
             const next = event.target.value;
@@ -108,7 +115,7 @@ export function CategorySubcategorySelect({
         </span>
         <select
           required
-          className="field"
+          className={`field${error ? " border-[var(--danger)]" : ""}`}
           value={subcategoryId}
           disabled={!categoryId}
           onChange={(event) => {
@@ -146,6 +153,11 @@ export function CategorySubcategorySelect({
       ) : (
         <input type="hidden" name={otherName} value="" />
       )}
+      {error ? (
+        <p role="alert" className="text-xs text-[var(--danger)] sm:col-span-2">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

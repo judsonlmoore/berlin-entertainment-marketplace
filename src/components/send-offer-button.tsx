@@ -106,8 +106,8 @@ function LegalRequiredNotice() {
   return (
     <p className="max-w-xs text-right text-sm text-[var(--text-muted)]">
       {t("legalRequiredToSend")}{" "}
-      <Link href="/account" className="font-medium underline">
-        {t("goToAccount")}
+      <Link href="/profile" className="font-medium underline">
+        {t("goToProfile")}
       </Link>
     </p>
   );

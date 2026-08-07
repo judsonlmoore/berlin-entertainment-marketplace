@@ -43,7 +43,7 @@ Salon generates **invoice artifacts** for parties. It does **not** collect, hold
 
 **Completeness for Generate agreement:** both parties must have `entityType`, `legalName`, address fields, `countryCode`, `invoiceEmail`. Tax ID required when `countryCode` is `DE` and `entityType` is `freelancer` or `registered_business` (MVP rule; refine with counsel).
 
-**Privacy:** Counterparty legal/payment fields visible only at/after `terms_agreed`. Own fields always editable on `/account` and shown on negotiation for self.
+**Privacy:** Counterparty legal/payment fields visible only at/after `terms_agreed`. Own fields always editable on `/profile` and shown on negotiation for self.
 
 ## Negotiation checklist gates (before Generate agreement)
 

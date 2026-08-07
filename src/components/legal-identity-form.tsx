@@ -10,17 +10,21 @@ import type { LegalIdentityFields } from "@/src/domain/legal-identity";
 type Props = {
   locale: "en" | "de";
   initial: LegalIdentityFields | null;
+  /** Publish-gate field error shown on the section. */
+  error?: string | null;
 };
 
-export function LegalIdentityForm({ locale, initial }: Props) {
-  const t = useTranslations("accountPage");
+export function LegalIdentityForm({ locale, initial, error = null }: Props) {
+  const t = useTranslations("profile");
   const formRef = useRef<HTMLFormElement>(null);
 
   const readPayload = useCallback(
     (form: FormData) => {
       return {
         entityType: String(form.get("entityType") ?? "individual") as
-          "individual" | "freelancer" | "registered_business",
+          | "individual"
+          | "freelancer"
+          | "registered_business",
         legalName: String(form.get("legalName") ?? ""),
         tradingName: String(form.get("tradingName") ?? "") || null,
         addressLine1: String(form.get("addressLine1") ?? ""),
@@ -53,15 +57,34 @@ export function LegalIdentityForm({ locale, initial }: Props) {
   });
 
   return (
-    <form ref={formRef} className="grid gap-3">
+    <form
+      ref={formRef}
+      id="field-legalIdentity"
+      data-field="legalIdentity"
+      className={`panel grid gap-4 p-6${error ? " border-[var(--danger)]" : ""}`}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-medium">{t("legalTitle")}</h2>
+        <div>
+          <h3 className="text-sm font-semibold tracking-[0.12em] text-[var(--ink)] uppercase">
+            {t("sectionLegal")}
+          </h3>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            {t("legalBody")}
+          </p>
+        </div>
         <AutosaveStatus
           phase={autosave.phase}
           errorMessage={autosave.errorMessage}
         />
       </div>
-      <p className="text-sm text-[var(--text-muted)]">{t("legalBody")}</p>
+      {error ? (
+        <p role="alert" className="text-sm text-[var(--danger)]">
+          {error}
+        </p>
+      ) : null}
+      <p className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--text-muted)]">
+        {t("legalHiddenUntilContract")}
+      </p>
 
       <label className="label">
         <span className="field-label">{t("entityType")}</span>

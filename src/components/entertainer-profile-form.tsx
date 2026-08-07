@@ -19,12 +19,14 @@ import {
   toParagraphEditorHtml,
 } from "@/src/components/profile/paragraph-text-field";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
+import { LegalIdentityForm } from "@/src/components/legal-identity-form";
 import {
   canOwnerPublishProfile,
   canOwnerUnpublishProfile,
   isProfilePublished,
   type ProfilePublicationState,
 } from "@/src/domain/profile-publication";
+import type { LegalIdentityFields } from "@/src/domain/legal-identity";
 import {
   ENTERTAINER_SOCIAL_ORDER,
   type SocialPlatform,
@@ -80,6 +82,7 @@ type Props = {
   publicationState?: string;
   /** Account email used for contact upsert — not shown on this form. */
   accountEmail: string;
+  legalIdentity?: LegalIdentityFields | null;
 };
 
 function Section({
@@ -159,12 +162,14 @@ export function EntertainerProfileForm({
   defaultValues,
   publicationState,
   accountEmail,
+  legalIdentity = null,
 }: Props) {
   const t = useTranslations("profile");
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [actName, setActName] = useState(defaultValues?.actName ?? "");
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [legalError, setLegalError] = useState<string | null>(null);
   const [isPublishing, startPublish] = useTransition();
   const social = defaultValues?.socialLinks ?? {};
   const pubState = (publicationState ?? "draft") as ProfilePublicationState;
@@ -217,8 +222,23 @@ export function EntertainerProfileForm({
     save: (payload) => upsertEntertainerProfile(payload),
   });
 
+  function focusPublishField(field: string | undefined) {
+    if (!field || typeof document === "undefined") return;
+    requestAnimationFrame(() => {
+      const target =
+        document.getElementById(`field-${field}`) ??
+        document.querySelector<HTMLElement>(`[data-field="${field}"]`);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = target?.matches("input,select,textarea")
+        ? target
+        : target?.querySelector<HTMLElement>("input,select,textarea");
+      focusable?.focus?.();
+    });
+  }
+
   function publishProfile() {
     setPublishError(null);
+    setLegalError(null);
     startPublish(async () => {
       const saved = await autosave.saveNow();
       if (!saved?.ok) {
@@ -228,6 +248,11 @@ export function EntertainerProfileForm({
       const result = await publishEntertainerProfile(locale);
       if (!result.ok) {
         setPublishError(result.message || t("publishProfileFailed"));
+        const legalMessage = result.fields?.legalIdentity ?? null;
+        setLegalError(legalMessage);
+        if (result.field === "legalIdentity" || legalMessage) {
+          focusPublishField("legalIdentity");
+        }
         return;
       }
       router.refresh();
@@ -236,6 +261,7 @@ export function EntertainerProfileForm({
 
   function unpublishProfile() {
     setPublishError(null);
+    setLegalError(null);
     startPublish(async () => {
       const result = await unpublishEntertainerProfile(locale);
       if (!result.ok) {
@@ -507,6 +533,12 @@ export function EntertainerProfileForm({
           </div>
         </Section>
       </form>
+
+      <LegalIdentityForm
+        locale={locale}
+        initial={legalIdentity}
+        error={legalError}
+      />
     </div>
   );
 }
