@@ -433,9 +433,6 @@ export const profileEnquiries = pgTable(
       table.entertainerProfileId,
       table.state,
     ),
-    uniqueIndex("profile_enquiries_active_pair_uidx")
-      .on(table.venueId, table.entertainerProfileId)
-      .where(sql`${table.state} IN ('pending', 'interested')`),
   ],
 );
 

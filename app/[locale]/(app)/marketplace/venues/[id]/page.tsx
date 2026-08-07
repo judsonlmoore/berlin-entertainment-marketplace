@@ -10,17 +10,15 @@ import {
   requireDiscoveryAccess,
 } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
-import {
-  findActiveProfileEnquiry,
-  findRecentProfileEnquiry,
-} from "@/src/db/queries/profile-enquiries";
+import { listOpenOfferBookingsForPair } from "@/src/db/queries/profile-enquiries";
 import { listOpenCallsForVenue } from "@/src/db/queries/opportunities";
 import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
+import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 import { getDb } from "@/src/db/client";
-import { bookings, entertainerProfiles } from "@/src/db/schema/marketplace";
-import { and, eq } from "drizzle-orm";
+import { entertainerProfiles } from "@/src/db/schema/marketplace";
+import { eq } from "drizzle-orm";
 import { can } from "@/src/domain/permissions";
-import { enquiryRequestCooldownDaysRemaining } from "@/src/domain/profile-enquiry-cooldown";
+import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import {
   getCategoryNode,
   parseSubcategory,
@@ -181,35 +179,18 @@ export default async function VenueDiscoveryDetailPage({
   const publishRequired = Boolean(
     isEntertainer && ownProfile && ownProfile.publicationState !== "approved",
   );
+  const legalIdentityComplete = isLegalIdentityComplete(
+    await getLegalIdentityForUser(access.actor.userId),
+  );
 
-  let activeEnquiryBookingId: string | null = null;
-  let enquiryCooldownDaysRemaining: number | null = null;
-  if (ownProfile) {
-    const [active, recent] = await Promise.all([
-      findActiveProfileEnquiry({
-        venueId: id,
-        entertainerProfileId: ownProfile.id,
-      }),
-      findRecentProfileEnquiry({
-        venueId: id,
-        entertainerProfileId: ownProfile.id,
-      }),
-    ]);
-    if (active) {
-      const booking = await db.query.bookings.findFirst({
-        where: and(
-          eq(bookings.originType, "profile_enquiry"),
-          eq(bookings.originId, active.id),
-        ),
-        columns: { id: true },
-      });
-      activeEnquiryBookingId = booking?.id ?? null;
-    }
-    if (recent) {
-      const days = enquiryRequestCooldownDaysRemaining(recent.createdAt);
-      enquiryCooldownDaysRemaining = days > 0 ? days : null;
-    }
-  }
+  const openOfferBookingIds = ownProfile
+    ? (
+        await listOpenOfferBookingsForPair({
+          venueId: id,
+          entertainerProfileId: ownProfile.id,
+        })
+      ).map((row) => row.bookingId)
+    : [];
 
   const openCalls = isEntertainer
     ? await listOpenCallsForVenue({
@@ -222,16 +203,14 @@ export default async function VenueDiscoveryDetailPage({
     actor: access.actor,
     venueId: id,
     ownerUserId: venue.ownerUserId,
-    publicationState: venue.publicationState,
+    publicationState: showPreviewBanner ? "approved" : venue.publicationState,
+    ...(showPreviewBanner ? { asMarketplacePreview: true } : {}),
   });
 
   const showSubmitCta =
     isEntertainer &&
     !showPreviewBanner &&
-    (canSubmit ||
-      publishRequired ||
-      Boolean(activeEnquiryBookingId) ||
-      (enquiryCooldownDaysRemaining ?? 0) > 0);
+    (canSubmit || publishRequired || openOfferBookingIds.length > 0);
 
   const headerAction = showSubmitCta ? (
     <SendOfferButton
@@ -240,8 +219,8 @@ export default async function VenueDiscoveryDetailPage({
       venueId={id}
       canSubmit={canSubmit}
       publishRequired={publishRequired}
-      activeBookingId={activeEnquiryBookingId}
-      cooldownDaysRemaining={enquiryCooldownDaysRemaining}
+      legalIdentityComplete={legalIdentityComplete}
+      openOfferBookingIds={openOfferBookingIds}
     />
   ) : null;
 

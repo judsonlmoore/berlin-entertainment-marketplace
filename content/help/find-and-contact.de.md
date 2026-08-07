@@ -12,7 +12,7 @@ Rollenseparierte Suche: Talent sieht Venues; Buyer sehen Acts. Unveröffentlicht
 
 ## Matches starten
 
-1. **Angebot senden** auf einer Venue- oder Act-Seite — kommerzielle Konditionen zum Annehmen, Gegenbieten oder Ablehnen
+1. **Angebot senden** auf einer Venue- oder Act-Seite — Modal mit kommerziellen Konditionen zum Annehmen, Gegenbieten oder Ablehnen. Zuerst vollständige rechtliche Identität unter Konto. Mehrere Angebote für unterschiedliche Engagements mit derselben Partei sind erlaubt (z. B. wöchentliche Serie). Offene unbeantwortete Angebote erscheinen als **Angebot ansehen** / **Angebote ansehen**. Unbeantwortete Angebote laufen nach 7 Tagen ab; der Absender kann früher zurückziehen. Empfänger dürfen ohne rechtliche Identität ablehnen; Annehmen und Gegenbieten erfordern sie.
 2. **Bewerben** auf einen Open Call der Venue (möglichst 1-Klick)
 3. **Direktanfrage** vom Act-Profil (Buyer) — mit Datum (Legacy; Profil-Angebot deckt datierte Konditionen ab)
 

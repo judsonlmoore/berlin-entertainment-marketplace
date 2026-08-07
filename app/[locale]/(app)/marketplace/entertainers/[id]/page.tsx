@@ -9,7 +9,9 @@ import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklis
 import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
 import { listVenueActConnectionStatuses } from "@/src/db/queries/profile-enquiries";
+import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 import { formatLanguageList } from "@/src/domain/languages";
+import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import {
   ENTERTAINER_CATEGORIES,
   getCategoryNode,
@@ -133,6 +135,9 @@ export default async function EntertainerDetailPage({
   const statusByVenueId = new Map(
     connectionStatuses.map((status) => [status.venueId, status]),
   );
+  const legalIdentityComplete = isLegalIdentityComplete(
+    await getLegalIdentityForUser(access.actor.userId),
+  );
 
   const media = splitPortfolioMedia(profile.portfolio);
   const sub = subcategoryLabel(profile.genres, profile.category, appLocale);
@@ -193,11 +198,13 @@ export default async function EntertainerDetailPage({
   }
 
   // Discovery only loads approved profiles; keep list/download gates aligned.
+  // Preview mirrors marketplace discovery (not owner/staff ACL).
   const visibleDocuments = await listDocumentsVisibleToActor({
     actor: access.actor,
     entertainerProfileId: profile.id,
     ownerUserId: profile.userId,
     publicationState: "approved",
+    ...(showPreviewBanner ? { asMarketplacePreview: true } : {}),
   });
 
   const headerAction = isVenueBooker ? (
@@ -210,8 +217,8 @@ export default async function EntertainerDetailPage({
         return {
           id: venue.id,
           name: venue.name,
-          activeBookingId: status?.activeBookingId ?? null,
-          cooldownDaysRemaining: status?.cooldownDaysRemaining ?? null,
+          openOfferBookingIds: status?.openOfferBookingIds ?? [],
+          legalIdentityComplete,
         };
       })}
       locked={showRequestLocked}

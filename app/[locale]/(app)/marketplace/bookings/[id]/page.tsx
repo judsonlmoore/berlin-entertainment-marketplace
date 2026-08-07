@@ -16,6 +16,7 @@ import {
   VenueRespondToChangesButtons,
   WithdrawDirectRequestButton,
 } from "@/src/components/direct-request-actions";
+import { WithdrawProfileOfferButton } from "@/src/components/withdraw-profile-offer-button";
 import { toDatetimeLocal } from "@/src/lib/format";
 import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
 import { ProfileEnquiryRespondButtons } from "@/src/components/profile-enquiry-actions";
@@ -49,9 +50,8 @@ import {
 import { canGenerateAgreement } from "@/src/domain/agreement";
 import {
   isLegalIdentityComplete,
-  publicLegalIdentityView,
 } from "@/src/domain/legal-identity";
-import { leadContactsUnlocked } from "@/src/domain/lead";
+import { bookingContactsUnlocked } from "@/src/domain/lead";
 import { can } from "@/src/domain/permissions";
 import { Link } from "@/src/i18n/navigation";
 
@@ -65,13 +65,6 @@ function docTitle(doc: {
 }): string {
   return doc.title.trim() || doc.originalFilename?.trim() || "PDF";
 }
-
-const LEGAL_REVEAL_STATES = new Set([
-  "terms_agreed",
-  "agreement_generated",
-  "partially_signed",
-  "confirmed",
-]);
 
 export default async function BookingDetailPage({ params }: Props) {
   const { locale, id } = await params;
@@ -108,11 +101,13 @@ export default async function BookingDetailPage({ params }: Props) {
     notFound();
   }
 
-  const party: BookingParty = isStaff
-    ? "staff"
-    : isEntertainer
-      ? "entertainer"
-      : "venue";
+  // Prefer booking-party role over staff so staff who are also a party
+  // can Accept / Counter / Decline their own offers.
+  const party: BookingParty = isEntertainer
+    ? "entertainer"
+    : isVenue
+      ? "venue"
+      : "staff";
 
   const openTerms =
     terms.find((row) => isOpenTermsOffer(row)) ?? null;
@@ -188,17 +183,9 @@ export default async function BookingDetailPage({ params }: Props) {
   const bothLegalComplete =
     isLegalIdentityComplete(entertainerLegal) &&
     isLegalIdentityComplete(venueLegal);
-  const revealCounterpartyLegal = LEGAL_REVEAL_STATES.has(booking.state);
-  const ownLegal = isEntertainer
-    ? entertainerLegal
-    : isVenue
-      ? venueLegal
-      : null;
-  const counterpartyLegal = isEntertainer
-    ? venueLegal
-    : isVenue
-      ? entertainerLegal
-      : null;
+  const ownLegalComplete = isLegalIdentityComplete(
+    isEntertainer ? entertainerLegal : isVenue ? venueLegal : null,
+  );
 
   const db = getDb();
   const [actHero] = await db
@@ -336,7 +323,15 @@ export default async function BookingDetailPage({ params }: Props) {
   const declineEnquiryId =
     canRespondToEnquiry && enquiry && openTerms ? enquiry.id : null;
 
-  const contactsUnlocked = lead ? leadContactsUnlocked(lead.leadStatus) : false;
+  const canWithdrawProfileOffer =
+    Boolean(enquiry) &&
+    enquiry!.state === "pending" &&
+    enquiry!.submittedByUserId === access.actor.userId &&
+    (booking.state === "applied" || booking.state === "requested");
+
+  const contactsUnlocked = lead
+    ? bookingContactsUnlocked(booking.state as BookingState)
+    : false;
 
   let addendumN = 1;
   const actAddenda = actDocuments.map((doc) => ({
@@ -464,6 +459,17 @@ export default async function BookingDetailPage({ params }: Props) {
                 ? t("nextConfirmed")
                 : t("nextSteps")}
         </p>
+        {agreedTerms && canGenerate && !agreement ? (
+          <GenerateAgreementButton
+            locale={locale as "en" | "de"}
+            bookingId={booking.id}
+            expectedVersion={booking.version}
+            disabled={!bothLegalComplete}
+            disabledReason={
+              bothLegalComplete ? null : t("legalRequiredToGenerate")
+            }
+          />
+        ) : null}
       </div>
 
       {canRespondToEnquiry && enquiry && !openTerms ? (
@@ -510,7 +516,7 @@ export default async function BookingDetailPage({ params }: Props) {
         </div>
       ) : null}
 
-      {lead?.leadStatus === "open" ? (
+      {contactsUnlocked && lead?.leadStatus === "open" ? (
         <p className="text-sm text-[var(--text-muted)]">{leadsT("openHint")}</p>
       ) : null}
 
@@ -528,7 +534,15 @@ export default async function BookingDetailPage({ params }: Props) {
           history={offerHistory}
           defaults={defaults}
           canAccept={Boolean(canAccept)}
+          ownLegalComplete={ownLegalComplete}
           declineEnquiryId={declineEnquiryId}
+          bookingClosedWithoutAccept={
+            booking.state === "declined" ||
+            booking.state === "rejected" ||
+            booking.state === "expired" ||
+            booking.state === "withdrawn" ||
+            booking.state === "cancelled"
+          }
         />
       ) : null}
 
@@ -642,180 +656,121 @@ export default async function BookingDetailPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Legal checklist + Agreement */}
-      <div className="panel grid gap-4 p-6">
-        <h2 className="text-sm font-semibold tracking-[0.12em] uppercase">
-          {t("sectionAgreement")}
-        </h2>
-        <div className="grid gap-2 border-[var(--info-soft)] bg-[var(--info-soft)]/50 p-4 text-sm">
-          <h3 className="font-medium">{t("agreementNoticeTitle")}</h3>
-          <p>{t("agreementNoticeBody")}</p>
-          <p>
-            <span className="font-semibold">{t("agreementNoticeDeLabel")}</span>
-            {" · "}
-            <span className="text-[var(--text-muted)]">
-              {t("agreementNoticeEnLabel")}
-            </span>
-          </p>
-        </div>
-
-        <div className="grid gap-3 text-sm">
-          <h3 className="font-medium">{t("legalChecklistTitle")}</h3>
-          <p
-            className={
-              bothLegalComplete
-                ? "text-[var(--primary)]"
-                : "text-[var(--text-muted)]"
-            }
-          >
-            {bothLegalComplete
-              ? t("legalChecklistComplete")
-              : t("legalChecklistIncomplete")}
-          </p>
-          {!bothLegalComplete ? (
-            <p>
-              <Link href="/account" className="underline">
-                /account
-              </Link>
-            </p>
-          ) : null}
-          {ownLegal && isLegalIdentityComplete(ownLegal) ? (
-            <div>
-              <p className="font-medium">{t("legalOwnTitle")}</p>
+      {/* Agreement (only after generate) + optional invoice when confirmed */}
+      {agreement || booking.state === "confirmed" ? (
+        <div className="panel grid gap-4 p-6">
+          <h2 className="text-sm font-semibold tracking-[0.12em] uppercase">
+            {t("sectionAgreement")}
+          </h2>
+          {agreement ? (
+            <div className="grid gap-4 text-sm">
+              <div className="grid gap-2 border-[var(--info-soft)] bg-[var(--info-soft)]/50 p-4">
+                <h3 className="font-medium">{t("agreementNoticeTitle")}</h3>
+                <p>{t("agreementNoticeBody")}</p>
+                <p>
+                  <span className="font-semibold">
+                    {t("agreementNoticeDeLabel")}
+                  </span>
+                  {" · "}
+                  <span className="text-[var(--text-muted)]">
+                    {t("agreementNoticeEnLabel")}
+                  </span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-lg font-medium">{t("agreementTitle")}</h3>
+                <StatusLabel tone="warning">{t("sandboxBadge")}</StatusLabel>
+              </div>
+              <p className="text-[var(--text-muted)]">{t("sandboxBody")}</p>
               <p>
-                {ownLegal.legalName} · {ownLegal.city}, {ownLegal.countryCode}
+                {t("agreementStatus")}: {agreement.status} · {agreement.provider}
               </p>
-            </div>
-          ) : null}
-          {revealCounterpartyLegal &&
-          counterpartyLegal &&
-          isLegalIdentityComplete(counterpartyLegal) ? (
-            <div>
-              <p className="font-medium">{t("legalCounterpartyTitle")}</p>
-              {(() => {
-                const view = publicLegalIdentityView(counterpartyLegal);
-                return (
-                  <p>
-                    {view.legalName}
-                    {view.tradingName ? ` (${view.tradingName})` : ""} ·{" "}
-                    {view.addressLine1}, {view.postalCode} {view.city},{" "}
-                    {view.countryCode}
-                    {view.taxId ? ` · ${view.taxId}` : ""} · {view.invoiceEmail}
-                    {view.hasPaymentInstructions
-                      ? " · payment instructions on file"
-                      : ""}
-                  </p>
-                );
-              })()}
-            </div>
-          ) : !revealCounterpartyLegal ? (
-            <p className="text-[var(--text-muted)]">
-              {t("legalHiddenUntilTerms")}
-            </p>
-          ) : null}
-        </div>
-
-        {agreedTerms && canGenerate ? (
-          <GenerateAgreementButton
-            locale={locale as "en" | "de"}
-            bookingId={booking.id}
-            expectedVersion={booking.version}
-            disabled={!bothLegalComplete}
-            disabledReason={
-              bothLegalComplete ? null : t("legalChecklistIncomplete")
-            }
-          />
-        ) : null}
-
-        {agreement ? (
-          <div className="grid gap-4 border-t border-[var(--rule)] pt-4 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-medium">{t("agreementTitle")}</h3>
-              <StatusLabel tone="warning">{t("sandboxBadge")}</StatusLabel>
-            </div>
-            <p className="text-[var(--text-muted)]">{t("sandboxBody")}</p>
-            <p>
-              {t("agreementStatus")}: {agreement.status} · {agreement.provider}
-            </p>
-            {agreement.addendaSnapshot &&
-            agreement.addendaSnapshot.length > 0 ? (
+              {agreement.addendaSnapshot &&
+              agreement.addendaSnapshot.length > 0 ? (
+                <ul className="grid gap-1">
+                  {agreement.addendaSnapshot.map((item) => (
+                    <li key={`${item.id}-${item.addendumNumber}`}>
+                      {t("addendumLabel", { n: item.addendumNumber })}:{" "}
+                      {item.title}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               <ul className="grid gap-1">
-                {agreement.addendaSnapshot.map((item) => (
-                  <li key={`${item.id}-${item.addendumNumber}`}>
-                    {t("addendumLabel", { n: item.addendumNumber })}:{" "}
-                    {item.title}
+                {agreement.signatures.map((signature) => (
+                  <li key={signature.id}>
+                    {signature.partyRole}: {signature.status}
+                    {signature.signedAt
+                      ? ` · ${dateFmt.format(signature.signedAt)}`
+                      : ""}
                   </li>
                 ))}
               </ul>
-            ) : null}
-            <ul className="grid gap-1">
-              {agreement.signatures.map((signature) => (
-                <li key={signature.id}>
-                  {signature.partyRole}: {signature.status}
-                  {signature.signedAt
-                    ? ` · ${dateFmt.format(signature.signedAt)}`
-                    : ""}
-                </li>
-              ))}
-            </ul>
-            {agreement.rendered ? (
-              <div className="grid gap-4 border-t border-[var(--rule)] pt-4">
-                <div>
-                  <p className="font-semibold">{t("agreementNoticeDeLabel")}</p>
-                  <pre className="mt-2 font-sans text-xs leading-relaxed whitespace-pre-wrap text-[var(--text-muted)]">
-                    {agreement.rendered.germanBody}
-                  </pre>
+              {agreement.rendered ? (
+                <div className="grid gap-4 border-t border-[var(--rule)] pt-4">
+                  <div>
+                    <p className="font-semibold">
+                      {t("agreementNoticeDeLabel")}
+                    </p>
+                    <pre className="mt-2 font-sans text-xs leading-relaxed whitespace-pre-wrap text-[var(--text-muted)]">
+                      {agreement.rendered.germanBody}
+                    </pre>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-[var(--text-muted)]">
+                      {t("agreementNoticeEnLabel")}
+                    </p>
+                    <pre className="mt-2 font-sans text-xs leading-relaxed whitespace-pre-wrap text-[var(--text-muted)]">
+                      {agreement.rendered.englishBody}
+                    </pre>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-[var(--text-muted)]">
-                    {t("agreementNoticeEnLabel")}
-                  </p>
-                  <pre className="mt-2 font-sans text-xs leading-relaxed whitespace-pre-wrap text-[var(--text-muted)]">
-                    {agreement.rendered.englishBody}
-                  </pre>
-                </div>
-              </div>
-            ) : null}
-            {canSign ? (
-              <SignAgreementButton
-                locale={locale as "en" | "de"}
-                bookingId={booking.id}
-                agreementId={agreement.id}
-                expectedVersion={booking.version}
-              />
-            ) : agreement.status !== "completed" ? (
-              <p className="text-[var(--text-muted)]">
-                {t("waitingSignatures")}
-              </p>
-            ) : (
-              <p className="text-[var(--primary)]">{t("confirmedCalendars")}</p>
-            )}
-          </div>
-        ) : null}
+              ) : null}
+              {canSign ? (
+                <SignAgreementButton
+                  locale={locale as "en" | "de"}
+                  bookingId={booking.id}
+                  agreementId={agreement.id}
+                  expectedVersion={booking.version}
+                />
+              ) : agreement.status !== "completed" ? (
+                <p className="text-[var(--text-muted)]">
+                  {t("waitingSignatures")}
+                </p>
+              ) : (
+                <p className="text-[var(--primary)]">{t("confirmedCalendars")}</p>
+              )}
+            </div>
+          ) : null}
 
-        {booking.state === "confirmed" ? (
-          <div className="grid gap-3 border-t border-[var(--rule)] pt-4 text-sm">
-            <h3 className="font-medium">{t("invoiceTitle")}</h3>
-            <p className="text-[var(--text-muted)]">{t("invoiceBody")}</p>
-            {invoice?.status === "generated" && invoice.blobKey ? (
-              <p>
-                {t("invoiceGenerated")} ·{" "}
-                <a
-                  href={`/api/invoices/${booking.id}`}
-                  className="underline"
-                >
-                  {t("downloadInvoice")}
-                </a>
-              </p>
-            ) : (
-              <GenerateInvoiceButton
-                locale={locale as "en" | "de"}
-                bookingId={booking.id}
-              />
-            )}
-          </div>
-        ) : null}
-      </div>
+          {booking.state === "confirmed" ? (
+            <div
+              className={`grid gap-3 text-sm ${
+                agreement ? "border-t border-[var(--rule)] pt-4" : ""
+              }`}
+            >
+              <h3 className="font-medium">{t("invoiceTitle")}</h3>
+              <p className="text-[var(--text-muted)]">{t("invoiceBody")}</p>
+              {invoice?.status === "generated" && invoice.blobKey ? (
+                <p>
+                  {t("invoiceGenerated")} ·{" "}
+                  <a
+                    href={`/api/invoices/${booking.id}`}
+                    className="underline"
+                  >
+                    {t("downloadInvoice")}
+                  </a>
+                </p>
+              ) : (
+                <GenerateInvoiceButton
+                  locale={locale as "en" | "de"}
+                  bookingId={booking.id}
+                />
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {showCancel ? (
         <CancelBookingForm
@@ -823,6 +778,31 @@ export default async function BookingDetailPage({ params }: Props) {
           bookingId={booking.id}
           expectedVersion={booking.version}
         />
+      ) : canWithdrawProfileOffer && enquiry ? (
+        <div className="panel grid gap-4 p-6">
+          <div className="border-l-4 border-[var(--danger)] pl-4">
+            <h2 className="page-title text-xl text-[var(--danger)]">
+              {t("dangerZoneTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              {t("withdrawOfferBody")}
+            </p>
+          </div>
+          <div className="rounded-[var(--radius-md)] border border-[var(--danger)] bg-[var(--warning-soft)] p-4">
+            <h3 className="text-sm font-semibold text-[var(--ink)]">
+              {t("withdrawOfferTitle")}
+            </h3>
+            <p className="mt-2 text-sm text-[var(--ink)]">
+              {t("withdrawOfferHint")}
+            </p>
+            <div className="mt-4">
+              <WithdrawProfileOfferButton
+                locale={locale as "en" | "de"}
+                enquiryId={enquiry.id}
+              />
+            </div>
+          </div>
+        </div>
       ) : directRequest &&
         isVenue &&
         (directRequest.state === "requested" ||

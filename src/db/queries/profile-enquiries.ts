@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
 import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
@@ -17,17 +17,14 @@ import {
 import type { ActorContext } from "@/src/domain/permissions";
 import { AppError } from "@/src/domain/errors";
 import {
-  PROFILE_ENQUIRY_PASS_COOLDOWN_DAYS,
-  PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS,
-  enquiryRequestCooldownDaysRemaining,
-} from "@/src/domain/profile-enquiry-cooldown";
+  PROFILE_OFFER_EXPIRY_DAYS,
+  isProfileOfferExpired,
+} from "@/src/domain/profile-offer-expiry";
 
-export {
-  PROFILE_ENQUIRY_PASS_COOLDOWN_DAYS,
-  PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS,
-};
+export { PROFILE_OFFER_EXPIRY_DAYS };
 
-const ACTIVE_ENQUIRY_STATES = ["pending", "interested"] as const;
+const PENDING_ENQUIRY_STATE = "pending" as const;
+const PENDING_BOOKING_STATES = ["applied", "requested"] as const;
 
 export type ProfileOfferTermsInput = {
   startsAt: Date;
@@ -40,77 +37,56 @@ export type ProfileOfferTermsInput = {
   changeNote?: string | null;
 };
 
-export async function findActiveProfileEnquiry(input: {
+/** Open pending profile offers for an act↔venue pair (multi-engagement). */
+export async function listOpenOfferBookingsForPair(input: {
   venueId: string;
   entertainerProfileId: string;
-}) {
+  now?: Date;
+}): Promise<{ bookingId: string; enquiryId: string; createdAt: Date }[]> {
+  const now = input.now ?? new Date();
   const db = getDb();
-  return db.query.profileEnquiries.findFirst({
-    where: and(
-      eq(profileEnquiries.venueId, input.venueId),
-      eq(profileEnquiries.entertainerProfileId, input.entertainerProfileId),
-      inArray(profileEnquiries.state, [...ACTIVE_ENQUIRY_STATES]),
-    ),
-  });
-}
-
-export async function findRecentPassedEnquiry(input: {
-  venueId: string;
-  entertainerProfileId: string;
-  withinDays?: number;
-}) {
-  const db = getDb();
-  const days = input.withinDays ?? PROFILE_ENQUIRY_PASS_COOLDOWN_DAYS;
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-  const [row] = await db
-    .select()
+  const rows = await db
+    .select({
+      bookingId: bookings.id,
+      enquiryId: profileEnquiries.id,
+      createdAt: profileEnquiries.createdAt,
+      bookingState: bookings.state,
+    })
     .from(profileEnquiries)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.originType, "profile_enquiry"),
+        eq(bookings.originId, profileEnquiries.id),
+      ),
+    )
     .where(
       and(
         eq(profileEnquiries.venueId, input.venueId),
         eq(profileEnquiries.entertainerProfileId, input.entertainerProfileId),
-        eq(profileEnquiries.state, "passed"),
-        sql`${profileEnquiries.updatedAt} >= ${since}`,
+        eq(profileEnquiries.state, PENDING_ENQUIRY_STATE),
+        inArray(bookings.state, [...PENDING_BOOKING_STATES]),
       ),
     )
-    .orderBy(desc(profileEnquiries.updatedAt))
-    .limit(1);
-  return row ?? null;
-}
+    .orderBy(desc(profileEnquiries.createdAt));
 
-/** Most recent enquiry for the pair (any state), optionally within a window. */
-export async function findRecentProfileEnquiry(input: {
-  venueId: string;
-  entertainerProfileId: string;
-  withinDays?: number;
-}) {
-  const db = getDb();
-  const conditions = [
-    eq(profileEnquiries.venueId, input.venueId),
-    eq(profileEnquiries.entertainerProfileId, input.entertainerProfileId),
-  ];
-  if (input.withinDays != null) {
-    const since = new Date(Date.now() - input.withinDays * 24 * 60 * 60 * 1000);
-    conditions.push(sql`${profileEnquiries.createdAt} >= ${since}`);
-  }
-  const [row] = await db
-    .select()
-    .from(profileEnquiries)
-    .where(and(...conditions))
-    .orderBy(desc(profileEnquiries.createdAt))
-    .limit(1);
-  return row ?? null;
+  return rows
+    .filter((row) => !isProfileOfferExpired(row.createdAt, now))
+    .map((row) => ({
+      bookingId: row.bookingId,
+      enquiryId: row.enquiryId,
+      createdAt: row.createdAt,
+    }));
 }
 
 export type VenueActConnectionStatus = {
   venueId: string;
-  activeBookingId: string | null;
-  /** Whole days left before another request is allowed; null if not on cooldown. */
-  cooldownDaysRemaining: number | null;
+  /** Pending unanswered offers (newest first). */
+  openOfferBookingIds: string[];
 };
 
 /**
- * Per-venue connection status for a talent profile (active lead + 7-day request cooldown).
+ * Per-venue open pending offers for a talent profile (no send cooldown).
  */
 export async function listVenueActConnectionStatuses(input: {
   entertainerProfileId: string;
@@ -118,16 +94,16 @@ export async function listVenueActConnectionStatuses(input: {
 }): Promise<VenueActConnectionStatus[]> {
   if (input.venueIds.length === 0) return [];
 
+  const now = new Date();
   const db = getDb();
   const rows = await db
     .select({
       venueId: profileEnquiries.venueId,
-      state: profileEnquiries.state,
       createdAt: profileEnquiries.createdAt,
       bookingId: bookings.id,
     })
     .from(profileEnquiries)
-    .leftJoin(
+    .innerJoin(
       bookings,
       and(
         eq(bookings.originType, "profile_enquiry"),
@@ -138,56 +114,26 @@ export async function listVenueActConnectionStatuses(input: {
       and(
         eq(profileEnquiries.entertainerProfileId, input.entertainerProfileId),
         inArray(profileEnquiries.venueId, input.venueIds),
+        eq(profileEnquiries.state, PENDING_ENQUIRY_STATE),
+        inArray(bookings.state, [...PENDING_BOOKING_STATES]),
       ),
     )
     .orderBy(desc(profileEnquiries.createdAt));
 
-  const byVenue = new Map<
-    string,
-    { latestCreatedAt: Date; activeBookingId: string | null }
-  >();
-
+  const byVenue = new Map<string, string[]>();
+  for (const venueId of input.venueIds) {
+    byVenue.set(venueId, []);
+  }
   for (const row of rows) {
-    const existing = byVenue.get(row.venueId);
-    if (!existing) {
-      byVenue.set(row.venueId, {
-        latestCreatedAt: row.createdAt,
-        activeBookingId:
-          ACTIVE_ENQUIRY_STATES.includes(
-            row.state as (typeof ACTIVE_ENQUIRY_STATES)[number],
-          ) && row.bookingId
-            ? row.bookingId
-            : null,
-      });
-      continue;
-    }
-    if (
-      !existing.activeBookingId &&
-      ACTIVE_ENQUIRY_STATES.includes(
-        row.state as (typeof ACTIVE_ENQUIRY_STATES)[number],
-      ) &&
-      row.bookingId
-    ) {
-      existing.activeBookingId = row.bookingId;
-    }
+    if (!row.bookingId || isProfileOfferExpired(row.createdAt, now)) continue;
+    const list = byVenue.get(row.venueId);
+    if (list) list.push(row.bookingId);
   }
 
-  const now = new Date();
-  return input.venueIds.map((venueId) => {
-    const status = byVenue.get(venueId);
-    if (!status) {
-      return { venueId, activeBookingId: null, cooldownDaysRemaining: null };
-    }
-    const daysRemaining = enquiryRequestCooldownDaysRemaining(
-      status.latestCreatedAt,
-      now,
-    );
-    return {
-      venueId,
-      activeBookingId: status.activeBookingId,
-      cooldownDaysRemaining: daysRemaining > 0 ? daysRemaining : null,
-    };
-  });
+  return input.venueIds.map((venueId) => ({
+    venueId,
+    openOfferBookingIds: byVenue.get(venueId) ?? [],
+  }));
 }
 
 export async function submitProfileEnquiry(input: {
@@ -297,47 +243,6 @@ async function createProfileEnquiry(input: {
     throw new AppError("validation", "Fee must be non-negative");
   }
 
-  const existing = await findActiveProfileEnquiry({
-    venueId: input.venueId,
-    entertainerProfileId: input.entertainerProfileId,
-  });
-  if (existing) {
-    const booking = await db.query.bookings.findFirst({
-      where: and(
-        eq(bookings.originType, "profile_enquiry"),
-        eq(bookings.originId, existing.id),
-      ),
-      columns: { id: true },
-    });
-    if (booking) {
-      return { enquiryId: existing.id, bookingId: booking.id };
-    }
-    throw new AppError("conflict", "An active enquiry already exists");
-  }
-
-  const recent = await findRecentProfileEnquiry({
-    venueId: input.venueId,
-    entertainerProfileId: input.entertainerProfileId,
-    withinDays: PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS,
-  });
-  if (recent) {
-    throw new AppError(
-      "conflict",
-      `An offer was already sent. Try again after ${PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS} days.`,
-    );
-  }
-
-  const passed = await findRecentPassedEnquiry({
-    venueId: input.venueId,
-    entertainerProfileId: input.entertainerProfileId,
-  });
-  if (passed) {
-    throw new AppError(
-      "conflict",
-      "A recent decline blocks a new offer. Try again after the cooldown.",
-    );
-  }
-
   const note = input.note?.trim() || null;
   let enquiryId = "";
   let bookingId = "";
@@ -440,6 +345,13 @@ export async function establishProfileEnquiryConnection(
     throw new AppError("not_found", "Enquiry not found");
   }
 
+  if (isProfileOfferExpired(enquiry.createdAt)) {
+    throw new AppError(
+      "invalid_transition",
+      "This offer expired after 7 days without a response",
+    );
+  }
+
   const pending =
     input.booking.state === "applied" || input.booking.state === "requested";
   if (!pending || enquiry.state !== "pending") {
@@ -492,6 +404,12 @@ export async function respondToProfileEnquiry(input: {
 
   if (enquiry.state !== "pending") {
     throw new AppError("invalid_transition", "Enquiry is no longer pending");
+  }
+  if (isProfileOfferExpired(enquiry.createdAt)) {
+    throw new AppError(
+      "invalid_transition",
+      "This offer expired after 7 days without a response",
+    );
   }
 
   const profile = await db.query.entertainerProfiles.findFirst({
@@ -575,6 +493,159 @@ export async function respondToProfileEnquiry(input: {
   });
 
   return { bookingId: booking.id };
+}
+
+/**
+ * Initiator withdraws a pending profile offer (before Accept / Counter / Decline).
+ */
+export async function withdrawProfileOffer(input: {
+  actor: ActorContext;
+  enquiryId: string;
+}): Promise<{ bookingId: string }> {
+  const db = getDb();
+  const enquiry = await db.query.profileEnquiries.findFirst({
+    where: eq(profileEnquiries.id, input.enquiryId),
+  });
+  if (!enquiry) throw new AppError("not_found", "Enquiry not found");
+  if (enquiry.state !== "pending") {
+    throw new AppError("invalid_transition", "Offer is no longer pending");
+  }
+  if (enquiry.submittedByUserId !== input.actor.userId) {
+    throw new AppError("forbidden", "Only the sender can withdraw this offer");
+  }
+
+  const booking = await db.query.bookings.findFirst({
+    where: and(
+      eq(bookings.originType, "profile_enquiry"),
+      eq(bookings.originId, enquiry.id),
+    ),
+  });
+  if (!booking) throw new AppError("not_found", "Booking not found");
+  if (!canTransitionBooking(booking.state as BookingState, "withdrawn")) {
+    throw new AppError(
+      "invalid_transition",
+      `Cannot withdraw booking from ${booking.state}`,
+    );
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(profileEnquiries)
+      .set({ state: "withdrawn", updatedAt: new Date() })
+      .where(eq(profileEnquiries.id, enquiry.id));
+
+    await tx
+      .update(bookings)
+      .set({
+        state: "withdrawn",
+        version: booking.version + 1,
+        updatedAt: new Date(),
+      })
+      .where(eq(bookings.id, booking.id));
+
+    await tx
+      .update(bookingTerms)
+      .set({ supersededAt: new Date() })
+      .where(
+        and(
+          eq(bookingTerms.bookingId, booking.id),
+          sql`${bookingTerms.acceptedAt} IS NULL`,
+          sql`${bookingTerms.supersededAt} IS NULL`,
+        ),
+      );
+
+    await tx.insert(auditEvents).values({
+      actorUserId: input.actor.userId,
+      action: "profile_enquiry.withdrawn",
+      subjectType: "profile_enquiry",
+      subjectId: enquiry.id,
+      metadata: { bookingId: booking.id },
+    });
+  });
+
+  return { bookingId: booking.id };
+}
+
+/**
+ * Expire unanswered pending profile offers older than PROFILE_OFFER_EXPIRY_DAYS.
+ * Idempotent — safe for cron.
+ */
+export async function expireStaleProfileOffers(input?: {
+  now?: Date;
+  actorUserId?: string | null;
+}): Promise<{ expired: number; checkedAt: Date }> {
+  const now = input?.now ?? new Date();
+  const oldestStillValid = new Date(
+    now.getTime() - PROFILE_OFFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+  );
+
+  const db = getDb();
+  const stale = await db
+    .select({
+      enquiryId: profileEnquiries.id,
+      bookingId: bookings.id,
+      bookingState: bookings.state,
+      bookingVersion: bookings.version,
+    })
+    .from(profileEnquiries)
+    .innerJoin(
+      bookings,
+      and(
+        eq(bookings.originType, "profile_enquiry"),
+        eq(bookings.originId, profileEnquiries.id),
+      ),
+    )
+    .where(
+      and(
+        eq(profileEnquiries.state, PENDING_ENQUIRY_STATE),
+        inArray(bookings.state, [...PENDING_BOOKING_STATES]),
+        lt(profileEnquiries.createdAt, oldestStillValid),
+      ),
+    );
+
+  let expired = 0;
+  for (const row of stale) {
+    if (!canTransitionBooking(row.bookingState as BookingState, "expired")) {
+      continue;
+    }
+    await db.transaction(async (tx) => {
+      await tx
+        .update(profileEnquiries)
+        .set({ state: "withdrawn", updatedAt: now })
+        .where(eq(profileEnquiries.id, row.enquiryId));
+
+      await tx
+        .update(bookings)
+        .set({
+          state: "expired",
+          version: row.bookingVersion + 1,
+          updatedAt: now,
+        })
+        .where(eq(bookings.id, row.bookingId));
+
+      await tx
+        .update(bookingTerms)
+        .set({ supersededAt: now })
+        .where(
+          and(
+            eq(bookingTerms.bookingId, row.bookingId),
+            sql`${bookingTerms.acceptedAt} IS NULL`,
+            sql`${bookingTerms.supersededAt} IS NULL`,
+          ),
+        );
+
+      await tx.insert(auditEvents).values({
+        actorUserId: input?.actorUserId ?? null,
+        action: "profile_enquiry.expired",
+        subjectType: "profile_enquiry",
+        subjectId: row.enquiryId,
+        metadata: { bookingId: row.bookingId },
+      });
+    });
+    expired += 1;
+  }
+
+  return { expired, checkedAt: now };
 }
 
 export async function updateProfileEnquiryProposal(input: {

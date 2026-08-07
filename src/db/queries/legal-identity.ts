@@ -1,8 +1,12 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import { accountLegalIdentities } from "@/src/db/schema/marketplace";
+import { AppError } from "@/src/domain/errors";
 import type { LegalIdentityFields } from "@/src/domain/legal-identity";
-import { toLegalIdentityFields } from "@/src/domain/legal-identity";
+import {
+  isLegalIdentityComplete,
+  toLegalIdentityFields,
+} from "@/src/domain/legal-identity";
 
 export async function getLegalIdentityForUser(userId: string) {
   const db = getDb();
@@ -10,6 +14,17 @@ export async function getLegalIdentityForUser(userId: string) {
     where: eq(accountLegalIdentities.userId, userId),
   });
   return toLegalIdentityFields(row);
+}
+
+/** Require complete Account legal identity before sending or accepting offers. */
+export async function assertLegalIdentityComplete(userId: string): Promise<void> {
+  const identity = await getLegalIdentityForUser(userId);
+  if (!isLegalIdentityComplete(identity)) {
+    throw new AppError(
+      "validation",
+      "Complete legal identity on Account before continuing",
+    );
+  }
 }
 
 export async function upsertLegalIdentity(

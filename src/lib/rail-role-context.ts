@@ -29,7 +29,7 @@ export function resolveEffectiveRoleMode(
 /**
  * Discovery nav follows the marketplace role even for platform staff who also
  * hold a talent/buyer role. Staff dual-browse stays for accounts with no
- * marketplace role; support sessions use `supportDiscoveryFlags` instead.
+ * marketplace role.
  */
 export function discoveryNavFlags(actor: ActorContext): {
   canDiscoverEntertainers: boolean;

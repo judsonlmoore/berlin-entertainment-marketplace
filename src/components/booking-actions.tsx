@@ -13,7 +13,7 @@ import {
 } from "@/src/actions/agreements";
 import { generateBookingInvoice } from "@/src/actions/invoices";
 import { Button } from "@/src/components/ui/button";
-import { useRouter } from "@/src/i18n/navigation";
+import { Link, useRouter } from "@/src/i18n/navigation";
 
 export function AcceptTermsButton({
   locale,
@@ -186,7 +186,12 @@ export function GenerateAgreementButton({
         {t("generateAgreement")}
       </Button>
       {disabled && disabledReason ? (
-        <p className="text-sm text-[var(--text-muted)]">{disabledReason}</p>
+        <p className="text-sm text-[var(--text-muted)]">
+          {disabledReason}{" "}
+          <Link href="/account" className="font-medium underline">
+            {t("goToAccount")}
+          </Link>
+        </p>
       ) : null}
       {error ? (
         <p role="alert" className="text-sm text-red-800">

@@ -23,10 +23,7 @@ import { can } from "@/src/domain/permissions";
 import { isDocumentStoreConfigured } from "@/src/integrations/document-file-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 import { Link } from "@/src/i18n/navigation";
-import {
-  listRiderFilesForProfile,
-  listRiderFilesForVenue,
-} from "@/src/db/queries/admin-ops";
+import { listDocumentsForOwner } from "@/src/db/queries/rider-access";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -83,7 +80,9 @@ export default async function ProfilePage({ params }: Props) {
   const primarySpace = venueSpaces[0] ?? null;
   const riderFiles =
     entertainerProfile && process.env.DATABASE_URL
-      ? await listRiderFilesForProfile(entertainerProfile.id)
+      ? await listDocumentsForOwner({
+          entertainerProfileId: entertainerProfile.id,
+        })
       : [];
   const portfolioItems =
     entertainerProfile && process.env.DATABASE_URL
@@ -91,7 +90,7 @@ export default async function ProfilePage({ params }: Props) {
       : [];
   const venueRiderFiles =
     venue && process.env.DATABASE_URL
-      ? await listRiderFilesForVenue(venue.id)
+      ? await listDocumentsForOwner({ venueId: venue.id })
       : [];
   const venuePortfolioItems =
     venue && process.env.DATABASE_URL

@@ -3,7 +3,6 @@
 import {
   type ActionResult,
   requireActor,
-  requireStaffActor,
   toActionError,
 } from "@/src/actions/_shared";
 import { and, asc, count, eq } from "drizzle-orm";
@@ -23,7 +22,6 @@ import { checkEntertainerPublishReadiness } from "@/src/domain/entertainer-publi
 import { can } from "@/src/domain/permissions";
 import {
   canOwnerTransitionProfile,
-  canStaffTransitionProfile,
   type ProfilePublicationState,
 } from "@/src/domain/profile-publication";
 import {
@@ -420,8 +418,6 @@ export async function upsertEntertainerProfile(
         },
       });
     });
-
-    revalidatePath(`/${parsed.data.locale}/admin`);
     return { ok: true, ...(profileId ? { id: profileId } : {}) };
   } catch (error) {
     return toActionError(error);
@@ -507,7 +503,6 @@ export async function publishEntertainerProfile(
 
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/marketplace`);
-    revalidatePath(`/${locale}/admin`);
     revalidatePath("/", "layout");
     return { ok: true, id: profile.id };
   } catch (error) {
@@ -560,7 +555,6 @@ export async function unpublishEntertainerProfile(
 
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/marketplace`);
-    revalidatePath(`/${locale}/admin`);
     return { ok: true, id: profile.id };
   } catch (error) {
     return toActionError(error);
@@ -783,7 +777,6 @@ export async function updateVenue(
     });
 
     // Autosave owns client form state — do not revalidate profile routes.
-    revalidatePath(`/${parsed.data.locale}/admin`);
     return { ok: true, id: venueId };
   } catch (error) {
     return toActionError(error);
@@ -836,7 +829,6 @@ export async function publishVenueProfile(
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/profile/venues/${venueId}`);
     revalidatePath(`/${locale}/marketplace`);
-    revalidatePath(`/${locale}/admin`);
     revalidatePath("/", "layout");
     return { ok: true, id: venueId };
   } catch (error) {
@@ -884,7 +876,6 @@ export async function unpublishVenueProfile(
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/profile/venues/${venueId}`);
     revalidatePath(`/${locale}/marketplace`);
-    revalidatePath(`/${locale}/admin`);
     return { ok: true, id: venueId };
   } catch (error) {
     return toActionError(error);
@@ -897,113 +888,6 @@ export async function submitVenueProfile(
   locale: "en" | "de" = "en",
 ): Promise<ActionResult> {
   return publishVenueProfile(venueId, locale);
-}
-
-const staffProfileReviewSchema = z.object({
-  subjectType: z.enum(["entertainer", "venue"]),
-  subjectId: z.string().uuid(),
-  nextState: z.enum([
-    "draft",
-    "submitted",
-    "approved",
-    "changes_requested",
-    "suspended",
-  ]),
-  reason: z.string().trim().min(1).max(1000),
-  locale: localeSchema,
-});
-
-export async function staffReviewProfile(
-  input: z.infer<typeof staffProfileReviewSchema>,
-): Promise<ActionResult> {
-  try {
-    const { session, actor, auditUserId } = await requireStaffActor();
-    if (!can(actor, "admin.review_profiles")) {
-      throw new AppError("forbidden", "Staff only");
-    }
-
-    const parsed = staffProfileReviewSchema.safeParse(input);
-    if (!parsed.success) {
-      throw new AppError("validation", "Invalid profile review");
-    }
-
-    const db = getDb();
-    if (parsed.data.subjectType === "entertainer") {
-      const profile = await db.query.entertainerProfiles.findFirst({
-        where: eq(entertainerProfiles.id, parsed.data.subjectId),
-      });
-      if (!profile) {
-        throw new AppError("not_found", "Entertainer profile not found");
-      }
-      const from = profile.publicationState as ProfilePublicationState;
-      if (!canStaffTransitionProfile(from, parsed.data.nextState)) {
-        throw new AppError(
-          "invalid_transition",
-          `Cannot move entertainer profile from ${from} to ${parsed.data.nextState}`,
-        );
-      }
-      await db.transaction(async (tx) => {
-        await tx
-          .update(entertainerProfiles)
-          .set({
-            publicationState: parsed.data.nextState,
-            updatedAt: new Date(),
-          })
-          .where(eq(entertainerProfiles.id, profile.id));
-        await tx.insert(auditEvents).values({
-          actorUserId: auditUserId,
-          action: "entertainer_profile.reviewed",
-          subjectType: "entertainer_profile",
-          subjectId: profile.id,
-          metadata: {
-            from,
-            to: parsed.data.nextState,
-            reason: parsed.data.reason,
-          },
-        });
-      });
-    } else {
-      const venue = await db.query.venues.findFirst({
-        where: eq(venues.id, parsed.data.subjectId),
-      });
-      if (!venue) {
-        throw new AppError("not_found", "Venue not found");
-      }
-      const from = venue.publicationState as ProfilePublicationState;
-      if (!canStaffTransitionProfile(from, parsed.data.nextState)) {
-        throw new AppError(
-          "invalid_transition",
-          `Cannot move venue from ${from} to ${parsed.data.nextState}`,
-        );
-      }
-      await db.transaction(async (tx) => {
-        await tx
-          .update(venues)
-          .set({
-            publicationState: parsed.data.nextState,
-            updatedAt: new Date(),
-          })
-          .where(eq(venues.id, venue.id));
-        await tx.insert(auditEvents).values({
-          actorUserId: auditUserId,
-          action: "venue.reviewed",
-          subjectType: "venue",
-          subjectId: venue.id,
-          metadata: {
-            from,
-            to: parsed.data.nextState,
-            reason: parsed.data.reason,
-          },
-        });
-      });
-    }
-
-    revalidatePath(`/${parsed.data.locale}/admin`);
-    revalidatePath(`/${parsed.data.locale}/profile`);
-    return { ok: true, id: parsed.data.subjectId };
-  } catch (error) {
-    return toActionError(error);
-  }
 }
 
 const venueSpaceSchema = z.object({

@@ -400,15 +400,28 @@ export async function listDocumentsVisibleToActor(
     actor: ActorContext;
     ownerUserId: string;
     publicationState: string;
+    /**
+     * Profile preview (`?preview=1`): show what an opposite-role discovery
+     * viewer sees — marketplace docs only, not engagement-only attachments.
+     */
+    asMarketplacePreview?: boolean;
   } & DocumentAccessOwnerInput,
 ) {
   const owner = assertDocumentOwner(input);
   const docs = await listDocumentsForOwner(owner);
-  const ctx = await getDocumentAccessContext({
-    actor: input.actor,
-    ownerUserId: input.ownerUserId,
-    publicationState: input.publicationState,
-    ...owner,
-  });
+  const ctx = input.asMarketplacePreview
+    ? computeDocumentAccessFlags({
+        isOwner: false,
+        isStaff: false,
+        publicationState: input.publicationState,
+        canDiscoverMarketplace: true,
+        hasOpenEngagement: false,
+      })
+    : await getDocumentAccessContext({
+        actor: input.actor,
+        ownerUserId: input.ownerUserId,
+        publicationState: input.publicationState,
+        ...owner,
+      });
   return filterDocumentsForViewer(docs, ctx);
 }

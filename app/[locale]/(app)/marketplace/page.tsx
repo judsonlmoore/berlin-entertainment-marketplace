@@ -115,9 +115,9 @@ export default async function MarketplacePage({ params }: Props) {
             ],
             [
               t("metricRequests"),
-              metrics.pendingRequests,
+              metrics.actionNeeded,
               t("metricRequestsHint"),
-              "/marketplace/bookings?status=pending",
+              "/marketplace/bookings",
             ],
             [
               t("metricActiveBookings"),
@@ -129,7 +129,7 @@ export default async function MarketplacePage({ params }: Props) {
               t("metricConfirmed"),
               metrics.confirmedBookings,
               t("metricConfirmedHint"),
-              "/marketplace/bookings?status=won",
+              "/marketplace/bookings?status=confirmed",
             ],
           ] as const
         ).map(([label, value, hint, href]) => (

@@ -1,6 +1,5 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
-import { users } from "@/src/db/schema";
 import {
   entertainerProfiles,
   portfolioItems,
@@ -86,52 +85,4 @@ export async function listVenuesForUser(userId: string) {
     .from(venues)
     .where(eq(venues.ownerUserId, userId))
     .orderBy(desc(venues.updatedAt));
-}
-
-export async function listProfilesForStaffReview() {
-  const db = getDb();
-  const [entertainers, venueRows] = await Promise.all([
-    db
-      .select({
-        id: entertainerProfiles.id,
-        title: entertainerProfiles.actName,
-        publicationState: entertainerProfiles.publicationState,
-        ownerName: users.name,
-        ownerEmail: users.email,
-        updatedAt: entertainerProfiles.updatedAt,
-      })
-      .from(entertainerProfiles)
-      .innerJoin(users, eq(users.id, entertainerProfiles.userId))
-      .orderBy(desc(entertainerProfiles.updatedAt)),
-    db
-      .select({
-        id: venues.id,
-        title: venues.name,
-        publicationState: venues.publicationState,
-        district: venues.district,
-        updatedAt: venues.updatedAt,
-      })
-      .from(venues)
-      .orderBy(desc(venues.updatedAt)),
-  ]);
-
-  return {
-    entertainers: entertainers.map((row) => ({
-      id: row.id,
-      type: "entertainer" as const,
-      title: row.title,
-      publicationState: row.publicationState,
-      ownerName: row.ownerName,
-      ownerEmail: row.ownerEmail,
-      updatedAt: row.updatedAt,
-    })),
-    venues: venueRows.map((row) => ({
-      id: row.id,
-      type: "venue" as const,
-      title: row.title,
-      publicationState: row.publicationState,
-      district: row.district,
-      updatedAt: row.updatedAt,
-    })),
-  };
 }

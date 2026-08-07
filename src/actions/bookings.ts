@@ -40,6 +40,8 @@ import {
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
 import { establishProfileEnquiryConnection } from "@/src/db/queries/profile-enquiries";
+import { assertLegalIdentityComplete } from "@/src/db/queries/legal-identity";
+import { getVenueOwnerUserId } from "@/src/db/queries/agreements";
 
 const proposeSchema = z.object({
   bookingId: z.string().uuid(),
@@ -75,6 +77,15 @@ export async function proposeBookingTerms(
     if (party !== "venue" && party !== "entertainer") {
       throw new AppError("forbidden", "Only booking parties can propose terms");
     }
+
+    const legalUserId =
+      party === "entertainer"
+        ? profile.userId
+        : await getVenueOwnerUserId(booking.venueId);
+    if (!legalUserId) {
+      throw new AppError("not_found", "Venue owner not found");
+    }
+    await assertLegalIdentityComplete(legalUserId);
 
     const pendingProfileOffer =
       booking.originType === "profile_enquiry" &&
@@ -265,6 +276,16 @@ export async function acceptBookingTerms(
     if (party !== "venue" && party !== "entertainer") {
       throw new AppError("forbidden", "Only booking parties can accept terms");
     }
+
+    const legalUserId =
+      party === "entertainer"
+        ? profile.userId
+        : await getVenueOwnerUserId(booking.venueId);
+    if (!legalUserId) {
+      throw new AppError("not_found", "Venue owner not found");
+    }
+    await assertLegalIdentityComplete(legalUserId);
+
     if (
       !canActorTransitionBooking(
         booking.state as BookingState,

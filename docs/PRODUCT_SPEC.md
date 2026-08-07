@@ -144,7 +144,9 @@ An approved venue operator sends a request to an approved entertainer for a venu
 
 ### 6.3 Profile offers (connection)
 
-An approved entertainer may **Send offer** to an approved venue from the venue discovery page. An approved venue may likewise **Send offer** from an act profile. The CTA is a commercial offer (dates, fee, format, cancellation, production, optional deposit terms / note), not a “may I contact you” request. Sending creates a pending booking with `booking_terms` v1 and makes the **sender’s** engagement PDFs visible to the receiver with that open offer. Contacts stay locked until the receiver **Accepts** or **Counters**. **Decline** (Pass) closes the booking as lost without unlocking contacts. Accept locks terms (`terms_agreed`). Counter unlocks contacts, opens the booking, and continues the offer/counter timeline. After unlock, both parties’ engagement documents are visible. One active pending/open profile-origin booking is allowed per act↔venue pair. After any send for a pair, a new offer is blocked for **7 days** (inactive CTA + message). After Decline, further profile offers are also blocked for a **30-day** cooldown unless re-opened.
+An approved entertainer may **Send offer** to an approved venue from the venue discovery page. An approved venue may likewise **Send offer** from an act profile. The CTA opens a modal composer for commercial terms (dates, fee, format, cancellation, production, optional deposit terms / note), not a “may I contact you” request. Sending requires complete **legal identity** on Account (otherwise the CTA directs to `/account`). Sending creates a pending booking with `booking_terms` v1 and makes the **sender’s** engagement PDFs visible to the receiver with that open offer. Contacts stay locked until the receiver **Accepts** or **Counters**. **Decline** (Pass) closes the booking as lost without unlocking contacts and does not require legal identity. Accept and Counter require the receiver’s complete legal identity on Account. Accept locks terms (`terms_agreed`). Counter unlocks contacts, opens the booking, and continues the offer/counter timeline. After unlock, both parties’ engagement documents are visible.
+
+**Multiple engagements:** the same act↔venue pair may have many concurrent open offers (e.g. a weekly series). Profile CTAs stay **Send offer** plus **See offer** / **See offers (N)** linking to unanswered pending bookings — there is no re-send cooldown and no single-active-pair uniqueness. The initiator may **withdraw** a pending offer before the receiver responds. Unanswered pending offers **expire after 7 days** (cron + domain filter); expiry closes the booking as expired without unlocking contacts.
 
 ### 6.4 One booking engine
 
@@ -152,30 +154,31 @@ Every booking records its origin (`application`, `direct_request`, or `profile_e
 
 ### 6.5 Bookings inbox (member-facing)
 
-Members track matches in **Bookings** with pipeline statuses projected from booking state:
+Members track matches in **Bookings** with pipeline statuses projected from booking state. Default filter is **Open**. Filters order: Open → Confirmed → Done → Lost → All.
 
 | Status | Meaning |
 |--------|---------|
-| Needs you / Pending | One-sided outreach; awaiting Accept / Counter / Decline (or shortlist for applications) |
-| In progress / Open | Connection established; contacts unlocked; negotiate offers until Accept |
-| Confirmed / Won | Booking confirmed (agreement signed) |
+| Open | Outreach or negotiation in flight (`applied` / `requested` through `partially_signed`) |
+| Confirmed | Booking confirmed (agreement signed); performance end not yet passed |
+| Done | Confirmed, and the performance window has ended |
 | Lost | Passed, declined, rejected, withdrawn, expired, or cancelled before confirm |
-| Done / Completed | Confirmed, and the performance window has ended |
 
-Contact unlock fires once on mutual opt-in (application shortlist, direct-request accept, or profile-offer Accept/Counter). The former separate “Leads” inbox and the old bookings-only list are one surface.
+**Action needed is not a status.** When the current user must respond (offer, direct request, signature, or application review), the inbox row and the open offer card show an ochre cue. Waiting on the other party is not a separate filter.
+
+Contact unlock fires once on mutual opt-in (application shortlist, direct-request accept, or profile-offer Accept/Counter) — independent of the Open filter (early `applied` / `requested` stay contact-locked). The former separate “Leads” inbox and the old bookings-only list are one surface.
 
 ## 7. Booking lifecycle
 
 Canonical lifecycle:
 
-1. `requested` or `applied` (booking inbox: Pending) — profile-origin includes an open commercial offer
-2. `shortlisted` (application shortlist or profile-offer Counter) or `accepted` (direct request accept or profile-offer Counter) (Open); profile-offer **Accept** may move Pending → `terms_agreed` in one step after unlock
+1. `requested` or `applied` (booking inbox: Open; action cue for the receiver) — profile-origin includes an open commercial offer
+2. `shortlisted` (application shortlist or profile-offer Counter) or `accepted` (direct request accept or profile-offer Counter) (still Open; contacts unlocked); profile-offer **Accept** may move early Open → `terms_agreed` in one step after unlock
 3. `terms_agreed`
 4. `agreement_generated`
 5. `partially_signed`
-6. `confirmed` when both required parties have signed (Confirmed / Won)
+6. `confirmed` when both required parties have signed (Confirmed)
 
-Terminal/exception states: `declined`, `rejected`, `withdrawn`, `expired`, `cancelled` (Lost). After Confirmed, when the performance end time has passed, the inbox projects as Done / Completed.
+Terminal/exception states: `declined`, `rejected`, `withdrawn`, `expired`, `cancelled` (Lost). After Confirmed, when the performance end time has passed, the inbox projects as Done.
 
 State changes must be validated, idempotent, authorized, and audited.
 
@@ -228,19 +231,13 @@ Native states are `available`, `unavailable`, `tentative_hold`, `requested`, and
 - Missing translation keys fail CI for required catalogs.
 - Public and private pages define localized metadata; private pages are `noindex, nofollow`.
 
-## 11. Admin operations
+## 11. Staff operations
 
-Staff require a protected admin surface to:
+Platform staff (`users.is_platform_staff`) keep elevated in-product access: dual discovery, open booking visibility, and rider download including quarantined files.
 
-- Review profile publication and change publication states with reasons
-- Inspect venue memberships and restore access safely
-- View and moderate profiles, opportunities, applications, requests, bookings, calendar conflicts, contact unlocks, and upload metadata
-- Suspend/reactivate accounts without deleting history
-- Retry/reconcile agreement-provider events
-- Record manual deposit-status corrections without processing money
-- View immutable audit events and operational metrics
+**Super admin** (`/admin` → `/admin/accounts`) is the staff account search surface: find members by email/name/act/venue and start a support session to act as their marketplace entity. Audits stay on the staff user; exit from the banner or the Super admin page. There is no broader ops console (profile review queue, hold expiry buttons, rider quarantine UI) in the member app — hold expiry runs via cron; other moderation stays operational tooling.
 
-Destructive hard deletion is not a routine admin action. Data-subject deletion requests require a separate retention/legal procedure.
+Destructive hard deletion is not a routine action; data-subject deletion requests require a separate retention/legal procedure.
 
 ## 12. Out of scope (current product)
 
@@ -250,7 +247,7 @@ No consumer event pages, public profile directory, public listings, public revie
 
 - Anonymous and suspended users cannot access private profiles, opportunities, contact data, or booking records.
 - Self-serve signup creates an active account with exactly one role (entertainer XOR venue) without staff account approval.
-- Staff can suspend/reactivate accounts and suspend/restore profile publication with an audit trail.
+- Staff can suspend/reactivate accounts and suspend/restore profile publication with an audit trail (operational tooling; not a member `/admin` UI).
 - Unpublished members can search the opposite side but cannot contact (apply / direct request) until their profile is published; unpublished profiles are invisible in discovery.
 - An owner can invite/manage venue members.
 - Venue and entertainer profiles capture required fields and support self-serve publish/unpublish with a built-in checklist.

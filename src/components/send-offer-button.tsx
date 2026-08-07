@@ -7,14 +7,17 @@ import {
   sendVenueConnectionRequestAction,
   submitProfileEnquiryAction,
 } from "@/src/actions/profile-enquiries";
+import { OfferTermsFields } from "@/src/components/offer-terms-fields";
+import { AppModal } from "@/src/components/ui/app-modal";
 import { Button } from "@/src/components/ui/button";
 import { toDatetimeLocal } from "@/src/lib/format";
 
 type VenueOption = {
   id: string;
   name: string;
-  activeBookingId?: string | null;
-  cooldownDaysRemaining?: number | null;
+  openOfferBookingIds?: string[];
+  /** Venue-owner legal identity complete (required to send). */
+  legalIdentityComplete?: boolean;
 };
 
 type SharedProps = {
@@ -28,8 +31,8 @@ type TalentToVenueProps = SharedProps & {
   venueId: string;
   canSubmit: boolean;
   publishRequired: boolean;
-  activeBookingId?: string | null;
-  cooldownDaysRemaining?: number | null;
+  legalIdentityComplete: boolean;
+  openOfferBookingIds?: string[];
 };
 
 type VenueToTalentProps = SharedProps & {
@@ -49,11 +52,69 @@ function defaultWindow() {
   return {
     startsAtLocal: toDatetimeLocal(starts),
     endsAtLocal: toDatetimeLocal(ends),
+    feeEur: 500,
+    performanceFormat: "chamber",
   };
 }
 
+function OpenOffersLinks({
+  bookingIds,
+  seeOfferLabel,
+  seeOffersLabel,
+  openOfferNLabel,
+}: {
+  bookingIds: string[];
+  seeOfferLabel: string;
+  seeOffersLabel: (count: number) => string;
+  openOfferNLabel: (n: number) => string;
+}) {
+  if (bookingIds.length === 0) return null;
+
+  if (bookingIds.length === 1) {
+    return (
+      <p className="max-w-xs text-right text-sm text-[var(--text-muted)]">
+        <Link
+          href={`/marketplace/bookings/${bookingIds[0]}`}
+          className="font-medium underline"
+        >
+          {seeOfferLabel}
+        </Link>
+      </p>
+    );
+  }
+
+  return (
+    <div className="max-w-xs text-right text-sm text-[var(--text-muted)]">
+      <p className="font-medium text-[var(--ink)]">
+        {seeOffersLabel(bookingIds.length)}
+      </p>
+      <ul className="mt-1 grid gap-1">
+        {bookingIds.map((id, index) => (
+          <li key={id}>
+            <Link href={`/marketplace/bookings/${id}`} className="underline">
+              {openOfferNLabel(index + 1)}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function LegalRequiredNotice() {
+  const t = useTranslations("leads");
+  return (
+    <p className="max-w-xs text-right text-sm text-[var(--text-muted)]">
+      {t("legalRequiredToSend")}{" "}
+      <Link href="/account" className="font-medium underline">
+        {t("goToAccount")}
+      </Link>
+    </p>
+  );
+}
+
 /**
- * Profile CTA: open a commercial offer composer instead of a contact request.
+ * Profile CTA: send a commercial offer in a modal, or open existing offers.
  */
 export function SendOfferButton(props: Props) {
   const t = useTranslations("leads");
@@ -66,6 +127,7 @@ export function SendOfferButton(props: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const defaults = useMemo(() => defaultWindow(), []);
+  const formId = "send-offer-form";
 
   const isVenueToTalent = props.direction === "venue_to_talent";
   const [venueId, setVenueId] = useState(
@@ -104,28 +166,29 @@ export function SendOfferButton(props: Props) {
     props.direction === "venue_to_talent"
       ? props.venues.find((v) => v.id === selectedVenueId)
       : null;
-  const cooldownDays =
+  const openOfferBookingIds =
     props.direction === "venue_to_talent"
-      ? (selected?.cooldownDaysRemaining ?? null)
-      : (props.cooldownDaysRemaining ?? null);
-  const activeBookingId =
+      ? (selected?.openOfferBookingIds ?? [])
+      : (props.openOfferBookingIds ?? []);
+  const legalComplete =
     props.direction === "venue_to_talent"
-      ? (selected?.activeBookingId ?? null)
-      : (props.activeBookingId ?? null);
-  const onCooldown = cooldownDays != null && cooldownDays > 0;
-  const inactive = onCooldown || Boolean(activeBookingId);
-  const canOpenComposer =
-    props.direction === "talent_to_venue"
-      ? props.canSubmit && !inactive
-      : !inactive && Boolean(selectedVenueId);
+      ? Boolean(selected?.legalIdentityComplete)
+      : props.legalIdentityComplete;
 
-  if (
-    props.direction === "talent_to_venue" &&
-    !props.canSubmit &&
-    !activeBookingId &&
-    !onCooldown
-  ) {
-    return null;
+  const canSubmitRole =
+    props.direction === "talent_to_venue"
+      ? props.canSubmit
+      : Boolean(selectedVenueId);
+
+  if (props.direction === "talent_to_venue" && !props.canSubmit) {
+    return openOfferBookingIds.length > 0 ? (
+      <OpenOffersLinks
+        bookingIds={openOfferBookingIds}
+        seeOfferLabel={t("seeOffer")}
+        seeOffersLabel={(count) => t("seeOffers", { count })}
+        openOfferNLabel={(n) => t("openOfferN", { n })}
+      />
+    ) : null;
   }
 
   return (
@@ -148,11 +211,11 @@ export function SendOfferButton(props: Props) {
         </label>
       ) : null}
 
-      {!open ? (
+      {legalComplete ? (
         <Button
           type="button"
           variant="primary"
-          disabled={!canOpenComposer}
+          disabled={!canSubmitRole}
           onClick={() => {
             setError(null);
             setOpen(true);
@@ -161,15 +224,59 @@ export function SendOfferButton(props: Props) {
           {t("sendOfferCta")}
         </Button>
       ) : (
+        <LegalRequiredNotice />
+      )}
+
+      <OpenOffersLinks
+        bookingIds={openOfferBookingIds}
+        seeOfferLabel={t("seeOffer")}
+        seeOffersLabel={(count) => t("seeOffers", { count })}
+        openOfferNLabel={(n) => t("openOfferN", { n })}
+      />
+
+      <AppModal
+        open={open}
+        onClose={() => {
+          if (pending) return;
+          setOpen(false);
+        }}
+        title={t("sendOfferTitle")}
+        subtitle={t("sendOfferBody")}
+        closeLabel={ui("close")}
+        size="lg"
+        footer={
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={pending}
+              onClick={() => setOpen(false)}
+              className="w-full sm:w-auto"
+            >
+              {t("dismissComposer")}
+            </Button>
+            <Button
+              type="submit"
+              form={formId}
+              variant="primary"
+              pending={pending}
+              pendingLabel={ui("working")}
+              className="w-full sm:w-auto"
+            >
+              {bookingsT("sendOffer")}
+            </Button>
+          </div>
+        }
+      >
         <form
-          className="grid w-full max-w-md gap-3 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] p-4 text-left"
+          id={formId}
+          className="grid gap-3"
           onSubmit={(event) => {
             event.preventDefault();
-            if (inactive || !selectedVenueId) return;
+            if (!selectedVenueId || !legalComplete) return;
             setError(null);
             const form = new FormData(event.currentTarget);
             const depositTerms = String(form.get("depositTerms") ?? "").trim();
-            const changeNote = String(form.get("changeNote") ?? "").trim();
             const note = String(form.get("note") ?? "").trim();
             const payload = {
               venueId: selectedVenueId,
@@ -183,7 +290,6 @@ export function SendOfferButton(props: Props) {
                 form.get("productionObligations") ?? "",
               ),
               ...(depositTerms ? { depositTerms } : {}),
-              ...(changeNote ? { changeNote } : {}),
               ...(note ? { note } : {}),
             };
             startTransition(async () => {
@@ -202,163 +308,27 @@ export function SendOfferButton(props: Props) {
                 );
                 return;
               }
+              setOpen(false);
               if (result.bookingId) {
                 router.push(`/marketplace/bookings/${result.bookingId}`);
                 router.refresh();
                 return;
               }
-              setOpen(false);
               router.refresh();
             });
           }}
         >
-          <div>
-            <h3 className="text-lg font-medium">{t("sendOfferTitle")}</h3>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {t("sendOfferBody")}
-            </p>
-            <p className="mt-2 text-xs text-[var(--text-muted)]">
-              {t("sendOfferIncludesDocs")}
-            </p>
-          </div>
-          <label className="label">
-            <span className="field-label">{bookingsT("startsAt")}</span>
-            <input
-              name="startsAt"
-              type="datetime-local"
-              className="field"
-              required
-              defaultValue={defaults.startsAtLocal}
-            />
-          </label>
-          <label className="label">
-            <span className="field-label">{bookingsT("endsAt")}</span>
-            <input
-              name="endsAt"
-              type="datetime-local"
-              className="field"
-              required
-              defaultValue={defaults.endsAtLocal}
-            />
-          </label>
-          <label className="label">
-            <span className="field-label">{bookingsT("fee")}</span>
-            <input
-              name="feeEur"
-              type="number"
-              min={0}
-              step="0.01"
-              className="field"
-              required
-              defaultValue={500}
-            />
-          </label>
-          <label className="label">
-            <span className="field-label">{bookingsT("performanceFormat")}</span>
-            <input
-              name="performanceFormat"
-              className="field"
-              required
-              defaultValue="chamber"
-            />
-          </label>
-          <label className="label">
-            <span className="field-label">{bookingsT("cancellationTerms")}</span>
-            <textarea
-              name="cancellationTerms"
-              rows={3}
-              className="field"
-              required
-              defaultValue={bookingsT("cancellationDefault")}
-            />
-          </label>
-          <label className="label">
-            <span className="field-label">
-              {bookingsT("productionObligations")}
-            </span>
-            <textarea
-              name="productionObligations"
-              rows={3}
-              className="field"
-              required
-              defaultValue={bookingsT("productionDefault")}
-            />
-          </label>
-          <label className="label">
-            <span className="field-label">
-              {bookingsT("depositTerms")} ({bookingsT("optional")})
-            </span>
-            <textarea
-              name="depositTerms"
-              rows={2}
-              className="field"
-              placeholder={bookingsT("depositTermsPlaceholder")}
-            />
-          </label>
-          <label className="label">
-            <span className="field-label">
-              {t("noteLabel")} ({bookingsT("optional")})
-            </span>
-            <textarea
-              name="note"
-              rows={2}
-              className="field"
-              maxLength={2000}
-              placeholder={t("notePlaceholder")}
-            />
-          </label>
+          <p className="text-xs text-[var(--text-muted)]">
+            {t("sendOfferIncludesDocs")}
+          </p>
+          <OfferTermsFields defaults={defaults} includeNote />
           {error ? (
             <p role="alert" className="text-sm text-[var(--danger)]">
               {error}
             </p>
           ) : null}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="submit"
-              variant="primary"
-              pending={pending}
-              pendingLabel={ui("working")}
-            >
-              {bookingsT("sendOffer")}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={pending}
-              onClick={() => setOpen(false)}
-            >
-              {t("dismissComposer")}
-            </Button>
-          </div>
         </form>
-      )}
-
-      {onCooldown ? (
-        <p className="max-w-xs text-right text-sm text-[var(--text-muted)]">
-          {t("enquiryCooldown", { days: cooldownDays })}
-          {activeBookingId ? (
-            <>
-              {" "}
-              <Link
-                href={`/marketplace/bookings/${activeBookingId}`}
-                className="font-medium underline"
-              >
-                {t("viewLead")}
-              </Link>
-            </>
-          ) : null}
-        </p>
-      ) : activeBookingId ? (
-        <p className="max-w-xs text-right text-sm text-[var(--text-muted)]">
-          {t("enquiryAlreadyActive")}{" "}
-          <Link
-            href={`/marketplace/bookings/${activeBookingId}`}
-            className="font-medium underline"
-          >
-            {t("viewLead")}
-          </Link>
-        </p>
-      ) : null}
+      </AppModal>
     </div>
   );
 }

@@ -18,8 +18,10 @@ import {
   sendVenueConnectionRequest,
   submitProfileEnquiry,
   updateProfileEnquiryProposal,
+  withdrawProfileOffer,
 } from "@/src/db/queries/profile-enquiries";
 import { createNotification } from "@/src/db/queries/notifications";
+import { assertLegalIdentityComplete } from "@/src/db/queries/legal-identity";
 import { generateNotificationContent } from "@/src/domain/notifications/templates";
 import { getDb } from "@/src/db/client";
 import { entertainerProfiles, venues } from "@/src/db/schema/marketplace";
@@ -124,6 +126,8 @@ export async function submitProfileEnquiryAction(input: {
       throw new AppError("forbidden", "Published act required to submit");
     }
 
+    await assertLegalIdentityComplete(actor.userId);
+
     const offer = parseOfferTerms(parsed.data);
     const result = await submitProfileEnquiry({
       actor,
@@ -214,6 +218,16 @@ export async function sendVenueConnectionRequestAction(input: {
       throw new AppError("forbidden", "Published venue required to connect");
     }
 
+    const db = getDb();
+    const venueForLegal = await db.query.venues.findFirst({
+      where: eq(venues.id, parsed.data.venueId),
+      columns: { ownerUserId: true },
+    });
+    if (!venueForLegal) {
+      throw new AppError("not_found", "Venue not found");
+    }
+    await assertLegalIdentityComplete(venueForLegal.ownerUserId);
+
     const offer = parseOfferTerms(parsed.data);
     const result = await sendVenueConnectionRequest({
       actor,
@@ -223,7 +237,6 @@ export async function sendVenueConnectionRequestAction(input: {
       ...(parsed.data.note ? { note: parsed.data.note } : {}),
     });
 
-    const db = getDb();
     const [profile, venue] = await Promise.all([
       db.query.entertainerProfiles.findFirst({
         where: eq(entertainerProfiles.id, parsed.data.entertainerProfileId),
@@ -351,6 +364,37 @@ export async function respondToProfileEnquiryAction(input: {
     if (result.bookingId) {
       revalidatePath(`/${locale}/marketplace/bookings/${result.bookingId}`);
     }
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return toActionError(error);
+  }
+}
+
+export async function withdrawProfileOfferAction(input: {
+  enquiryId: string;
+  locale?: "en" | "de";
+}): Promise<ActionResult> {
+  try {
+    const { actor } = await requireActor();
+    const parsed = z
+      .object({
+        enquiryId: z.string().uuid(),
+        locale: localeSchema.optional(),
+      })
+      .safeParse(input);
+    if (!parsed.success) {
+      throw new AppError("validation", "Invalid withdraw request");
+    }
+
+    const result = await withdrawProfileOffer({
+      actor,
+      enquiryId: parsed.data.enquiryId,
+    });
+
+    const locale = parsed.data.locale ?? "en";
+    revalidatePath(`/${locale}/marketplace/bookings`);
+    revalidatePath(`/${locale}/marketplace/bookings/${result.bookingId}`);
     revalidatePath("/", "layout");
     return { ok: true };
   } catch (error) {

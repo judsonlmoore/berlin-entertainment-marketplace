@@ -124,7 +124,7 @@ export async function findPendingRequest(input: {
 
 /**
  * Idempotent expiry: claim overdue rows with a conditional UPDATE so concurrent
- * cron/admin runs cannot double-count or write duplicate audits.
+ * cron runs cannot double-count or write duplicate audits.
  */
 export async function expireOverdueDirectRequests(input?: {
   actorUserId?: string | null;

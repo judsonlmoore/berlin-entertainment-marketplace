@@ -5,7 +5,6 @@ import { PageHeader } from "@/src/components/ui/page-header";
 import { getActorContext } from "@/src/db/queries/actor";
 import { searchAdminAccounts } from "@/src/db/queries/admin-accounts";
 import { can } from "@/src/domain/permissions";
-import { Link } from "@/src/i18n/navigation";
 import { readSupportSession } from "@/src/lib/support-session";
 
 type Props = {
@@ -47,11 +46,6 @@ export default async function AdminAccountsPage({
   return (
     <section className="mx-auto grid max-w-3xl gap-8">
       <PageHeader title={t("title")} body={t("body")} />
-      <p className="text-sm text-[var(--text-muted)]">
-        <Link href="/admin" className="text-[var(--primary)]">
-          {t("backToAdmin")}
-        </Link>
-      </p>
 
       {support ? (
         <div className="rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--warning-soft)] px-4 py-3 text-sm">

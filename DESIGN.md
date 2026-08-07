@@ -154,6 +154,6 @@ No live marketplace preview rail on profile edit.
 | 2026-08-06 | Profile contact via leads | Submit profile + 1-click open-call apply; Interest/Pass unlocks contacts; CRM statuses over booking engine |
 | 2026-08-06 | Mobile drawer drops role chip; brand + close share a row | Checklist needs vertical room; act/venue context already sits in the mobile header |
 | 2026-08-06 | Mobile drawer drops account avatar menu | Account/sign-out already in sticky header; reclaim rail space for checklist + nav |
-| 2026-08-06 | Mobile modals are edge-to-edge sheets | Feel like screens; sticky close (top) and CTA (bottom); calendar opens on tap via dateClick |
+| 2026-08-07 | Offer cards: status dots (pending ochre / accepted primary / declined danger) + fee-first layout | Match URL-validity status language; current offer above chronological history |
 | 2026-08-06 | Marketplace IA: Marketplace / Bookings / Calendar | Collapse Leads+Bookings lists; open calls live on profiles; availability is a discovery filter |
 | 2026-08-06 | Public Help + Contact; member help hub | Thin public FAQ; ops guides stay signed-in; Spamblock-backed contact form in footer and app |

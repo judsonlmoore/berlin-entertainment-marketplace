@@ -29,10 +29,12 @@ export async function loadBookingAccess(
   const isEntertainer = profile.userId === actor.userId;
   const isVenue = actor.venueId === booking.venueId;
 
+  // Prefer booking-party role over staff so staff who are also a party
+  // can drive Accept / Counter / terms transitions.
   let party: BookingParty | null = null;
-  if (actor.isPlatformStaff) party = "staff";
-  else if (isEntertainer) party = "entertainer";
+  if (isEntertainer) party = "entertainer";
   else if (isVenue) party = "venue";
+  else if (actor.isPlatformStaff) party = "staff";
 
   if (!party || !can(actor, "booking.view")) {
     throw new AppError("forbidden", "Not a party to this booking");
