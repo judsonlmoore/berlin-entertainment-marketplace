@@ -11,6 +11,7 @@ import {
   generateAgreement,
   signAgreementSandbox,
 } from "@/src/actions/agreements";
+import { generateBookingInvoice } from "@/src/actions/invoices";
 import { Button } from "@/src/components/ui/button";
 import { useRouter } from "@/src/i18n/navigation";
 
@@ -129,10 +130,14 @@ export function GenerateAgreementButton({
   locale,
   bookingId,
   expectedVersion,
+  disabled = false,
+  disabledReason,
 }: {
   locale: "en" | "de";
   bookingId: string;
   expectedVersion: number;
+  disabled?: boolean;
+  disabledReason?: string | null;
 }) {
   const t = useTranslations("bookings");
   const ui = useTranslations("ui");
@@ -147,6 +152,7 @@ export function GenerateAgreementButton({
         pending={pending}
         pendingLabel={ui("working")}
         variant="primary"
+        disabled={disabled}
         onClick={() => {
           setError(null);
           startTransition(async () => {
@@ -164,6 +170,55 @@ export function GenerateAgreementButton({
         }}
       >
         {t("generateAgreement")}
+      </Button>
+      {disabled && disabledReason ? (
+        <p className="text-sm text-[var(--text-muted)]">{disabledReason}</p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+export function GenerateInvoiceButton({
+  locale,
+  bookingId,
+}: {
+  locale: "en" | "de";
+  bookingId: string;
+}) {
+  const t = useTranslations("bookings");
+  const ui = useTranslations("ui");
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="grid gap-2">
+      <Button
+        type="button"
+        pending={pending}
+        pendingLabel={ui("working")}
+        variant="secondary"
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            const result = await generateBookingInvoice({
+              bookingId,
+              locale,
+            });
+            if (!result.ok) {
+              setError(result.message);
+              return;
+            }
+            router.refresh();
+          });
+        }}
+      >
+        {t("generateInvoice")}
       </Button>
       {error ? (
         <p role="alert" className="text-sm text-red-800">

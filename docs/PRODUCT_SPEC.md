@@ -127,7 +127,7 @@ Members save drafts and publish when the checklist passes. Publishing sets `appr
 
 ## 6. Matching paths
 
-Matching produces a shared **booking** both parties track in one inbox. Internal CRM projection may still say “lead.” UI copy uses **open call** for venue-published needs (schema table may still be named `opportunities`).
+Matching produces a shared **booking** both parties track in one inbox. Internal CRM projection may still say “lead.” Member UI uses **booking** / **negotiation** (never “lead” in user-facing copy). UI copy uses **open call** for venue-published needs (schema table may still be named `opportunities`).
 
 ### 6.1 Open calls and applications
 
@@ -181,7 +181,17 @@ State changes must be validated, idempotent, authorized, and audited.
 
 Agreed terms snapshot venue, act, service date/times/time zone (when known), fee/currency, performance format, cancellation terms, production obligations, and optional deposit terms. Later profile edits do not alter this snapshot. Undated open bookings may add or edit date/fee/format progressively before terms agreement.
 
-## 8. Agreement, signatures, and deposits
+### 7.1 Negotiation page (contract builder)
+
+The booking detail surface is a **shared negotiation / contract builder**:
+
+- Both parties see act and venue imagery and names once the booking is Open.
+- Commercial fields (dates, fee, format, notes, deposit terms draft) **autosave** (Saving/Saved) like profile builders; draft edits do not require a separate “submit proposal” CTA.
+- **Documents package:** marketplace/engagement profile PDFs from both act and venue, plus booking-scoped uploads by either party. Before generate, each file receives a stable **Addendum N** order (act profile → venue profile → booking uploads by upload time, unless parties reorder before generate).
+- **Agreement package** = generated agreement (DE controlling + EN convenience) **plus** the numbered addenda snapshot. Addendum file IDs/titles are frozen on the agreement row so later profile edits do not change the signed package.
+- Section order: Overview → Commercial terms → Documents package → Agreement → Deposit status.
+
+## 8. Agreement, signatures, deposits, and invoices
 
 - Generated agreements have German controlling text and an English convenience translation linked to the same versioned terms.
 - The product defines an e-signature provider boundary and test/sandbox status. It does not deliver production legal documents or live e-signatures until provisioned and counsel-approved.
@@ -191,6 +201,8 @@ Agreed terms snapshot venue, act, service date/times/time zone (when known), fee
 - Deposit status is separate: `not_required`, `pending`, `received`, `refunded`, or `disputed`.
 - A deposit never confirms a booking and lack of a deposit never prevents signature-based confirmation.
 - Salon does not collect, hold, escrow, route, or refund money in the current product.
+- **Legal / payment identity** lives on the member account (individual / freelancer / registered business). Fields support agreement parties and optional invoice artifacts (see `docs/INVOICE_LIBRARY_SPIKE.md`). Counterparty legal/payment details are revealed only at/after `terms_agreed` (not at contact unlock). Identity is snapshotted onto the agreement at generate time.
+- **Invoices** are optional post-`confirmed` PDF/e-invoice **artifacts** for the parties (talent seller → venue buyer by default). Generation uses an `InvoiceProvider` boundary (sandbox first). Invoices are not checkout, escrow, or payouts.
 
 ## 9. Availability and calendar
 
@@ -232,7 +244,7 @@ Destructive hard deletion is not a routine admin action. Data-subject deletion r
 
 ## 12. Out of scope (current product)
 
-No consumer event pages, public profile directory, public listings, public reviews/ratings, in-platform chat, escrow, payment custody, checkout, automatic payouts/refunds, live legal advice, live e-signatures (until provisioned), complex automatic verification, dual-role accounts, recommendation ML, ticketing, or tax/insurance verification. External calendar sync is deferred to its own milestone, not claimed as operational until implemented.
+No consumer event pages, public profile directory, public listings, public reviews/ratings, in-platform chat, escrow, payment custody, checkout, automatic payouts/refunds, live legal advice, live e-signatures (until provisioned), complex automatic verification, dual-role accounts, recommendation ML, ticketing, tax/insurance verification, or tax-authority e-invoice filing/PEPPOL network submission. Invoice **PDF/e-invoice artifacts** for parties are in scope (see §8); money movement is not. External calendar sync is deferred to its own milestone, not claimed as operational until implemented.
 
 ## 13. Acceptance criteria
 

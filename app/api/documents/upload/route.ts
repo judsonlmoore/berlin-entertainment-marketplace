@@ -2,6 +2,7 @@ import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
 import {
   auditEvents,
+  bookings,
   entertainerProfiles,
   riderFiles,
   venues,
@@ -19,7 +20,7 @@ import {
   saveDocumentFile,
 } from "@/src/integrations/document-file-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
-import { count, eq, sql, type SQL } from "drizzle-orm";
+import { and, count, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 class DocumentLimitError extends Error {
@@ -34,13 +35,19 @@ type DocumentOwner =
       kind: "entertainer";
       lockId: string;
       ownerFilter: SQL;
-      insert: { entertainerProfileId: string };
+      insert: {
+        entertainerProfileId: string;
+        bookingId?: string;
+      };
     }
   | {
       kind: "venue";
       lockId: string;
       ownerFilter: SQL;
-      insert: { venueId: string };
+      insert: {
+        venueId: string;
+        bookingId?: string;
+      };
     };
 
 export async function POST(request: Request) {
@@ -78,6 +85,7 @@ export async function POST(request: Request) {
     form.get("entertainerProfileId") ?? "",
   ).trim();
   const venueIdRaw = String(form.get("venueId") ?? "").trim();
+  const bookingIdRaw = String(form.get("bookingId") ?? "").trim();
   const rawTitle = String(form.get("title") ?? "");
   const visibility = String(form.get("visibility") ?? "engagement");
   const locale = String(form.get("locale") ?? "en");
@@ -115,8 +123,75 @@ export async function POST(request: Request) {
 
   const db = getDb();
   let owner: DocumentOwner;
+  let bookingId: string | undefined;
 
-  if (hasProfile) {
+  if (bookingIdRaw) {
+    const booking = await db.query.bookings.findFirst({
+      where: eq(bookings.id, bookingIdRaw),
+      columns: {
+        id: true,
+        venueId: true,
+        entertainerProfileId: true,
+      },
+    });
+    if (!booking) {
+      return NextResponse.json(
+        { ok: false, error: "booking_not_found" },
+        { status: 404 },
+      );
+    }
+
+    if (hasProfile) {
+      if (entertainerProfileIdRaw !== booking.entertainerProfileId) {
+        return NextResponse.json(
+          { ok: false, error: "forbidden" },
+          { status: 403 },
+        );
+      }
+      const profile = await db.query.entertainerProfiles.findFirst({
+        where: eq(entertainerProfiles.id, entertainerProfileIdRaw),
+      });
+      if (!profile || profile.userId !== actor.userId) {
+        return NextResponse.json(
+          { ok: false, error: "forbidden" },
+          { status: 403 },
+        );
+      }
+      bookingId = booking.id;
+      owner = {
+        kind: "entertainer",
+        lockId: booking.id,
+        ownerFilter: eq(riderFiles.bookingId, booking.id),
+        insert: {
+          entertainerProfileId: profile.id,
+          bookingId: booking.id,
+        },
+      };
+    } else {
+      if (venueIdRaw !== booking.venueId) {
+        return NextResponse.json(
+          { ok: false, error: "forbidden" },
+          { status: 403 },
+        );
+      }
+      if (!can(actor, "venue.manage", { venueId: venueIdRaw })) {
+        return NextResponse.json(
+          { ok: false, error: "forbidden" },
+          { status: 403 },
+        );
+      }
+      bookingId = booking.id;
+      owner = {
+        kind: "venue",
+        lockId: booking.id,
+        ownerFilter: eq(riderFiles.bookingId, booking.id),
+        insert: {
+          venueId: venueIdRaw,
+          bookingId: booking.id,
+        },
+      };
+    }
+  } else if (hasProfile) {
     if (!can(actor, "entertainer.manage_own_profile")) {
       return NextResponse.json(
         { ok: false, error: "forbidden" },
@@ -135,7 +210,10 @@ export async function POST(request: Request) {
     owner = {
       kind: "entertainer",
       lockId: profile.id,
-      ownerFilter: eq(riderFiles.entertainerProfileId, profile.id),
+      ownerFilter: and(
+        eq(riderFiles.entertainerProfileId, profile.id),
+        isNull(riderFiles.bookingId),
+      )!,
       insert: { entertainerProfileId: profile.id },
     };
   } else {
@@ -148,7 +226,10 @@ export async function POST(request: Request) {
     owner = {
       kind: "venue",
       lockId: venueIdRaw,
-      ownerFilter: eq(riderFiles.venueId, venueIdRaw),
+      ownerFilter: and(
+        eq(riderFiles.venueId, venueIdRaw),
+        isNull(riderFiles.bookingId),
+      )!,
       insert: { venueId: venueIdRaw },
     };
   }
@@ -167,8 +248,13 @@ export async function POST(request: Request) {
     storedBlobKey = stored.blobKey;
 
     const created = await db.transaction(async (tx) => {
-      // Serialize uploads per owner so concurrent requests cannot exceed the cap.
-      if (owner.kind === "entertainer") {
+      if (bookingId) {
+        await tx
+          .select({ id: bookings.id })
+          .from(bookings)
+          .where(eq(bookings.id, bookingId))
+          .for("update");
+      } else if (owner.kind === "entertainer") {
         await tx
           .select({ id: entertainerProfiles.id })
           .from(entertainerProfiles)
@@ -221,13 +307,16 @@ export async function POST(request: Request) {
 
       await tx.insert(auditEvents).values({
         actorUserId: auditUserId,
-        action: "profile_document.uploaded",
+        action: bookingId
+          ? "booking_document.uploaded"
+          : "profile_document.uploaded",
         subjectType: "rider_file",
         subjectId: row.id,
         metadata: {
           title: row.title,
           visibility: row.visibility,
           sizeBytes: row.sizeBytes,
+          ...(bookingId ? { bookingId } : {}),
         },
       });
 
@@ -243,6 +332,7 @@ export async function POST(request: Request) {
       sortOrder: created.sortOrder,
       sizeBytes: created.sizeBytes,
       locale,
+      ...(bookingId ? { bookingId } : {}),
     });
   } catch (error) {
     if (storedBlobKey) {

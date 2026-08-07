@@ -42,17 +42,29 @@
 
 ## Platform
 
-### Venue PDF document library (remainder)
+### Venue PDF document library (remainder) — superseded by negotiations Phase 2
 
-**What:** Finish venue PDF symmetry: `engagement` visibility ACL (talent↔venue open booking) and show venue-owned docs on booking detail for viewers who may access them.
+**What:** Venue engagement ACL + booking-page dual docs + booking-scoped uploads + addenda (see negotiations roadmap).
 
-**Why:** Marketplace public list/download ships with venue/talent profile parity; engagement packs (house plot, load-in) still need a counterparty surface for Tom’s night-of prep.
+**Why:** Contract package needs both parties’ PDFs.
 
-**Context:** Eng-review 2026-08-07. Builder + XOR upload already exist; public marketplace surface is the current parity PR. Do **not** treat this TODO as “start venue PDFs from scratch.” Start from post-parity `rider-access` marketplace XOR; add reverse engagement lookup (viewer entertainer profile id — `ActorContext` has `venueId` only today); wire `ProfileDocumentList` on `/marketplace/bookings/[id]` for venue docs.
+**Context:** Marketplace venue PDFs shipped; engagement + booking UI is Phase 2 of negotiations → contract package.
 
 **Effort:** M
+**Priority:** P1
+**Depends on:** Phase 0 spec (done)
+
+### Invoice artifact generation (post-confirm)
+
+**What:** Optional invoice PDF/e-invoice after `confirmed` via `InvoiceProvider` (sandbox → @jasy/zugferd for DE).
+
+**Why:** Parties need a downloadable invoice without Salon holding money.
+
+**Context:** `docs/INVOICE_LIBRARY_SPIKE.md`. Requires account legal identity (Phase 3).
+
+**Effort:** L
 **Priority:** P2
-**Depends on:** Venue/talent public profile parity PR (marketplace venue ACL + download fix)
+**Depends on:** Account legal identity + confirmed booking
 
 ### City-scoped expansion (beyond Berlin HQ)
 

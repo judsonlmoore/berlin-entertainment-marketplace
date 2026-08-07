@@ -25,6 +25,11 @@ import {
   getPrimaryVenueSpaceId,
   upsertBookingCalendarEntry,
 } from "@/src/db/queries/calendar";
+import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
+import {
+  listDocumentsForBooking,
+  listDocumentsForOwner,
+} from "@/src/db/queries/rider-access";
 import {
   agreementTemplates,
   agreements,
@@ -43,8 +48,63 @@ import {
   type BookingState,
 } from "@/src/domain/booking";
 import { AppError } from "@/src/domain/errors";
+import {
+  isLegalIdentityComplete,
+  type LegalIdentityFields,
+} from "@/src/domain/legal-identity";
 import { can } from "@/src/domain/permissions";
 import { getESignProviderForGeneration } from "@/src/integrations/esign";
+
+function snapshotLegal(identity: LegalIdentityFields) {
+  return {
+    entityType: identity.entityType,
+    legalName: identity.legalName,
+    tradingName: identity.tradingName,
+    addressLine1: identity.addressLine1,
+    addressLine2: identity.addressLine2,
+    postalCode: identity.postalCode,
+    city: identity.city,
+    countryCode: identity.countryCode,
+    taxId: identity.taxId,
+    companyRegisterId: identity.companyRegisterId,
+    invoiceEmail: identity.invoiceEmail,
+    iban: identity.iban,
+    bic: identity.bic,
+    paymentNote: identity.paymentNote,
+  };
+}
+
+function formatAddendaAppendix(
+  addenda: Array<{
+    addendumNumber: number;
+    title: string;
+    source: string;
+  }>,
+  locale: "de" | "en",
+): string {
+  if (addenda.length === 0) {
+    return locale === "de"
+      ? "Anlagen: keine."
+      : "Addenda: none.";
+  }
+  const header = locale === "de" ? "Anlagen:" : "Addenda:";
+  const lines = addenda.map((item) => {
+    const sourceLabel =
+      locale === "de"
+        ? item.source === "act_profile"
+          ? "Act-Profil"
+          : item.source === "venue_profile"
+            ? "Venue-Profil"
+            : "Buchung"
+        : item.source === "act_profile"
+          ? "act profile"
+          : item.source === "venue_profile"
+            ? "venue profile"
+            : "booking";
+    return `${item.addendumNumber}. ${item.title} (${sourceLabel})`;
+  });
+  return [header, ...lines].join("\n");
+}
 
 async function ensureTemplates() {
   let { german, english } = await getLatestSandboxTemplates();
@@ -106,7 +166,7 @@ export async function generateAgreement(
   input: z.infer<typeof generateSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     const parsed = generateSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid agreement generation");
@@ -165,6 +225,57 @@ export async function generateAgreement(
       throw new AppError("validation", "Venue owner required to sign");
     }
 
+    const entertainerLegal = await getLegalIdentityForUser(profile.userId);
+    const venueLegal = await getLegalIdentityForUser(venueOwnerUserId);
+    if (
+      !isLegalIdentityComplete(entertainerLegal) ||
+      !isLegalIdentityComplete(venueLegal)
+    ) {
+      throw new AppError(
+        "validation",
+        "Both parties need complete legal identity on Account before generating the agreement",
+      );
+    }
+
+    const actDocs = await listDocumentsForOwner({
+      entertainerProfileId: booking.entertainerProfileId,
+    });
+    const venueDocs = await listDocumentsForOwner({
+      venueId: booking.venueId,
+    });
+    const bookingDocs = await listDocumentsForBooking(booking.id);
+    const addendaSnapshot: Array<{
+      id: string;
+      title: string;
+      source: "act_profile" | "venue_profile" | "booking";
+      addendumNumber: number;
+    }> = [];
+    let addendumNumber = 1;
+    for (const doc of actDocs) {
+      addendaSnapshot.push({
+        id: doc.id,
+        title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+        source: "act_profile",
+        addendumNumber: addendumNumber++,
+      });
+    }
+    for (const doc of venueDocs) {
+      addendaSnapshot.push({
+        id: doc.id,
+        title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+        source: "venue_profile",
+        addendumNumber: addendumNumber++,
+      });
+    }
+    for (const doc of bookingDocs) {
+      addendaSnapshot.push({
+        id: doc.id,
+        title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+        source: "booking",
+        addendumNumber: addendumNumber++,
+      });
+    }
+
     const { german, english } = await ensureTemplates();
     const rendered = renderAgreementDocuments({
       germanTemplate: german,
@@ -184,6 +295,13 @@ export async function generateAgreement(
         termsVersion: agreed.version,
       },
     });
+
+    const germanBody = `${rendered.germanBody}\n\n${formatAddendaAppendix(addendaSnapshot, "de")}`;
+    const englishBody = `${rendered.englishBody}\n\n${formatAddendaAppendix(addendaSnapshot, "en")}`;
+    const legalIdentitySnapshot = {
+      entertainer: snapshotLegal(entertainerLegal!),
+      venue: snapshotLegal(venueLegal!),
+    };
 
     const venueOwner = await db.query.users.findFirst({
       where: eq(users.id, venueOwnerUserId),
@@ -206,8 +324,10 @@ export async function generateAgreement(
           bookingTermsId: agreed.id,
           germanTemplateVersion: rendered.germanTemplateVersion,
           englishTemplateVersion: rendered.englishTemplateVersion,
-          germanBody: rendered.germanBody,
-          englishBody: rendered.englishBody,
+          germanBody,
+          englishBody,
+          addendaSnapshot,
+          legalIdentitySnapshot,
           provider: provider.name,
           status: "sent",
         })
@@ -288,7 +408,7 @@ export async function signAgreementSandbox(
   input: z.infer<typeof signSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     const parsed = signSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid signature");

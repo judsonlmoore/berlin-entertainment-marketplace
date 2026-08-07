@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   bookingTerms,
@@ -87,12 +87,62 @@ function assertDocumentOwner(
   return { entertainerProfileId: input.entertainerProfileId };
 }
 
+async function hasOpenEngagementWithVenue(input: {
+  actor: ActorContext;
+  venueId: string;
+  now: Date;
+}): Promise<boolean> {
+  // Talent side: look up their entertainer profile, then open bookings with venue.
+  const db = getDb();
+  const profile = await db.query.entertainerProfiles.findFirst({
+    where: eq(entertainerProfiles.userId, input.actor.userId),
+    columns: { id: true },
+  });
+  if (!profile) return false;
+
+  const rows = await db
+    .select({
+      bookingId: bookings.id,
+      endsAt: bookingTerms.endsAt,
+      acceptedAt: bookingTerms.acceptedAt,
+    })
+    .from(bookings)
+    .leftJoin(bookingTerms, eq(bookingTerms.bookingId, bookings.id))
+    .where(
+      and(
+        eq(bookings.venueId, input.venueId),
+        eq(bookings.entertainerProfileId, profile.id),
+        inArray(bookings.state, [...DOCUMENT_ENGAGEMENT_BOOKING_STATES]),
+      ),
+    );
+
+  if (rows.length === 0) return false;
+
+  const byBooking = new Map<string, Date | null>();
+  for (const row of rows) {
+    if (row.acceptedAt && row.endsAt) {
+      const prev = byBooking.get(row.bookingId);
+      if (!prev || row.endsAt > prev) {
+        byBooking.set(row.bookingId, row.endsAt);
+      }
+    } else if (!byBooking.has(row.bookingId)) {
+      byBooking.set(row.bookingId, null);
+    }
+  }
+
+  for (const endsAt of byBooking.values()) {
+    if (isEngagementWindowOpen({ now: input.now, endsAt })) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Access context for profile documents.
  *
  * Entertainer owners: marketplace via discover.entertainers; engagement via open booking.
- * Venue owners (this PR): marketplace via discover.venues; engagement always false
- * for non-owner/staff (booking UI follow-up).
+ * Venue owners: marketplace via discover.venues; engagement via open booking with viewer's act.
  */
 export async function getDocumentAccessContext(
   input: {
@@ -108,13 +158,21 @@ export async function getDocumentAccessContext(
   const owner = assertDocumentOwner(input);
 
   if ("venueId" in owner) {
+    const hasOpenEngagement =
+      isOwner || isStaff
+        ? true
+        : await hasOpenEngagementWithVenue({
+            actor: input.actor,
+            venueId: owner.venueId,
+            now,
+          });
+
     return computeDocumentAccessFlags({
       isOwner,
       isStaff,
       publicationState: input.publicationState,
       canDiscoverMarketplace: can(input.actor, "discover.venues"),
-      // Venue engagement ACL deferred with booking-detail PDF UI.
-      hasOpenEngagement: false,
+      hasOpenEngagement,
     });
   }
 
@@ -143,12 +201,33 @@ export async function canAccessRiderFile(input: {
     ownerUserId: string;
     entertainerProfileId: string | null;
     venueId?: string | null;
+    bookingId?: string | null;
     visibility?: ProfileDocumentVisibility | string | null;
   };
   now?: Date;
 }): Promise<boolean> {
   if (input.actor.isPlatformStaff) return true;
   if (input.rider.ownerUserId === input.actor.userId) return true;
+
+  // Booking-scoped uploads: any party on that booking may download.
+  if (input.rider.bookingId) {
+    const db = getDb();
+    const booking = await db.query.bookings.findFirst({
+      where: eq(bookings.id, input.rider.bookingId),
+      columns: {
+        venueId: true,
+        entertainerProfileId: true,
+      },
+    });
+    if (!booking) return false;
+    if (input.actor.venueId === booking.venueId) return true;
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, booking.entertainerProfileId),
+      columns: { userId: true },
+    });
+    if (profile?.userId === input.actor.userId) return true;
+    return false;
+  }
 
   const owner = resolveDocumentOwnerFromIds({
     entertainerProfileId: input.rider.entertainerProfileId,
@@ -218,12 +297,22 @@ const documentListColumns = {
   ownerUserId: riderFiles.ownerUserId,
   entertainerProfileId: riderFiles.entertainerProfileId,
   venueId: riderFiles.venueId,
+  bookingId: riderFiles.bookingId,
 } as const;
+
+export async function listDocumentsForBooking(bookingId: string) {
+  const db = getDb();
+  return db
+    .select(documentListColumns)
+    .from(riderFiles)
+    .where(eq(riderFiles.bookingId, bookingId))
+    .orderBy(asc(riderFiles.sortOrder), asc(riderFiles.createdAt));
+}
 
 export async function listDocumentsForOwner(owner: DocumentAccessOwnerInput) {
   const db = getDb();
   const resolved = assertDocumentOwner(owner);
-  const where =
+  const ownerWhere =
     "venueId" in resolved
       ? eq(riderFiles.venueId, resolved.venueId)
       : eq(riderFiles.entertainerProfileId, resolved.entertainerProfileId);
@@ -231,7 +320,7 @@ export async function listDocumentsForOwner(owner: DocumentAccessOwnerInput) {
   return db
     .select(documentListColumns)
     .from(riderFiles)
-    .where(where)
+    .where(and(ownerWhere, isNull(riderFiles.bookingId)))
     .orderBy(asc(riderFiles.sortOrder), asc(riderFiles.createdAt));
 }
 

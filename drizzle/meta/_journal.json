@@ -134,6 +134,13 @@
       "when": 1786900000000,
       "tag": "0018_agreements_rendered_bodies",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787000000000,
+      "tag": "0019_negotiations_contract_package",
+      "breakpoints": true
     }
   ]
 }
