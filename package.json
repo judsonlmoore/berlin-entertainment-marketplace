@@ -16,6 +16,7 @@
     "db:migrate": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs migrate --config=drizzle.config.ts",
     "db:studio": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs studio --config=drizzle.config.ts",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
+    "db:reset-dev": "tsx --env-file=.env scripts/reset-dev-data.ts",
     "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "engines": {

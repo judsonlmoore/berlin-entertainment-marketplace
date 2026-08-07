@@ -37,9 +37,20 @@ Platform staff is a database flag (`users.is_platform_staff`), not a login mode.
 ```bash
 npm run db:generate   # after schema edits
 npm run db:migrate
-ALLOW_DB_SEED=true npm run db:seed
+ALLOW_DB_SEED=true npm run db:seed   # synthetic demo only — not for real accounts
 npm run dev
 ```
+
+To wipe local/dev Neon + document/portfolio blobs and start empty (no seed):
+
+```bash
+# Requires AUTH_URL on localhost (or LAN). Refuses NODE_ENV=production.
+ALLOW_DB_RESET=true npm run db:reset-dev
+# Then sign up again; optional staff:
+# npx tsx --env-file=.env scripts/set-staff.ts you@example.com
+```
+
+`db:seed` recreates mock entertainers/venues. Prefer `db:reset-dev` + real sign-up when cleaning orphan demo data.
 
 ## Checks
 
