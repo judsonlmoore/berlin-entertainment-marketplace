@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   canViewDocumentVisibility,
+  computeDocumentAccessFlags,
   filterDocumentsForViewer,
   isEngagementWindowOpen,
   normalizeDocumentTitle,
+  resolveDocumentOwnerFromIds,
   titleFromFilename,
   validateProfileDocumentUpload,
   type ProfileDocumentAccessContext,
@@ -38,6 +40,87 @@ const stranger: ProfileDocumentAccessContext = {
 };
 
 describe("profile-document domain", () => {
+  it("resolves XOR document owners and rejects both/neither", () => {
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: "e1",
+        venueId: null,
+      }),
+    ).toEqual({ kind: "entertainer", entertainerProfileId: "e1" });
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: null,
+        venueId: "v1",
+      }),
+    ).toEqual({ kind: "venue", venueId: "v1" });
+    // Regression: venue-owned riders must not be treated as unowned.
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: null,
+        venueId: "v1",
+      })?.kind,
+    ).toBe("venue");
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: null,
+        venueId: null,
+      }),
+    ).toBeNull();
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: "e1",
+        venueId: "v1",
+      }),
+    ).toBeNull();
+  });
+
+  it("computes marketplace flags with discover.venues vs discover.entertainers gates", () => {
+    const talentViewingApprovedVenue = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "approved",
+      canDiscoverMarketplace: true,
+      hasOpenEngagement: false,
+    });
+    expect(talentViewingApprovedVenue.canSeeMarketplace).toBe(true);
+    expect(talentViewingApprovedVenue.canSeeEngagement).toBe(false);
+
+    const draftVenue = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "draft",
+      canDiscoverMarketplace: true,
+      hasOpenEngagement: false,
+    });
+    expect(draftVenue.canSeeMarketplace).toBe(false);
+
+    const noDiscover = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "approved",
+      canDiscoverMarketplace: false,
+      hasOpenEngagement: false,
+    });
+    expect(noDiscover.canSeeMarketplace).toBe(false);
+
+    const engaged = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "approved",
+      canDiscoverMarketplace: true,
+      hasOpenEngagement: true,
+    });
+    expect(engaged.canSeeEngagement).toBe(true);
+
+    expect(
+      canViewDocumentVisibility("marketplace", talentViewingApprovedVenue),
+    ).toBe(true);
+    expect(
+      canViewDocumentVisibility("engagement", talentViewingApprovedVenue),
+    ).toBe(false);
+    expect(canViewDocumentVisibility("engagement", engaged)).toBe(true);
+  });
+
   it("allows empty title on upload and trims provided titles", () => {
     expect(
       validateProfileDocumentUpload({

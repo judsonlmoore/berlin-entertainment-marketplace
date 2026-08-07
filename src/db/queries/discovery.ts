@@ -96,6 +96,8 @@ export type VenueDiscoveryCard = {
 };
 
 export type VenueDiscoveryDetail = VenueDiscoveryCard & {
+  ownerUserId: string;
+  publicationState: string;
   addressLine1: string;
   addressLine2: string | null;
   postalCode: string;
@@ -720,6 +722,8 @@ export async function getDiscoverableVenueDetail(input: {
 
   return {
     id: venue.id,
+    ownerUserId: venue.ownerUserId,
+    publicationState: venue.publicationState,
     name: venue.name,
     shortDescription: venue.shortDescription,
     district: venue.district,

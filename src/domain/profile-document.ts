@@ -24,6 +24,55 @@ export type ProfileDocumentAccessContext = {
   canSeeEngagement: boolean;
 };
 
+/** XOR owner for rider_files / document ACL (entertainer profile XOR venue). */
+export type DocumentOwnerRef =
+  | { kind: "entertainer"; entertainerProfileId: string }
+  | { kind: "venue"; venueId: string };
+
+/**
+ * Resolve document owner from XOR ids.
+ *
+ *   entertainerProfileId ──┐
+ *                          ├── exactly one set → owner ref
+ *   venueId ───────────────┘
+ *   both or neither → null (invalid / unowned)
+ */
+export function resolveDocumentOwnerFromIds(input: {
+  entertainerProfileId?: string | null;
+  venueId?: string | null;
+}): DocumentOwnerRef | null {
+  const entertainerProfileId = input.entertainerProfileId?.trim() || null;
+  const venueId = input.venueId?.trim() || null;
+  if (Boolean(entertainerProfileId) === Boolean(venueId)) return null;
+  if (entertainerProfileId) {
+    return { kind: "entertainer", entertainerProfileId };
+  }
+  return { kind: "venue", venueId: venueId! };
+}
+
+/** Pure flags for marketplace/engagement visibility (after async engagement resolved). */
+export function computeDocumentAccessFlags(input: {
+  isOwner: boolean;
+  isStaff: boolean;
+  publicationState: string;
+  canDiscoverMarketplace: boolean;
+  hasOpenEngagement: boolean;
+}): ProfileDocumentAccessContext {
+  const approved = input.publicationState === "approved";
+  const canSeeMarketplace =
+    input.isOwner ||
+    input.isStaff ||
+    (input.canDiscoverMarketplace && approved);
+  const canSeeEngagement =
+    input.isOwner || input.isStaff || input.hasOpenEngagement;
+  return {
+    isOwner: input.isOwner,
+    isStaff: input.isStaff,
+    canSeeMarketplace,
+    canSeeEngagement,
+  };
+}
+
 export type ProfileDocumentListItem = {
   id: string;
   visibility: ProfileDocumentVisibility;

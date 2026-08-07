@@ -838,6 +838,8 @@
     "submitProfileCta": "Mein Profil einreichen",
     "submitting": "Wird gesendet…",
     "noteLabel": "Kurze Notiz (optional)",
+    "noteDisclosureShow": "Notiz hinzufügen",
+    "noteDisclosureHide": "Notiz ausblenden",
     "notePlaceholder": "Warum Sie passen, oder wonach Sie suchen…",
     "enquirySubmitted": "Profil eingereicht. Rückmeldung erscheint unter Bookings.",
     "enquiryAlreadyActive": "Sie haben bereits ein aktives Booking mit dieser Venue.",

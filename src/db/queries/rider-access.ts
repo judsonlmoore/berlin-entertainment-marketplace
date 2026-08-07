@@ -5,12 +5,15 @@ import {
   bookings,
   entertainerProfiles,
   riderFiles,
+  venues,
 } from "@/src/db/schema/marketplace";
 import {
   DOCUMENT_ENGAGEMENT_BOOKING_STATES,
   canViewDocumentVisibility,
+  computeDocumentAccessFlags,
   filterDocumentsForViewer,
   isEngagementWindowOpen,
+  resolveDocumentOwnerFromIds,
   type ProfileDocumentAccessContext,
   type ProfileDocumentVisibility,
 } from "@/src/domain/profile-document";
@@ -65,38 +68,72 @@ async function hasOpenEngagementWithProfile(input: {
   return false;
 }
 
-export async function getDocumentAccessContext(input: {
-  actor: ActorContext;
-  entertainerProfileId: string;
-  ownerUserId: string;
-  publicationState: string;
-  now?: Date;
-}): Promise<ProfileDocumentAccessContext> {
+export type DocumentAccessOwnerInput =
+  | {
+      entertainerProfileId: string;
+      venueId?: never;
+    }
+  | {
+      venueId: string;
+      entertainerProfileId?: never;
+    };
+
+function assertDocumentOwner(
+  input: DocumentAccessOwnerInput,
+): DocumentAccessOwnerInput {
+  if ("venueId" in input) {
+    return { venueId: input.venueId };
+  }
+  return { entertainerProfileId: input.entertainerProfileId };
+}
+
+/**
+ * Access context for profile documents.
+ *
+ * Entertainer owners: marketplace via discover.entertainers; engagement via open booking.
+ * Venue owners (this PR): marketplace via discover.venues; engagement always false
+ * for non-owner/staff (booking UI follow-up).
+ */
+export async function getDocumentAccessContext(
+  input: {
+    actor: ActorContext;
+    ownerUserId: string;
+    publicationState: string;
+    now?: Date;
+  } & DocumentAccessOwnerInput,
+): Promise<ProfileDocumentAccessContext> {
   const now = input.now ?? new Date();
   const isOwner = input.actor.userId === input.ownerUserId;
   const isStaff = input.actor.isPlatformStaff;
+  const owner = assertDocumentOwner(input);
 
-  const canSeeMarketplace =
-    isOwner ||
-    isStaff ||
-    (can(input.actor, "discover.entertainers") &&
-      input.publicationState === "approved");
+  if ("venueId" in owner) {
+    return computeDocumentAccessFlags({
+      isOwner,
+      isStaff,
+      publicationState: input.publicationState,
+      canDiscoverMarketplace: can(input.actor, "discover.venues"),
+      // Venue engagement ACL deferred with booking-detail PDF UI.
+      hasOpenEngagement: false,
+    });
+  }
 
-  const canSeeEngagement =
-    isOwner ||
-    isStaff ||
-    (await hasOpenEngagementWithProfile({
-      actor: input.actor,
-      entertainerProfileId: input.entertainerProfileId,
-      now,
-    }));
+  const hasOpenEngagement =
+    isOwner || isStaff
+      ? true
+      : await hasOpenEngagementWithProfile({
+          actor: input.actor,
+          entertainerProfileId: owner.entertainerProfileId,
+          now,
+        });
 
-  return {
+  return computeDocumentAccessFlags({
     isOwner,
     isStaff,
-    canSeeMarketplace,
-    canSeeEngagement,
-  };
+    publicationState: input.publicationState,
+    canDiscoverMarketplace: can(input.actor, "discover.entertainers"),
+    hasOpenEngagement,
+  });
 }
 
 export async function canAccessRiderFile(input: {
@@ -105,32 +142,60 @@ export async function canAccessRiderFile(input: {
     id: string;
     ownerUserId: string;
     entertainerProfileId: string | null;
+    venueId?: string | null;
     visibility?: ProfileDocumentVisibility | string | null;
   };
   now?: Date;
 }): Promise<boolean> {
   if (input.actor.isPlatformStaff) return true;
   if (input.rider.ownerUserId === input.actor.userId) return true;
-  if (!input.rider.entertainerProfileId) return false;
+
+  const owner = resolveDocumentOwnerFromIds({
+    entertainerProfileId: input.rider.entertainerProfileId,
+    venueId: input.rider.venueId ?? null,
+  });
+  if (!owner) return false;
 
   const db = getDb();
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.id, input.rider.entertainerProfileId),
-  });
-  if (!profile) return false;
-  if (profile.userId === input.actor.userId) return true;
-
-  const ctx = await getDocumentAccessContext({
-    actor: input.actor,
-    entertainerProfileId: profile.id,
-    ownerUserId: profile.userId,
-    publicationState: profile.publicationState,
-    ...(input.now ? { now: input.now } : {}),
-  });
-
   const visibility =
     (input.rider.visibility as ProfileDocumentVisibility | undefined) ??
     "engagement";
+
+  if (owner.kind === "entertainer") {
+    const profile = await db.query.entertainerProfiles.findFirst({
+      where: eq(entertainerProfiles.id, owner.entertainerProfileId),
+    });
+    if (!profile) return false;
+    if (profile.userId === input.actor.userId) return true;
+
+    const ctx = await getDocumentAccessContext({
+      actor: input.actor,
+      entertainerProfileId: profile.id,
+      ownerUserId: profile.userId,
+      publicationState: profile.publicationState,
+      ...(input.now ? { now: input.now } : {}),
+    });
+    return canViewDocumentVisibility(visibility, ctx);
+  }
+
+  const venue = await db.query.venues.findFirst({
+    where: eq(venues.id, owner.venueId),
+    columns: {
+      id: true,
+      ownerUserId: true,
+      publicationState: true,
+    },
+  });
+  if (!venue) return false;
+  if (venue.ownerUserId === input.actor.userId) return true;
+
+  const ctx = await getDocumentAccessContext({
+    actor: input.actor,
+    venueId: venue.id,
+    ownerUserId: venue.ownerUserId,
+    publicationState: venue.publicationState,
+    ...(input.now ? { now: input.now } : {}),
+  });
   return canViewDocumentVisibility(visibility, ctx);
 }
 
@@ -141,33 +206,54 @@ export async function getRiderFileForDownload(riderId: string) {
   });
 }
 
-export async function listDocumentsForProfile(entertainerProfileId: string) {
+const documentListColumns = {
+  id: riderFiles.id,
+  title: riderFiles.title,
+  visibility: riderFiles.visibility,
+  sortOrder: riderFiles.sortOrder,
+  originalFilename: riderFiles.originalFilename,
+  sizeBytes: riderFiles.sizeBytes,
+  scanStatus: riderFiles.scanStatus,
+  createdAt: riderFiles.createdAt,
+  ownerUserId: riderFiles.ownerUserId,
+  entertainerProfileId: riderFiles.entertainerProfileId,
+  venueId: riderFiles.venueId,
+} as const;
+
+export async function listDocumentsForOwner(owner: DocumentAccessOwnerInput) {
   const db = getDb();
+  const resolved = assertDocumentOwner(owner);
+  const where =
+    "venueId" in resolved
+      ? eq(riderFiles.venueId, resolved.venueId)
+      : eq(riderFiles.entertainerProfileId, resolved.entertainerProfileId);
+
   return db
-    .select({
-      id: riderFiles.id,
-      title: riderFiles.title,
-      visibility: riderFiles.visibility,
-      sortOrder: riderFiles.sortOrder,
-      originalFilename: riderFiles.originalFilename,
-      sizeBytes: riderFiles.sizeBytes,
-      scanStatus: riderFiles.scanStatus,
-      createdAt: riderFiles.createdAt,
-      ownerUserId: riderFiles.ownerUserId,
-      entertainerProfileId: riderFiles.entertainerProfileId,
-    })
+    .select(documentListColumns)
     .from(riderFiles)
-    .where(eq(riderFiles.entertainerProfileId, entertainerProfileId))
+    .where(where)
     .orderBy(asc(riderFiles.sortOrder), asc(riderFiles.createdAt));
 }
 
-export async function listDocumentsVisibleToActor(input: {
-  actor: ActorContext;
-  entertainerProfileId: string;
-  ownerUserId: string;
-  publicationState: string;
-}) {
-  const docs = await listDocumentsForProfile(input.entertainerProfileId);
-  const ctx = await getDocumentAccessContext(input);
+/** @deprecated Prefer listDocumentsForOwner({ entertainerProfileId }) */
+export async function listDocumentsForProfile(entertainerProfileId: string) {
+  return listDocumentsForOwner({ entertainerProfileId });
+}
+
+export async function listDocumentsVisibleToActor(
+  input: {
+    actor: ActorContext;
+    ownerUserId: string;
+    publicationState: string;
+  } & DocumentAccessOwnerInput,
+) {
+  const owner = assertDocumentOwner(input);
+  const docs = await listDocumentsForOwner(owner);
+  const ctx = await getDocumentAccessContext({
+    actor: input.actor,
+    ownerUserId: input.ownerUserId,
+    publicationState: input.publicationState,
+    ...owner,
+  });
   return filterDocumentsForViewer(docs, ctx);
 }

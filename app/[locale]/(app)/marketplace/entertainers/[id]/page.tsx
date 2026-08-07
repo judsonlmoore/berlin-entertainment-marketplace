@@ -250,6 +250,7 @@ export default async function EntertainerDetailPage({
       >
         <ProfileDocumentList
           locale={locale}
+          variant="public"
           documents={visibleDocuments.map((doc) => ({
             id: doc.id,
             title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",

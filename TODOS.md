@@ -42,17 +42,17 @@
 
 ## Platform
 
-### Venue PDF document library
+### Venue PDF document library (remainder)
 
-**What:** Same titled PDF library for venue profiles (house plot, power, load-in packs) with marketplace vs engagement visibility.
+**What:** Finish venue PDF symmetry: `engagement` visibility ACL (talent↔venue open booking) and show venue-owned docs on booking detail for viewers who may access them.
 
-**Why:** Symmetric prep for acts booking a room; venues currently only have text production notes.
+**Why:** Marketplace public list/download ships with venue/talent profile parity; engagement packs (house plot, load-in) still need a counterparty surface for Tom’s night-of prep.
 
-**Context:** Deferred from eng-review D7 (entertainer-only first). Needs XOR owner on documents (venue vs entertainer) after entertainer path is green.
+**Context:** Eng-review 2026-08-07. Builder + XOR upload already exist; public marketplace surface is the current parity PR. Do **not** treat this TODO as “start venue PDFs from scratch.” Start from post-parity `rider-access` marketplace XOR; add reverse engagement lookup (viewer entertainer profile id — `ActorContext` has `venueId` only today); wire `ProfileDocumentList` on `/marketplace/bookings/[id]` for venue docs.
 
 **Effort:** M
-**Priority:** P3
-**Depends on:** Entertainer document library shipped
+**Priority:** P2
+**Depends on:** Venue/talent public profile parity PR (marketplace venue ACL + download fix)
 
 ### City-scoped expansion (beyond Berlin HQ)
 

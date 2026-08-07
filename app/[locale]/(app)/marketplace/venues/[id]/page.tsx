@@ -1,7 +1,9 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
-import { VenueProfileContactPanel } from "@/src/components/venue-profile-contact-panel";
+import { ProfileDocumentList } from "@/src/components/profile-document-list";
+import { VenueOpenCallsPanel } from "@/src/components/venue-open-calls-panel";
+import { VenueSubmitProfileButton } from "@/src/components/venue-submit-profile-button";
 import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
 import { getDiscoverableVenueDetail } from "@/src/db/queries/discovery";
 import {
@@ -14,6 +16,7 @@ import {
   findRecentProfileEnquiry,
 } from "@/src/db/queries/profile-enquiries";
 import { listOpenCallsForVenue } from "@/src/db/queries/opportunities";
+import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import { getDb } from "@/src/db/client";
 import { bookings, entertainerProfiles } from "@/src/db/schema/marketplace";
 import { and, eq } from "drizzle-orm";
@@ -208,6 +211,32 @@ export default async function VenueDiscoveryDetailPage({
       })
     : [];
 
+  const visibleDocuments = await listDocumentsVisibleToActor({
+    actor: access.actor,
+    venueId: id,
+    ownerUserId: venue.ownerUserId,
+    publicationState: venue.publicationState,
+  });
+
+  const showSubmitCta =
+    isEntertainer &&
+    !showPreviewBanner &&
+    (canSubmit ||
+      publishRequired ||
+      Boolean(activeEnquiryBookingId) ||
+      (enquiryCooldownDaysRemaining ?? 0) > 0);
+
+  const headerAction = showSubmitCta ? (
+    <VenueSubmitProfileButton
+      locale={appLocale}
+      venueId={id}
+      canSubmit={canSubmit}
+      publishRequired={publishRequired}
+      activeEnquiryBookingId={activeEnquiryBookingId}
+      cooldownDaysRemaining={enquiryCooldownDaysRemaining}
+    />
+  ) : null;
+
   return (
     <>
       {showPreviewBanner ? <ProfilePreviewExitBanner /> : null}
@@ -237,15 +266,13 @@ export default async function VenueDiscoveryDetailPage({
         galleryTitle={t("galleryTitle")}
         videoTitle={t("videoTitle")}
         linksTitle={t("linksTitle")}
+        {...(headerAction ? { headerAction } : {})}
       >
         {isEntertainer && !showPreviewBanner ? (
-          <VenueProfileContactPanel
+          <VenueOpenCallsPanel
             locale={appLocale}
-            venueId={id}
             canSubmit={canSubmit}
             publishRequired={publishRequired}
-            activeEnquiryBookingId={activeEnquiryBookingId}
-            cooldownDaysRemaining={enquiryCooldownDaysRemaining}
             openCalls={openCalls.map((c) => ({
               id: c.id,
               title: c.title,
@@ -260,6 +287,16 @@ export default async function VenueDiscoveryDetailPage({
             defaultQuoteMaxEur={ownProfile ? ownProfile.priceMaxCents / 100 : 0}
           />
         ) : null}
+        <ProfileDocumentList
+          locale={locale}
+          variant="public"
+          documents={visibleDocuments.map((doc) => ({
+            id: doc.id,
+            title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+            visibility: doc.visibility,
+            sizeBytes: doc.sizeBytes,
+          }))}
+        />
       </PublicProfileView>
     </>
   );

@@ -838,6 +838,8 @@
     "submitProfileCta": "Submit my profile",
     "submitting": "Submitting…",
     "noteLabel": "Short note (optional)",
+    "noteDisclosureShow": "Add a note",
+    "noteDisclosureHide": "Hide note",
     "notePlaceholder": "Why you’re a fit, or what you’re looking for…",
     "enquirySubmitted": "Profile submitted. You’ll hear back in Bookings.",
     "enquiryAlreadyActive": "You already have an active booking with this venue.",
