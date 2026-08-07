@@ -6,6 +6,7 @@ import { useRouter } from "@/src/i18n/navigation";
 import { respondToProfileEnquiryAction } from "@/src/actions/profile-enquiries";
 import { Button } from "@/src/components/ui/button";
 
+/** Legacy pending enquiries without an open offer: Decline only. */
 export function ProfileEnquiryRespondButtons({
   locale,
   enquiryId,
@@ -16,6 +17,7 @@ export function ProfileEnquiryRespondButtons({
   state: string;
 }) {
   const t = useTranslations("leads");
+  const bookingsT = useTranslations("bookings");
   const errors = useTranslations("errors");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -23,42 +25,36 @@ export function ProfileEnquiryRespondButtons({
 
   if (state !== "pending") return null;
 
-  function respond(decision: "interested" | "passed") {
-    setError(null);
-    startTransition(async () => {
-      const result = await respondToProfileEnquiryAction({
-        enquiryId,
-        decision,
-        locale,
-      });
-      if (!result.ok) {
-        setError(
-          result.code === "forbidden" || result.code === "invalid_transition"
-            ? errors(result.code)
-            : result.message,
-        );
-        return;
-      }
-      router.refresh();
-    });
-  }
-
   return (
     <div className="flex flex-wrap gap-2">
       <Button
         type="button"
-        disabled={pending}
-        onClick={() => respond("interested")}
-      >
-        {pending ? t("working") : t("interested")}
-      </Button>
-      <Button
-        type="button"
         variant="secondary"
         disabled={pending}
-        onClick={() => respond("passed")}
+        pending={pending}
+        pendingLabel={t("working")}
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            const result = await respondToProfileEnquiryAction({
+              enquiryId,
+              decision: "passed",
+              locale,
+            });
+            if (!result.ok) {
+              setError(
+                result.code === "forbidden" ||
+                  result.code === "invalid_transition"
+                  ? errors(result.code)
+                  : result.message,
+              );
+              return;
+            }
+            router.refresh();
+          });
+        }}
       >
-        {t("pass")}
+        {bookingsT("declineOffer")}
       </Button>
       {error ? (
         <p role="alert" className="w-full text-sm text-[var(--danger)]">

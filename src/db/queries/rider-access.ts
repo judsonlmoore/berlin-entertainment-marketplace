@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   bookingTerms,
@@ -9,6 +9,7 @@ import {
 } from "@/src/db/schema/marketplace";
 import {
   DOCUMENT_ENGAGEMENT_BOOKING_STATES,
+  DOCUMENT_PENDING_OFFER_BOOKING_STATES,
   canViewDocumentVisibility,
   computeDocumentAccessFlags,
   filterDocumentsForViewer,
@@ -19,9 +20,63 @@ import {
 } from "@/src/domain/profile-document";
 import { can, type ActorContext } from "@/src/domain/permissions";
 
+/**
+ * Sender’s engagement docs while Pending: open (unaccepted, unsuperseded) offer
+ * proposed by that owner’s user on a shared pending booking.
+ */
+async function hasPendingOfferFromEntertainer(input: {
+  venueIds: string[];
+  entertainerProfileId: string;
+  entertainerUserId: string;
+}): Promise<boolean> {
+  if (input.venueIds.length === 0) return false;
+  const db = getDb();
+  const [row] = await db
+    .select({ id: bookingTerms.id })
+    .from(bookingTerms)
+    .innerJoin(bookings, eq(bookings.id, bookingTerms.bookingId))
+    .where(
+      and(
+        eq(bookings.entertainerProfileId, input.entertainerProfileId),
+        inArray(bookings.venueId, input.venueIds),
+        inArray(bookings.state, [...DOCUMENT_PENDING_OFFER_BOOKING_STATES]),
+        eq(bookingTerms.proposedByUserId, input.entertainerUserId),
+        isNull(bookingTerms.acceptedAt),
+        isNull(bookingTerms.supersededAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
+async function hasPendingOfferFromVenue(input: {
+  venueId: string;
+  entertainerProfileId: string;
+  entertainerUserId: string;
+}): Promise<boolean> {
+  const db = getDb();
+  const [row] = await db
+    .select({ id: bookingTerms.id })
+    .from(bookingTerms)
+    .innerJoin(bookings, eq(bookings.id, bookingTerms.bookingId))
+    .where(
+      and(
+        eq(bookings.venueId, input.venueId),
+        eq(bookings.entertainerProfileId, input.entertainerProfileId),
+        inArray(bookings.state, [...DOCUMENT_PENDING_OFFER_BOOKING_STATES]),
+        ne(bookingTerms.proposedByUserId, input.entertainerUserId),
+        isNull(bookingTerms.acceptedAt),
+        isNull(bookingTerms.supersededAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(row);
+}
+
 async function hasOpenEngagementWithProfile(input: {
   actor: ActorContext;
   entertainerProfileId: string;
+  entertainerUserId: string;
   now: Date;
 }): Promise<boolean> {
   const venueIds = input.actor.venueId ? [input.actor.venueId] : [];
@@ -44,28 +99,87 @@ async function hasOpenEngagementWithProfile(input: {
       ),
     );
 
-  if (rows.length === 0) return false;
-
-  // Group by booking: if any accepted terms endsAt is still open, or no accepted terms yet → open
-  const byBooking = new Map<string, Date | null>();
-  for (const row of rows) {
-    const current = byBooking.get(row.bookingId);
-    if (row.acceptedAt && row.endsAt) {
-      const prev = current;
-      if (!prev || row.endsAt > prev) {
-        byBooking.set(row.bookingId, row.endsAt);
+  if (rows.length > 0) {
+    const byBooking = new Map<string, Date | null>();
+    for (const row of rows) {
+      const current = byBooking.get(row.bookingId);
+      if (row.acceptedAt && row.endsAt) {
+        const prev = current;
+        if (!prev || row.endsAt > prev) {
+          byBooking.set(row.bookingId, row.endsAt);
+        }
+      } else if (!byBooking.has(row.bookingId)) {
+        byBooking.set(row.bookingId, null);
       }
-    } else if (!byBooking.has(row.bookingId)) {
-      byBooking.set(row.bookingId, null);
+    }
+
+    for (const endsAt of byBooking.values()) {
+      if (isEngagementWindowOpen({ now: input.now, endsAt })) {
+        return true;
+      }
     }
   }
 
-  for (const endsAt of byBooking.values()) {
-    if (isEngagementWindowOpen({ now: input.now, endsAt })) {
-      return true;
+  return hasPendingOfferFromEntertainer({
+    venueIds,
+    entertainerProfileId: input.entertainerProfileId,
+    entertainerUserId: input.entertainerUserId,
+  });
+}
+
+async function hasOpenEngagementWithVenue(input: {
+  actor: ActorContext;
+  venueId: string;
+  now: Date;
+}): Promise<boolean> {
+  const db = getDb();
+  const profile = await db.query.entertainerProfiles.findFirst({
+    where: eq(entertainerProfiles.userId, input.actor.userId),
+    columns: { id: true, userId: true },
+  });
+  if (!profile) return false;
+
+  const rows = await db
+    .select({
+      bookingId: bookings.id,
+      endsAt: bookingTerms.endsAt,
+      acceptedAt: bookingTerms.acceptedAt,
+    })
+    .from(bookings)
+    .leftJoin(bookingTerms, eq(bookingTerms.bookingId, bookings.id))
+    .where(
+      and(
+        eq(bookings.venueId, input.venueId),
+        eq(bookings.entertainerProfileId, profile.id),
+        inArray(bookings.state, [...DOCUMENT_ENGAGEMENT_BOOKING_STATES]),
+      ),
+    );
+
+  if (rows.length > 0) {
+    const byBooking = new Map<string, Date | null>();
+    for (const row of rows) {
+      if (row.acceptedAt && row.endsAt) {
+        const prev = byBooking.get(row.bookingId);
+        if (!prev || row.endsAt > prev) {
+          byBooking.set(row.bookingId, row.endsAt);
+        }
+      } else if (!byBooking.has(row.bookingId)) {
+        byBooking.set(row.bookingId, null);
+      }
+    }
+
+    for (const endsAt of byBooking.values()) {
+      if (isEngagementWindowOpen({ now: input.now, endsAt })) {
+        return true;
+      }
     }
   }
-  return false;
+
+  return hasPendingOfferFromVenue({
+    venueId: input.venueId,
+    entertainerProfileId: profile.id,
+    entertainerUserId: profile.userId,
+  });
 }
 
 export type DocumentAccessOwnerInput =
@@ -87,62 +201,13 @@ function assertDocumentOwner(
   return { entertainerProfileId: input.entertainerProfileId };
 }
 
-async function hasOpenEngagementWithVenue(input: {
-  actor: ActorContext;
-  venueId: string;
-  now: Date;
-}): Promise<boolean> {
-  // Talent side: look up their entertainer profile, then open bookings with venue.
-  const db = getDb();
-  const profile = await db.query.entertainerProfiles.findFirst({
-    where: eq(entertainerProfiles.userId, input.actor.userId),
-    columns: { id: true },
-  });
-  if (!profile) return false;
-
-  const rows = await db
-    .select({
-      bookingId: bookings.id,
-      endsAt: bookingTerms.endsAt,
-      acceptedAt: bookingTerms.acceptedAt,
-    })
-    .from(bookings)
-    .leftJoin(bookingTerms, eq(bookingTerms.bookingId, bookings.id))
-    .where(
-      and(
-        eq(bookings.venueId, input.venueId),
-        eq(bookings.entertainerProfileId, profile.id),
-        inArray(bookings.state, [...DOCUMENT_ENGAGEMENT_BOOKING_STATES]),
-      ),
-    );
-
-  if (rows.length === 0) return false;
-
-  const byBooking = new Map<string, Date | null>();
-  for (const row of rows) {
-    if (row.acceptedAt && row.endsAt) {
-      const prev = byBooking.get(row.bookingId);
-      if (!prev || row.endsAt > prev) {
-        byBooking.set(row.bookingId, row.endsAt);
-      }
-    } else if (!byBooking.has(row.bookingId)) {
-      byBooking.set(row.bookingId, null);
-    }
-  }
-
-  for (const endsAt of byBooking.values()) {
-    if (isEngagementWindowOpen({ now: input.now, endsAt })) {
-      return true;
-    }
-  }
-  return false;
-}
-
 /**
  * Access context for profile documents.
  *
- * Entertainer owners: marketplace via discover.entertainers; engagement via open booking.
- * Venue owners: marketplace via discover.venues; engagement via open booking with viewer's act.
+ * Entertainer owners: marketplace via discover.entertainers; engagement via open booking
+ * or pending offer sent by that entertainer.
+ * Venue owners: marketplace via discover.venues; engagement via open booking or pending
+ * offer sent by the venue side.
  */
 export async function getDocumentAccessContext(
   input: {
@@ -182,6 +247,7 @@ export async function getDocumentAccessContext(
       : await hasOpenEngagementWithProfile({
           actor: input.actor,
           entertainerProfileId: owner.entertainerProfileId,
+          entertainerUserId: input.ownerUserId,
           now,
         });
 

@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { ConnectionRequestButton } from "@/src/components/connection-request-button";
+import { SendOfferButton } from "@/src/components/send-offer-button";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
 import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
@@ -201,7 +201,8 @@ export default async function EntertainerDetailPage({
   });
 
   const headerAction = isVenueBooker ? (
-    <ConnectionRequestButton
+    <SendOfferButton
+      direction="venue_to_talent"
       locale={appLocale}
       entertainerProfileId={profile.id}
       venues={operableVenues.map((venue) => {

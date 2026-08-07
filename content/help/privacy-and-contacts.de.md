@@ -10,11 +10,11 @@ navGroup: getting-started
 
 Bevorzugte Kontakte bleiben **privat**, bis es gegenseitiges Interesse gibt:
 
-- Eine Venue markiert eine Profil-Anfrage als **Interessiert**, oder
+- Jemand **nimmt an** oder **bietet gegen** auf ein Profil-Angebot, oder
 - Eine Bewerbung kommt auf die **Shortlist**, oder
 - Eine Direktanfrage wird **akzeptiert**
 
-Bis dahin zeigt die Discovery Profile ohne E-Mail oder Telefon.
+Bis dahin zeigt die Discovery Profile ohne E-Mail oder Telefon. Ein offenes Angebot kann Engagement-Dokumente der sendenden Seite zeigen, ohne Kontakte freizuschalten.
 
 ## Nach der Freischaltung
 

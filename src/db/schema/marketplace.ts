@@ -543,6 +543,13 @@ export const bookingTerms = pgTable(
     cancellationTerms: text("cancellation_terms").notNull(),
     productionObligations: text("production_obligations").notNull(),
     depositTerms: text("deposit_terms"),
+    /** Explains what changed vs prior offer; required for counters (version > 1). */
+    changeNote: text("change_note"),
+    /** Set when a later offer supersedes this row (counter sent). */
+    supersededAt: timestamp("superseded_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     snapshot: jsonb("snapshot")
       .$type<Record<string, unknown>>()
       .notNull()

@@ -2,19 +2,22 @@ import { and, asc, eq, isNotNull } from "drizzle-orm";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import {
-  AcceptTermsButton,
   CancelBookingForm,
-  DepositStatusForm,
   GenerateAgreementButton,
   GenerateInvoiceButton,
   SignAgreementButton,
 } from "@/src/components/booking-actions";
 import { BookingDocumentUpload } from "@/src/components/booking-document-upload";
 import { BookingLifecycleTrack } from "@/src/components/booking-lifecycle-track";
-import { LeadProposalForm } from "@/src/components/lead-proposal-form";
-import { formatEur, toDatetimeLocal } from "@/src/lib/format";
+import { BookingOffersPanel } from "@/src/components/booking-offers-panel";
+import { DeleteBookingDocumentButton } from "@/src/components/delete-booking-document-button";
+import {
+  RespondDirectRequestButtons,
+  VenueRespondToChangesButtons,
+  WithdrawDirectRequestButton,
+} from "@/src/components/direct-request-actions";
+import { toDatetimeLocal } from "@/src/lib/format";
 import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
-import { BookingTermsForm } from "@/src/components/booking-terms-form";
 import { ProfileEnquiryRespondButtons } from "@/src/components/profile-enquiry-actions";
 import { Avatar } from "@/src/components/ui/monogram";
 import { StatusLabel } from "@/src/components/ui/status-label";
@@ -38,7 +41,8 @@ import {
 } from "@/src/db/schema/marketplace";
 import {
   canCancelBooking,
-  isTermsEligibleState,
+  isOpenTermsOffer,
+  resolveTermsOfferAction,
   type BookingParty,
   type BookingState,
 } from "@/src/domain/booking";
@@ -91,7 +95,7 @@ export default async function BookingDetailPage({ params }: Props) {
     notFound();
   }
 
-  const { booking, terms, depositEvents, agreement, invoice } = detail;
+  const { booking, terms, agreement, invoice } = detail;
   const lead = await getLeadByBookingId({
     bookingId: id,
     actor: access.actor,
@@ -110,21 +114,33 @@ export default async function BookingDetailPage({ params }: Props) {
       ? "entertainer"
       : "venue";
 
-  const openTerms = terms.find((row) => !row.acceptedAt) ?? null;
+  const openTerms =
+    terms.find((row) => isOpenTermsOffer(row)) ?? null;
   const agreedTerms = terms.find((row) => row.acceptedAt) ?? null;
-  const canPropose =
-    isTermsEligibleState(booking.state as BookingState) &&
-    (party === "venue" || party === "entertainer");
+  const offerHistory = terms.filter(
+    (row) => row.acceptedAt || row.supersededAt,
+  );
+  const offerActionResolved =
+    party === "venue" || party === "entertainer"
+      ? resolveTermsOfferAction({
+          bookingState: booking.state as BookingState,
+          actorUserId: access.actor.userId,
+          openOffer: openTerms
+            ? {
+                id: openTerms.id,
+                proposedByUserId: openTerms.proposedByUserId,
+              }
+            : null,
+          allowPendingOfferResponse:
+            booking.originType === "profile_enquiry" &&
+            (booking.state === "applied" || booking.state === "requested"),
+        })
+      : { kind: "none" as const };
   const canAccept =
-    openTerms &&
-    openTerms.proposedByUserId !== access.actor.userId &&
-    (party === "venue" || party === "entertainer") &&
-    isTermsEligibleState(booking.state as BookingState);
+    offerActionResolved.kind === "respond" &&
+    Boolean(openTerms) &&
+    (party === "venue" || party === "entertainer");
   const showCancel = canCancelBooking(booking.state as BookingState, party);
-  const showDeposit =
-    can(access.actor, "booking.record_deposit", {
-      venueId: booking.venueId,
-    }) || isStaff;
   const canGenerate =
     canGenerateAgreement(booking.state) &&
     (party === "venue" || party === "entertainer" || party === "staff");
@@ -221,12 +237,17 @@ export default async function BookingDetailPage({ params }: Props) {
     feeEur: 500,
     performanceFormat: "chamber",
   };
+  let directRequest: {
+    id: string;
+    state: string;
+  } | null = null;
 
   if (booking.originType === "direct_request") {
     const request = await db.query.directRequests.findFirst({
       where: eq(directRequests.id, booking.originId),
     });
     if (request) {
+      directRequest = { id: request.id, state: request.state };
       defaults = {
         startsAtLocal: toDatetimeLocal(request.startsAt),
         endsAtLocal: toDatetimeLocal(request.endsAt),
@@ -302,12 +323,6 @@ export default async function BookingDetailPage({ params }: Props) {
         })
       : null;
 
-  const canEditProposal =
-    Boolean(enquiry) &&
-    (enquiry!.state === "interested" || enquiry!.state === "pending") &&
-    lead != null &&
-    (lead.leadStatus === "open" || lead.leadStatus === "pending");
-
   const enquiryInitiatedByAct =
     Boolean(enquiry) &&
     enquiry!.submittedByUserId === booking.entertainerUserId;
@@ -318,6 +333,8 @@ export default async function BookingDetailPage({ params }: Props) {
           venueId: booking.venueId,
         })
       : isEntertainer && access.actor.entertainerVerified);
+  const declineEnquiryId =
+    canRespondToEnquiry && enquiry && openTerms ? enquiry.id : null;
 
   const contactsUnlocked = lead ? leadContactsUnlocked(lead.leadStatus) : false;
 
@@ -449,7 +466,7 @@ export default async function BookingDetailPage({ params }: Props) {
         </p>
       </div>
 
-      {canRespondToEnquiry && enquiry ? (
+      {canRespondToEnquiry && enquiry && !openTerms ? (
         <div className="panel grid gap-3 p-6">
           <h2 className="text-lg font-medium">{leadsT("respondTitle")}</h2>
           {enquiry.note ? (
@@ -463,32 +480,33 @@ export default async function BookingDetailPage({ params }: Props) {
         </div>
       ) : null}
 
-      {canEditProposal && enquiry ? (
-        <div className="panel p-6">
-          <LeadProposalForm
+      {directRequest &&
+      isEntertainer &&
+      (directRequest.state === "requested" ||
+        directRequest.state === "changes_proposed") ? (
+        <div className="panel grid gap-3 p-6">
+          <h2 className="text-lg font-medium">{t("pendingRequestTitle")}</h2>
+          <p className="text-sm text-[var(--text-muted)]">
+            {t("pendingRequestBody")}
+          </p>
+          <RespondDirectRequestButtons
             locale={locale as "en" | "de"}
-            enquiryId={enquiry.id}
-            initial={{
-              note: enquiry.note ?? "",
-              proposedFormat: enquiry.proposedFormat ?? "",
-              proposedFeeEur:
-                enquiry.proposedFeeCents != null
-                  ? String(enquiry.proposedFeeCents / 100)
-                  : "",
-              proposedStartsAt: enquiry.proposedStartsAt
-                ? toDatetimeLocal(enquiry.proposedStartsAt)
-                : "",
-              proposedEndsAt: enquiry.proposedEndsAt
-                ? toDatetimeLocal(enquiry.proposedEndsAt)
-                : "",
-            }}
+            requestId={directRequest.id}
+            state={directRequest.state}
           />
-          {enquiry.proposedFeeCents != null ? (
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
-              {leadsT("proposedFee")}:{" "}
-              {formatEur(enquiry.proposedFeeCents, locale)}
-            </p>
-          ) : null}
+        </div>
+      ) : null}
+
+      {directRequest &&
+      isVenue &&
+      directRequest.state === "changes_proposed" ? (
+        <div className="panel grid gap-3 p-6">
+          <h2 className="text-lg font-medium">{t("pendingRequestTitle")}</h2>
+          <VenueRespondToChangesButtons
+            locale={locale as "en" | "de"}
+            requestId={directRequest.id}
+            state={directRequest.state}
+          />
         </div>
       ) : null}
 
@@ -496,74 +514,23 @@ export default async function BookingDetailPage({ params }: Props) {
         <p className="text-sm text-[var(--text-muted)]">{leadsT("openHint")}</p>
       ) : null}
 
-      {/* Commercial terms */}
-      <div className="panel grid gap-4 p-6">
-        <h2 className="text-sm font-semibold tracking-[0.12em] uppercase">
-          {t("sectionTerms")}
-        </h2>
-        {agreedTerms ? (
-          <div className="grid gap-2 text-sm">
-            <h3 className="text-lg font-medium">{t("agreedTitle")}</h3>
-            <p>
-              {dateFmt.format(agreedTerms.startsAt)} –{" "}
-              {dateFmt.format(agreedTerms.endsAt)}
-            </p>
-            <p>
-              {t("fee")}: {formatEur(agreedTerms.feeCents, locale)}
-            </p>
-            <p>
-              {t("performanceFormat")}: {agreedTerms.performanceFormat}
-            </p>
-            <p>
-              {t("cancellationTerms")}: {agreedTerms.cancellationTerms}
-            </p>
-            <p>
-              {t("productionObligations")}: {agreedTerms.productionObligations}
-            </p>
-            {agreedTerms.depositTerms ? (
-              <p>
-                {t("depositTerms")}: {agreedTerms.depositTerms}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-        {openTerms ? (
-          <div className="grid gap-3 text-sm">
-            <h3 className="text-lg font-medium">{t("proposedTitle")}</h3>
-            <p>
-              {t("termsVersion")}: {openTerms.version}
-            </p>
-            <p>
-              {dateFmt.format(openTerms.startsAt)} –{" "}
-              {dateFmt.format(openTerms.endsAt)}
-            </p>
-            <p>
-              {t("fee")}: {formatEur(openTerms.feeCents, locale)}
-            </p>
-            <p>
-              {t("performanceFormat")}: {openTerms.performanceFormat}
-            </p>
-            {canAccept ? (
-              <AcceptTermsButton
-                locale={locale as "en" | "de"}
-                bookingId={booking.id}
-                termsId={openTerms.id}
-                expectedVersion={booking.version}
-              />
-            ) : (
-              <p className="text-[var(--muted)]">{t("waitingAccept")}</p>
-            )}
-          </div>
-        ) : null}
-        {canPropose ? (
-          <BookingTermsForm
-            locale={locale as "en" | "de"}
-            bookingId={booking.id}
-            expectedVersion={booking.version}
-            defaults={defaults}
-          />
-        ) : null}
-      </div>
+      {(party === "venue" || party === "entertainer") &&
+      (offerActionResolved.kind !== "none" ||
+        openTerms ||
+        offerHistory.length > 0) ? (
+        <BookingOffersPanel
+          locale={locale as "en" | "de"}
+          bookingId={booking.id}
+          expectedVersion={booking.version}
+          entertainerUserId={booking.entertainerUserId}
+          offerAction={offerActionResolved.kind}
+          openOffer={openTerms}
+          history={offerHistory}
+          defaults={defaults}
+          canAccept={Boolean(canAccept)}
+          declineEnquiryId={declineEnquiryId}
+        />
+      ) : null}
 
       {/* Documents package */}
       <div className="panel grid gap-5 p-6">
@@ -624,21 +591,36 @@ export default async function BookingDetailPage({ params }: Props) {
 
         <div className="grid gap-2">
           <h3 className="font-medium">{t("documentsBooking")}</h3>
+          <p className="text-sm text-[var(--text-muted)]">
+            {t("documentsBookingHint")}
+          </p>
           {bookingAddenda.length === 0 ? (
             <p className="text-sm text-[var(--text-muted)]">—</p>
           ) : (
-            <ul className="grid gap-1 text-sm">
+            <ul className="grid gap-2 text-sm">
               {bookingAddenda.map((doc) => (
-                <li key={doc.id}>
-                  <span className="text-[var(--text-muted)]">
-                    {t("addendumLabel", { n: doc.addendumNumber })} ·{" "}
+                <li
+                  key={doc.id}
+                  className="flex flex-wrap items-center gap-3"
+                >
+                  <span>
+                    <span className="text-[var(--text-muted)]">
+                      {t("addendumLabel", { n: doc.addendumNumber })} ·{" "}
+                    </span>
+                    <a
+                      href={`/api/riders/${doc.id}`}
+                      className="font-medium text-[var(--primary)]"
+                    >
+                      {docTitle(doc)}
+                    </a>
                   </span>
-                  <a
-                    href={`/api/riders/${doc.id}`}
-                    className="font-medium text-[var(--primary)]"
-                  >
-                    {docTitle(doc)}
-                  </a>
+                  {doc.ownerUserId === access.actor.userId ? (
+                    <DeleteBookingDocumentButton
+                      locale={locale as "en" | "de"}
+                      bookingId={booking.id}
+                      documentId={doc.id}
+                    />
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -835,46 +817,40 @@ export default async function BookingDetailPage({ params }: Props) {
         ) : null}
       </div>
 
-      {/* Deposit */}
-      <div className="panel grid gap-4 p-6">
-        <h2 className="text-sm font-semibold tracking-[0.12em] uppercase">
-          {t("sectionDeposit")}
-        </h2>
-        <p className="border-[var(--warning-soft)] bg-[var(--warning-soft)]/40 p-4 text-sm">
-          {t("depositNotice")}
-        </p>
-        {showDeposit ? (
-          <>
-            <DepositStatusForm
-              locale={locale as "en" | "de"}
-              bookingId={booking.id}
-              currentStatus={booking.depositStatus}
-            />
-            {depositEvents.length > 0 ? (
-              <ul className="grid gap-1 text-sm text-[var(--muted)]">
-                {depositEvents.map((event) => (
-                  <li key={event.id}>
-                    {event.status}
-                    {event.note ? ` — ${event.note}` : ""}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </>
-        ) : (
-          <p className="text-sm">
-            {t("depositCurrent")}: {booking.depositStatus}
-          </p>
-        )}
-      </div>
-
       {showCancel ? (
-        <div className="panel p-6">
-          <CancelBookingForm
-            locale={locale as "en" | "de"}
-            bookingId={booking.id}
-            expectedVersion={booking.version}
-          />
+        <CancelBookingForm
+          locale={locale as "en" | "de"}
+          bookingId={booking.id}
+          expectedVersion={booking.version}
+        />
+      ) : directRequest &&
+        isVenue &&
+        (directRequest.state === "requested" ||
+          directRequest.state === "changes_proposed") ? (
+        <div className="panel grid gap-4 p-6">
+          <div className="border-l-4 border-[var(--danger)] pl-4">
+            <h2 className="page-title text-xl text-[var(--danger)]">
+              {t("dangerZoneTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              {t("withdrawRequestBody")}
+            </p>
+          </div>
+          <div className="rounded-[var(--radius-md)] border border-[var(--danger)] bg-[var(--warning-soft)] p-4">
+            <h3 className="text-sm font-semibold text-[var(--ink)]">
+              {t("withdrawRequestTitle")}
+            </h3>
+            <p className="mt-2 text-sm text-[var(--ink)]">
+              {t("withdrawRequestHint")}
+            </p>
+            <div className="mt-4">
+              <WithdrawDirectRequestButton
+                locale={locale as "en" | "de"}
+                requestId={directRequest.id}
+                state={directRequest.state}
+              />
+            </div>
+          </div>
         </div>
       ) : null}
 

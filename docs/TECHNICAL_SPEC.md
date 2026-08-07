@@ -68,10 +68,10 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 - `opportunities`: venue/space, **kind** `dated` | `standing`, window (required for dated; null for standing), optional standing schedule text, budget, constraints, deadline, draft/open/closed/cancelled state (member UI: **open call**)
 - `applications`: opportunity + entertainer, message/quote, lifecycle; unique pair
 - `direct_requests`: venue + entertainer, proposed terms, lifecycle
-- `profile_enquiries`: act↔venue undated (or optionally dated) profile / connection request; pending/interested/passed/withdrawn; one active pending/interested pair per act↔venue (partial unique index); 7-day re-request cooldown after any request; 30-day pass cooldown before re-submit
+- `profile_enquiries`: act↔venue profile-origin connection; pending/interested/passed/withdrawn; first step creates pending booking + `booking_terms` offer v1; one active pending/interested pair per act↔venue (partial unique index); 7-day re-send cooldown after any send; 30-day pass/decline cooldown before re-submit
 - `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI is the **Bookings** inbox (Pending/Open/Confirmed/Lost/Done)
-- `booking_terms`: immutable versioned snapshots with currency amounts in integer cents (required once formal terms exist; open undated bookings may negotiate dates/fees on the origin row first)
-- `contact_unlocks`: booking/application/request/profile_enquiry, parties, reason, timestamp; unlock on mutual opt-in (shortlist / accept / enquiry interested). Undated opens skip calendar holds until a performance window exists; adding dates later places requested holds.
+- `booking_terms`: immutable versioned offer snapshots (cents); at most one open offer (`accepted_at` and `superseded_at` both null); counters supersede prior open rows; optional `change_note`
+- `contact_unlocks`: booking/application/request/profile_enquiry, parties, reason, timestamp; unlock on mutual opt-in (shortlist / direct-request accept / profile-offer Accept or Counter). Standing open-call applies skip calendar holds until a performance window exists; profile offers include dates from v1.
 - `agreement_templates`: locale, version, legal review status
 - `agreements`: booking terms version, German/English rendered artifact references, provider/status, **addenda snapshot** (ordered document IDs/titles frozen at generate)
 - `signatures`: agreement, signer user/party, provider reference, status/timestamps
@@ -115,7 +115,7 @@ Representative pages:
 - Public: `/[locale]`, `/[locale]/apply`, `/[locale]/privacy`, `/[locale]/terms`
 - Auth: `/[locale]/sign-in`, `/api/session/[...nextauth]` (Auth.js `basePath`; legacy `/api/auth/*` redirects to sign-in)
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
-- Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (**negotiation / contract builder**: overview, autosaved commercial terms, documents package, agreement, deposit), `/calendar`, `/profile` (incl. open-call manage), `/account` (locale, deletion, **legal/payment identity**). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
+- Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (**negotiation / contract builder**: overview, versioned offer/counter timeline, documents package, agreement; cancel danger zone), `/calendar`, `/profile` (incl. open-call manage), `/account` (locale, deletion, **legal/payment identity**). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
 - Admin: `/[locale]/admin/reviews`, `/accounts/[id]`, `/operations`
 - Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, `/api/places/autocomplete`, `/api/places/details`, authorized download route
 
@@ -123,7 +123,7 @@ Discovery authorization is role-scoped: `discover.entertainers` for venue operat
 
 Use Server Components for initial reads. Use Server Actions for same-origin form mutations where progressive enhancement helps; use Route Handlers for Auth.js, webhooks, uploads/downloads, and external APIs. Every mutation validates Zod input, authorizes, uses an idempotency/concurrency strategy, writes audit events, and returns typed expected errors. Revalidate affected paths/tags after commit.
 
-Key actions include: submit onboarding/profile; Google Places autocomplete/details prefill for buyer venues; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); submit/respond profile enquiry (Interested/Pass); autosave negotiation commercial fields; shortlist/reject; send/accept/decline request; propose/accept terms; upload booking-scoped documents; generate agreement package (with addenda snapshot); process signature event; generate optional invoice artifact after confirm; cancel booking; set availability/hold; expire holds; record deposit status; update account legal identity; staff suspend/reactivate.
+Key actions include: submit onboarding/profile; Google Places autocomplete/details prefill for buyer venues; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); send profile-origin offer (booking + terms v1); Accept/Counter/Decline on pending offers (Counter/Accept unlock contacts); shortlist/reject applications; send/accept/decline request; send/counter/accept booking terms offers; upload/delete booking-scoped documents; generate agreement package (with addenda snapshot); process signature event; generate optional invoice artifact after confirm; cancel booking; set availability/hold; expire holds; record deposit status (outside negotiation UI); update account legal identity; staff suspend/reactivate.
 
 ## 7. Booking and calendar concurrency
 
@@ -183,7 +183,7 @@ Testing layers:
 - Schema/migration: clean apply, upgrade path, constraints, seed idempotence
 - Integration: Auth.js adapter/session, server actions, contact projections, concurrent confirmation, webhook idempotency
 - Component/accessibility: critical forms and states in both locales
-- E2E: apply → publish → discover → profile enquiry / application / direct request → Interest/shortlist/accept (contact unlock) → terms → two signatures → calendar confirmation; undated lead skips holds until dates exist; suspension denial
+- E2E: apply → publish → discover → profile offer / application / direct request → Accept|Counter/shortlist/accept (contact unlock) → terms → two signatures → calendar confirmation; standing open-call apply skips holds until dates exist; suspension denial
 - Production build and preview smoke test before release
 
 ## 13. Deployment and provisioning sequence

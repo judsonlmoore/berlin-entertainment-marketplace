@@ -2,7 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
 import { VenueOpenCallsPanel } from "@/src/components/venue-open-calls-panel";
-import { VenueSubmitProfileButton } from "@/src/components/venue-submit-profile-button";
+import { SendOfferButton } from "@/src/components/send-offer-button";
 import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
 import { getDiscoverableVenueDetail } from "@/src/db/queries/discovery";
 import {
@@ -234,12 +234,13 @@ export default async function VenueDiscoveryDetailPage({
       (enquiryCooldownDaysRemaining ?? 0) > 0);
 
   const headerAction = showSubmitCta ? (
-    <VenueSubmitProfileButton
+    <SendOfferButton
+      direction="talent_to_venue"
       locale={appLocale}
       venueId={id}
       canSubmit={canSubmit}
       publishRequired={publishRequired}
-      activeEnquiryBookingId={activeEnquiryBookingId}
+      activeBookingId={activeEnquiryBookingId}
       cooldownDaysRemaining={enquiryCooldownDaysRemaining}
     />
   ) : null;

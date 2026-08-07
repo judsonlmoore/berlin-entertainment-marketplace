@@ -9,7 +9,7 @@ import {
   bumpBookingVersion,
   loadBookingAccess,
 } from "@/src/actions/_booking-access";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
@@ -28,13 +28,18 @@ import {
   canActorTransitionBooking,
   canCancelBooking,
   canRecordDepositStatus,
+  isPendingOfferState,
   isTermsEligibleState,
   nextTermsVersion,
+  openStateAfterPendingCounter,
+  requireChangeNoteForVersion,
+  resolveTermsOfferAction,
   type BookingState,
   type DepositStatus,
 } from "@/src/domain/booking";
 import { AppError } from "@/src/domain/errors";
 import { can } from "@/src/domain/permissions";
+import { establishProfileEnquiryConnection } from "@/src/db/queries/profile-enquiries";
 
 const proposeSchema = z.object({
   bookingId: z.string().uuid(),
@@ -46,6 +51,7 @@ const proposeSchema = z.object({
   cancellationTerms: z.string().trim().min(1).max(4000),
   productionObligations: z.string().trim().min(1).max(4000),
   depositTerms: z.string().trim().max(4000).optional(),
+  changeNote: z.string().trim().max(4000).optional(),
   locale: z.enum(["en", "de"]).default("en"),
 });
 
@@ -53,7 +59,7 @@ export async function proposeBookingTerms(
   input: z.infer<typeof proposeSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     const parsed = proposeSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid terms proposal");
@@ -62,14 +68,21 @@ export async function proposeBookingTerms(
       throw new AppError("forbidden", "Cannot propose terms");
     }
 
-    const { booking, party } = await loadBookingAccess(
+    const { booking, party, profile } = await loadBookingAccess(
       actor,
       parsed.data.bookingId,
     );
     if (party !== "venue" && party !== "entertainer") {
       throw new AppError("forbidden", "Only booking parties can propose terms");
     }
-    if (!isTermsEligibleState(booking.state as BookingState)) {
+
+    const pendingProfileOffer =
+      booking.originType === "profile_enquiry" &&
+      isPendingOfferState(booking.state as BookingState);
+    if (
+      !isTermsEligibleState(booking.state as BookingState) &&
+      !pendingProfileOffer
+    ) {
       throw new AppError(
         "invalid_transition",
         `Cannot propose terms while booking is ${booking.state}`,
@@ -85,7 +98,18 @@ export async function proposeBookingTerms(
     const db = getDb();
     let termsId: string | undefined;
     await db.transaction(async (tx) => {
-      await bumpBookingVersion(tx, booking, parsed.data.expectedVersion, {});
+      const [openOffer] = await tx
+        .select()
+        .from(bookingTerms)
+        .where(
+          and(
+            eq(bookingTerms.bookingId, booking.id),
+            isNull(bookingTerms.acceptedAt),
+            isNull(bookingTerms.supersededAt),
+          ),
+        )
+        .orderBy(desc(bookingTerms.version))
+        .limit(1);
 
       const [latest] = await tx
         .select({ version: bookingTerms.version })
@@ -94,7 +118,72 @@ export async function proposeBookingTerms(
         .orderBy(desc(bookingTerms.version))
         .limit(1);
 
+      const offerAction = resolveTermsOfferAction({
+        bookingState: booking.state as BookingState,
+        actorUserId: actor.userId,
+        openOffer: openOffer
+          ? { id: openOffer.id, proposedByUserId: openOffer.proposedByUserId }
+          : null,
+        allowPendingOfferResponse: pendingProfileOffer,
+      });
+      if (offerAction.kind === "wait") {
+        throw new AppError(
+          "conflict",
+          "Wait for the other party to accept or counter your open offer",
+        );
+      }
+      if (offerAction.kind === "none") {
+        throw new AppError("invalid_transition", "Cannot send an offer now");
+      }
+      // Pending profile offers: only Counter (respond), never compose the first offer here.
+      if (pendingProfileOffer && offerAction.kind !== "respond") {
+        throw new AppError("invalid_transition", "Cannot send an offer now");
+      }
+
       const version = nextTermsVersion(latest?.version ?? null);
+      const changeNote = parsed.data.changeNote?.trim() || null;
+      if (!requireChangeNoteForVersion(version, changeNote)) {
+        throw new AppError(
+          "validation",
+          "A change note is required when sending a counter offer",
+        );
+      }
+
+      let bumpPatch: Partial<{ state: BookingState }> = {};
+      if (pendingProfileOffer) {
+        await establishProfileEnquiryConnection(tx, {
+          booking,
+          entertainerUserId: profile.userId,
+          actorUserId: actor.userId,
+          startsAt,
+          endsAt,
+        });
+        const openState = openStateAfterPendingCounter(
+          booking.state as BookingState,
+        );
+        if (!openState) {
+          throw new AppError(
+            "invalid_transition",
+            "Cannot open booking from this state",
+          );
+        }
+        bumpPatch = { state: openState };
+      }
+
+      await bumpBookingVersion(
+        tx,
+        booking,
+        parsed.data.expectedVersion,
+        bumpPatch,
+      );
+
+      if (openOffer) {
+        await tx
+          .update(bookingTerms)
+          .set({ supersededAt: new Date() })
+          .where(eq(bookingTerms.id, openOffer.id));
+      }
+
       const [created] = await tx
         .insert(bookingTerms)
         .values({
@@ -108,6 +197,7 @@ export async function proposeBookingTerms(
           cancellationTerms: parsed.data.cancellationTerms,
           productionObligations: parsed.data.productionObligations,
           depositTerms: parsed.data.depositTerms ?? null,
+          changeNote,
           snapshot: {
             venueId: booking.venueId,
             entertainerProfileId: booking.entertainerProfileId,
@@ -115,6 +205,7 @@ export async function proposeBookingTerms(
             originId: booking.originId,
             proposedByUserId: actor.userId,
             proposedAt: new Date().toISOString(),
+            supersededTermsId: openOffer?.id ?? null,
           },
         })
         .returning();
@@ -128,7 +219,12 @@ export async function proposeBookingTerms(
         action: "booking.terms_proposed",
         subjectType: "booking",
         subjectId: booking.id,
-        metadata: { termsId: created.id, termsVersion: version },
+        metadata: {
+          termsId: created.id,
+          termsVersion: version,
+          changeNote,
+          supersededTermsId: openOffer?.id ?? null,
+        },
       });
     });
 
@@ -153,7 +249,7 @@ export async function acceptBookingTerms(
   input: z.infer<typeof acceptSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     const parsed = acceptSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid terms acceptance");
@@ -162,7 +258,7 @@ export async function acceptBookingTerms(
       throw new AppError("forbidden", "Cannot accept terms");
     }
 
-    const { booking, party } = await loadBookingAccess(
+    const { booking, party, profile } = await loadBookingAccess(
       actor,
       parsed.data.bookingId,
     );
@@ -182,6 +278,10 @@ export async function acceptBookingTerms(
       );
     }
 
+    const pendingProfileOffer =
+      booking.originType === "profile_enquiry" &&
+      isPendingOfferState(booking.state as BookingState);
+
     const db = getDb();
     await db.transaction(async (tx) => {
       const terms = await tx.query.bookingTerms.findFirst({
@@ -196,11 +296,24 @@ export async function acceptBookingTerms(
       if (terms.acceptedAt) {
         throw new AppError("conflict", "Terms already accepted");
       }
+      if (terms.supersededAt) {
+        throw new AppError("conflict", "This offer was superseded");
+      }
       if (terms.proposedByUserId === actor.userId) {
         throw new AppError(
           "validation",
           "The other party must accept the proposed terms",
         );
+      }
+
+      if (pendingProfileOffer) {
+        await establishProfileEnquiryConnection(tx, {
+          booking,
+          entertainerUserId: profile.userId,
+          actorUserId: actor.userId,
+          startsAt: terms.startsAt,
+          endsAt: terms.endsAt,
+        });
       }
 
       await tx
@@ -275,7 +388,7 @@ export async function cancelBooking(
   input: z.infer<typeof cancelSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     const parsed = cancelSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid cancellation");
@@ -345,7 +458,7 @@ export async function recordDepositStatus(
   input: z.infer<typeof depositSchema>,
 ): Promise<ActionResult> {
   try {
-    const { session, actor, auditUserId } = await requireActor();
+    const { actor, auditUserId } = await requireActor();
     const parsed = depositSchema.safeParse(input);
     if (!parsed.success) {
       throw new AppError("validation", "Invalid deposit status");

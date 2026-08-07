@@ -121,7 +121,7 @@ Members save drafts and publish when the checklist passes. Publishing sets `appr
 - Search/filter venues by location, venue type, audience, capacity, and production resources. Open-call badges may surface on venue cards.
 - Member IA is three ops rails plus overview/profile: **Marketplace** (directory), **Bookings** (match pipeline), **Calendar** (time). There is no separate Leads or Opportunities top-level browse.
 - Store contact methods separately from discoverable profile data.
-- Reveal the selected external contact method only after mutual opt-in: direct-request acceptance, application shortlist, or profile-enquiry interest. Until then contacts stay locked.
+- Reveal the selected external contact method only after mutual opt-in: direct-request acceptance, application shortlist, or **Accept / Counter** on a profile-origin offer. Until then contacts stay locked. Sending an offer does **not** unlock contacts; the sender’s engagement documents are visible to the receiver with that open offer (opt-in by sending).
 - Log contact-unlock reason, parties, and timestamp.
 - Do not build in-platform chat. After unlock, the product clearly hands off to email/phone/other chosen external channel while preserving booking pipeline status in Salon.
 
@@ -142,13 +142,13 @@ Publishing makes the call visible on that venue’s marketplace profile (and as 
 
 An approved venue operator sends a request to an approved entertainer for a venue, date/time, proposed fee, format, notes, and optional response deadline. The entertainer declines, accepts, or proposes changes; unanswered requests may expire. Acceptance unlocks the chosen contact method and opens the same booking engine used by shortlisted applications.
 
-### 6.3 Profile enquiries
+### 6.3 Profile offers (connection)
 
-An approved entertainer may submit their act profile to an approved venue from the venue discovery page (optional short note; no date required). An approved venue may likewise send a one-click connection request from an act profile. Either creates a pending booking. The receiving party may mark **Interested** or **Pass**. Interest unlocks preferred contacts both ways and opens the booking without requiring dates, fees, or terms yet. Pass closes it as lost without unlocking contacts. One active pending/open undated profile enquiry is allowed per act↔venue pair. After any contact request for a pair, a new request is blocked for **7 days** (inactive CTA + message). After Pass, further undated enquiries are also blocked for a **30-day** cooldown unless the venue re-opens.
+An approved entertainer may **Send offer** to an approved venue from the venue discovery page. An approved venue may likewise **Send offer** from an act profile. The CTA is a commercial offer (dates, fee, format, cancellation, production, optional deposit terms / note), not a “may I contact you” request. Sending creates a pending booking with `booking_terms` v1 and makes the **sender’s** engagement PDFs visible to the receiver with that open offer. Contacts stay locked until the receiver **Accepts** or **Counters**. **Decline** (Pass) closes the booking as lost without unlocking contacts. Accept locks terms (`terms_agreed`). Counter unlocks contacts, opens the booking, and continues the offer/counter timeline. After unlock, both parties’ engagement documents are visible. One active pending/open profile-origin booking is allowed per act↔venue pair. After any send for a pair, a new offer is blocked for **7 days** (inactive CTA + message). After Decline, further profile offers are also blocked for a **30-day** cooldown unless re-opened.
 
 ### 6.4 One booking engine
 
-Every booking records its origin (`application`, `direct_request`, or `profile_enquiry`) but uses the same terms, agreement, signature, confirmation, deposit, calendar, audit, and cancellation behavior once enough structure exists. Performance dates may be null until agreed (standing open-call applies and profile enquiries); calendar conflict checks and holds run only when a start/end window is known.
+Every booking records its origin (`application`, `direct_request`, or `profile_enquiry`) but uses the same terms, agreement, signature, confirmation, deposit, calendar, audit, and cancellation behavior once enough structure exists. Performance dates may be null until agreed (standing open-call applies); profile-origin offers include a performance window from v1. Calendar conflict checks and holds run only when a start/end window is known.
 
 ### 6.5 Bookings inbox (member-facing)
 
@@ -156,20 +156,20 @@ Members track matches in **Bookings** with pipeline statuses projected from book
 
 | Status | Meaning |
 |--------|---------|
-| Needs you / Pending | One-sided outreach; awaiting opt-in |
-| In progress / Open | Mutual interest; contacts unlocked; negotiate and fill terms |
+| Needs you / Pending | One-sided outreach; awaiting Accept / Counter / Decline (or shortlist for applications) |
+| In progress / Open | Connection established; contacts unlocked; negotiate offers until Accept |
 | Confirmed / Won | Booking confirmed (agreement signed) |
 | Lost | Passed, declined, rejected, withdrawn, expired, or cancelled before confirm |
 | Done / Completed | Confirmed, and the performance window has ended |
 
-Contact unlock fires once on transition into Open (shortlist / accept / enquiry interest). The former separate “Leads” inbox and the old bookings-only list are one surface.
+Contact unlock fires once on mutual opt-in (application shortlist, direct-request accept, or profile-offer Accept/Counter). The former separate “Leads” inbox and the old bookings-only list are one surface.
 
 ## 7. Booking lifecycle
 
 Canonical lifecycle:
 
-1. `requested` or `applied` (booking inbox: Pending)
-2. `shortlisted` (application / profile enquiry interest) or `accepted` (direct request) (Open)
+1. `requested` or `applied` (booking inbox: Pending) — profile-origin includes an open commercial offer
+2. `shortlisted` (application shortlist or profile-offer Counter) or `accepted` (direct request accept or profile-offer Counter) (Open); profile-offer **Accept** may move Pending → `terms_agreed` in one step after unlock
 3. `terms_agreed`
 4. `agreement_generated`
 5. `partially_signed`
@@ -186,10 +186,10 @@ Agreed terms snapshot venue, act, service date/times/time zone (when known), fee
 The booking detail surface is a **shared negotiation / contract builder**:
 
 - Both parties see act and venue imagery and names once the booking is Open.
-- Commercial fields (dates, fee, format, notes, deposit terms draft) **autosave** (Saving/Saved) like profile builders; draft edits do not require a separate “submit proposal” CTA.
-- **Documents package:** marketplace/engagement profile PDFs from both act and venue, plus booking-scoped uploads by either party. Before generate, each file receives a stable **Addendum N** order (act profile → venue profile → booking uploads by upload time, unless parties reorder before generate).
+- **Offers / counters:** Either party may send a versioned commercial offer (dates, fee, format, cancellation, production, deposit terms, optional change note). At most one open offer exists at a time. The counterparty **Accepts** (→ `terms_agreed`), **Counters** (supersedes the open offer and sends the next version), or **Declines** while Pending. The proposer waits until the other party responds; there is no second “agree” from the proposer. Draft fields stay local until **Send offer** / **Send counter** (not autosaved into new versions). Profile-origin connection starts with Send offer (v1 on the pending booking); Accept or Counter establishes the connection (contacts + mutual engagement docs). After Open, negotiation continues on this timeline until Accept → agreement generation.
+- **Documents package:** marketplace/engagement profile PDFs from both act and venue, plus booking-scoped uploads by either party (uploader may delete their own booking upload). While a profile-origin offer is open and Pending, only the **sender’s** engagement PDFs are visible to the receiver. After Accept/Counter unlock, both sides’ engagement docs are visible. Before generate, each file receives a stable **Addendum N** order (act profile → venue profile → booking uploads by upload time). Profile docs are managed on Profile; booking uploads are for night-specific PDFs.
 - **Agreement package** = generated agreement (DE controlling + EN convenience) **plus** the numbered addenda snapshot. Addendum file IDs/titles are frozen on the agreement row so later profile edits do not change the signed package.
-- Section order: Overview → Commercial terms → Documents package → Agreement → Deposit status.
+- Section order: Overview → Offers → Documents package → Agreement. Cancel is a danger-zone control. Deposit **terms** live inside each offer; deposit **status** recording is outside this negotiation surface (post-contract).
 
 ## 8. Agreement, signatures, deposits, and invoices
 
@@ -256,10 +256,10 @@ No consumer event pages, public profile directory, public listings, public revie
 - Venue and entertainer profiles capture required fields and support self-serve publish/unpublish with a built-in checklist.
 - Entertainers cannot browse other entertainers; venues cannot browse other venues (server-enforced).
 - A published entertainer can apply once to an open call (including one-click from the venue profile); a venue can shortlist or reject.
-- A published entertainer can submit a profile enquiry to a venue; a venue can mark Interested or Pass.
+- A published entertainer or venue can Send offer on the opposite profile; the receiver Accepts, Counters, or Declines.
 - A published venue can send a direct request; an entertainer can accept or decline.
 - All origins converge on one enforced booking state machine projected as a lead pipeline.
-- Contact unlock occurs only at mutual opt-in (shortlist / accept / enquiry interest) and is audited.
+- Contact unlock occurs only at mutual opt-in (shortlist / direct-request accept / profile-offer Accept or Counter) and is audited.
 - Undated open leads do not create calendar holds until a performance window exists.
 - Both signatures on the current agreement version confirm the booking and atomically block both calendars.
 - Deposit status can change independently without confirming a booking.

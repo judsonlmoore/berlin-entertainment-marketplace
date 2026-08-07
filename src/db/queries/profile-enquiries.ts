@@ -4,12 +4,16 @@ import { assertNoHardCalendarConflict } from "@/src/db/queries/calendar-ops";
 import { upsertBookingCalendarEntry } from "@/src/db/queries/calendar";
 import {
   auditEvents,
+  bookingTerms,
   bookings,
   entertainerProfiles,
   profileEnquiries,
   venues,
 } from "@/src/db/schema/marketplace";
-import { canTransitionBooking, type BookingState } from "@/src/domain/booking";
+import {
+  canTransitionBooking,
+  type BookingState,
+} from "@/src/domain/booking";
 import type { ActorContext } from "@/src/domain/permissions";
 import { AppError } from "@/src/domain/errors";
 import {
@@ -24,6 +28,17 @@ export {
 };
 
 const ACTIVE_ENQUIRY_STATES = ["pending", "interested"] as const;
+
+export type ProfileOfferTermsInput = {
+  startsAt: Date;
+  endsAt: Date;
+  feeCents: number;
+  performanceFormat: string;
+  cancellationTerms: string;
+  productionObligations: string;
+  depositTerms?: string | null;
+  changeNote?: string | null;
+};
 
 export async function findActiveProfileEnquiry(input: {
   venueId: string;
@@ -178,6 +193,7 @@ export async function listVenueActConnectionStatuses(input: {
 export async function submitProfileEnquiry(input: {
   actor: ActorContext;
   venueId: string;
+  offer: ProfileOfferTermsInput;
   note?: string;
 }): Promise<{ enquiryId: string; bookingId: string }> {
   const db = getDb();
@@ -206,20 +222,22 @@ export async function submitProfileEnquiry(input: {
     actorUserId: input.actor.userId,
     venueId: input.venueId,
     entertainerProfileId: profile.id,
+    offer: input.offer,
     ...(input.note !== undefined ? { note: input.note } : {}),
     bookingState: "applied",
-    auditAction: "profile_enquiry.submitted",
+    auditAction: "profile_enquiry.offer_sent",
   });
 }
 
 /**
- * Venue-initiated undated connection request (mirror of profile enquiry).
- * Act responds Interested / Pass; Interest unlocks contacts.
+ * Venue-initiated profile offer (mirror of talent Send offer).
+ * Receiver Accept / Counter / Decline on the booking.
  */
 export async function sendVenueConnectionRequest(input: {
   actor: ActorContext;
   venueId: string;
   entertainerProfileId: string;
+  offer: ProfileOfferTermsInput;
   note?: string;
 }): Promise<{ enquiryId: string; bookingId: string }> {
   const db = getDb();
@@ -233,7 +251,7 @@ export async function sendVenueConnectionRequest(input: {
   if (venue.publicationState !== "approved") {
     throw new AppError(
       "validation",
-      "Publish your venue profile before requesting a connection",
+      "Publish your venue profile before sending an offer",
     );
   }
 
@@ -254,9 +272,10 @@ export async function sendVenueConnectionRequest(input: {
     actorUserId: input.actor.userId,
     venueId: input.venueId,
     entertainerProfileId: profile.id,
+    offer: input.offer,
     ...(input.note !== undefined ? { note: input.note } : {}),
     bookingState: "requested",
-    auditAction: "profile_enquiry.connection_requested",
+    auditAction: "profile_enquiry.offer_sent",
   });
 }
 
@@ -264,11 +283,19 @@ async function createProfileEnquiry(input: {
   actorUserId: string;
   venueId: string;
   entertainerProfileId: string;
+  offer: ProfileOfferTermsInput;
   note?: string;
   bookingState: "applied" | "requested";
   auditAction: string;
 }): Promise<{ enquiryId: string; bookingId: string }> {
   const db = getDb();
+
+  if (input.offer.endsAt <= input.offer.startsAt) {
+    throw new AppError("validation", "End must be after start");
+  }
+  if (input.offer.feeCents < 0) {
+    throw new AppError("validation", "Fee must be non-negative");
+  }
 
   const existing = await findActiveProfileEnquiry({
     venueId: input.venueId,
@@ -296,7 +323,7 @@ async function createProfileEnquiry(input: {
   if (recent) {
     throw new AppError(
       "conflict",
-      `A connection was already requested. Try again after ${PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS} days.`,
+      `An offer was already sent. Try again after ${PROFILE_ENQUIRY_REQUEST_COOLDOWN_DAYS} days.`,
     );
   }
 
@@ -307,7 +334,7 @@ async function createProfileEnquiry(input: {
   if (passed) {
     throw new AppError(
       "conflict",
-      "A recent pass blocks a new connection. Try again after the cooldown.",
+      "A recent decline blocks a new offer. Try again after the cooldown.",
     );
   }
 
@@ -323,6 +350,10 @@ async function createProfileEnquiry(input: {
         entertainerProfileId: input.entertainerProfileId,
         submittedByUserId: input.actorUserId,
         note,
+        proposedStartsAt: input.offer.startsAt,
+        proposedEndsAt: input.offer.endsAt,
+        proposedFeeCents: input.offer.feeCents,
+        proposedFormat: input.offer.performanceFormat,
         state: "pending",
       })
       .returning({ id: profileEnquiries.id });
@@ -342,6 +373,28 @@ async function createProfileEnquiry(input: {
     if (!booking) throw new AppError("conflict", "Could not create lead");
     bookingId = booking.id;
 
+    await tx.insert(bookingTerms).values({
+      bookingId: booking.id,
+      version: 1,
+      proposedByUserId: input.actorUserId,
+      startsAt: input.offer.startsAt,
+      endsAt: input.offer.endsAt,
+      feeCents: input.offer.feeCents,
+      performanceFormat: input.offer.performanceFormat,
+      cancellationTerms: input.offer.cancellationTerms,
+      productionObligations: input.offer.productionObligations,
+      depositTerms: input.offer.depositTerms ?? null,
+      changeNote: input.offer.changeNote?.trim() || null,
+      snapshot: {
+        venueId: input.venueId,
+        entertainerProfileId: input.entertainerProfileId,
+        originType: "profile_enquiry",
+        originId: enquiry.id,
+        proposedByUserId: input.actorUserId,
+        proposedAt: new Date().toISOString(),
+      },
+    });
+
     await tx.insert(auditEvents).values({
       actorUserId: input.actorUserId,
       action: input.auditAction,
@@ -352,6 +405,78 @@ async function createProfileEnquiry(input: {
   });
 
   return { enquiryId, bookingId };
+}
+
+/**
+ * On Accept or Counter of a pending profile offer: mark enquiry interested and
+ * unlock contacts. Caller owns booking state transitions / version bumps.
+ */
+export async function establishProfileEnquiryConnection(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  tx: any,
+  input: {
+    booking: {
+      id: string;
+      state: string;
+      originType: string;
+      originId: string;
+      venueId: string;
+      entertainerProfileId: string;
+    };
+    entertainerUserId: string;
+    actorUserId: string;
+    startsAt?: Date | null;
+    endsAt?: Date | null;
+  },
+): Promise<{ unlocked: boolean }> {
+  if (input.booking.originType !== "profile_enquiry") {
+    return { unlocked: false };
+  }
+
+  const enquiry = await tx.query.profileEnquiries.findFirst({
+    where: eq(profileEnquiries.id, input.booking.originId),
+  });
+  if (!enquiry) {
+    throw new AppError("not_found", "Enquiry not found");
+  }
+
+  const pending =
+    input.booking.state === "applied" || input.booking.state === "requested";
+  if (!pending || enquiry.state !== "pending") {
+    return { unlocked: false };
+  }
+
+  await tx
+    .update(profileEnquiries)
+    .set({
+      state: "interested",
+      updatedAt: new Date(),
+    })
+    .where(eq(profileEnquiries.id, enquiry.id));
+
+  const { settleMatchAcceptance } =
+    await import("@/src/db/queries/match-settlement");
+  await settleMatchAcceptance(tx, {
+    entertainerProfileId: input.booking.entertainerProfileId,
+    entertainerUserId: input.entertainerUserId,
+    venueId: input.booking.venueId,
+    startsAt: input.startsAt ?? enquiry.proposedStartsAt,
+    endsAt: input.endsAt ?? enquiry.proposedEndsAt,
+    reason: "profile_offer_connection",
+    origin: {
+      bookingId: input.booking.id,
+      profileEnquiryId: enquiry.id,
+    },
+  });
+
+  await tx.insert(auditEvents).values({
+    actorUserId: input.actorUserId,
+    action: "profile_enquiry.connection_established",
+    subjectType: "profile_enquiry",
+    subjectId: enquiry.id,
+    metadata: { bookingId: input.booking.id },
+  });
+  return { unlocked: true };
 }
 
 export async function respondToProfileEnquiry(input: {
@@ -392,16 +517,17 @@ export async function respondToProfileEnquiry(input: {
   });
   if (!booking) throw new AppError("not_found", "Lead not found");
 
-  // Act→venue pending uses applied→shortlisted/rejected;
-  // venue→act connection uses requested→accepted/declined.
-  const nextBookingState: BookingState =
-    input.decision === "interested"
-      ? initiatedByAct
-        ? "shortlisted"
-        : "accepted"
-      : initiatedByAct
-        ? "rejected"
-        : "declined";
+  // Decline only via this path for pending offers (Accept/Counter use booking terms).
+  if (input.decision === "interested") {
+    throw new AppError(
+      "invalid_transition",
+      "Accept or counter the open offer instead of marking interested",
+    );
+  }
+
+  const nextBookingState: BookingState = initiatedByAct
+    ? "rejected"
+    : "declined";
   if (!canTransitionBooking(booking.state as BookingState, nextBookingState)) {
     throw new AppError(
       "invalid_transition",
@@ -409,14 +535,11 @@ export async function respondToProfileEnquiry(input: {
     );
   }
 
-  const { settleMatchAcceptance } =
-    await import("@/src/db/queries/match-settlement");
-
   await db.transaction(async (tx) => {
     await tx
       .update(profileEnquiries)
       .set({
-        state: input.decision === "interested" ? "interested" : "passed",
+        state: "passed",
         updatedAt: new Date(),
       })
       .where(eq(profileEnquiries.id, enquiry.id));
@@ -430,27 +553,21 @@ export async function respondToProfileEnquiry(input: {
       })
       .where(eq(bookings.id, booking.id));
 
-    if (input.decision === "interested") {
-      await settleMatchAcceptance(tx, {
-        entertainerProfileId: enquiry.entertainerProfileId,
-        entertainerUserId: profile.userId,
-        venueId: enquiry.venueId,
-        startsAt: enquiry.proposedStartsAt,
-        endsAt: enquiry.proposedEndsAt,
-        reason: "profile_enquiry_interested",
-        origin: {
-          bookingId: booking.id,
-          profileEnquiryId: enquiry.id,
-        },
-      });
-    }
+    // Supersede any open offer so it cannot be accepted after decline.
+    await tx
+      .update(bookingTerms)
+      .set({ supersededAt: new Date() })
+      .where(
+        and(
+          eq(bookingTerms.bookingId, booking.id),
+          sql`${bookingTerms.acceptedAt} IS NULL`,
+          sql`${bookingTerms.supersededAt} IS NULL`,
+        ),
+      );
 
     await tx.insert(auditEvents).values({
       actorUserId: input.actor.userId,
-      action:
-        input.decision === "interested"
-          ? "profile_enquiry.interested"
-          : "profile_enquiry.passed",
+      action: "profile_enquiry.passed",
       subjectType: "profile_enquiry",
       subjectId: enquiry.id,
       metadata: { bookingId: booking.id },

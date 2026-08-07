@@ -84,7 +84,7 @@ export function CancelBookingForm({
 
   return (
     <form
-      className="grid gap-2"
+      className="panel grid gap-4 p-6"
       onSubmit={(event) => {
         event.preventDefault();
         setError(null);
@@ -104,24 +104,38 @@ export function CancelBookingForm({
         });
       }}
     >
-      <h3 className="text-lg font-medium">{t("cancelTitle")}</h3>
-      <label className="grid gap-1 text-sm">
-        <span>{t("cancelReason")}</span>
-        <textarea name="reason" required rows={2} className="field" />
-      </label>
-      {error ? (
-        <p role="alert" className="text-sm text-red-800">
-          {error}
+      <div className="border-l-4 border-[var(--danger)] pl-4">
+        <h2 className="page-title text-xl text-[var(--danger)]">
+          {t("dangerZoneTitle")}
+        </h2>
+        <p className="mt-2 text-sm text-[var(--text-muted)]">
+          {t("dangerZoneBody")}
         </p>
-      ) : null}
-      <Button
-        type="submit"
-        pending={pending}
-        pendingLabel={ui("working")}
-        variant="secondary"
-      >
-        {t("cancel")}
-      </Button>
+      </div>
+      <div className="rounded-[var(--radius-md)] border border-[var(--danger)] bg-[var(--warning-soft)] p-4">
+        <h3 className="text-sm font-semibold text-[var(--ink)]">
+          {t("cancelTitle")}
+        </h3>
+        <p className="mt-2 text-sm text-[var(--ink)]">{t("cancelBody")}</p>
+        <label className="mt-4 grid gap-1 text-sm">
+          <span>{t("cancelReason")}</span>
+          <textarea name="reason" required rows={2} className="field" />
+        </label>
+        {error ? (
+          <p role="alert" className="mt-2 text-sm text-red-800">
+            {error}
+          </p>
+        ) : null}
+        <Button
+          type="submit"
+          pending={pending}
+          pendingLabel={ui("working")}
+          variant="secondary"
+          className="mt-4 border-[var(--danger)] text-[var(--danger)] hover:bg-[var(--danger)] hover:text-white"
+        >
+          {t("cancel")}
+        </Button>
+      </div>
     </form>
   );
 }

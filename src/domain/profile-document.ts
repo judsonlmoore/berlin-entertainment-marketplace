@@ -93,6 +93,12 @@ export const DOCUMENT_ENGAGEMENT_BOOKING_STATES = [
   "confirmed",
 ] as const;
 
+/** Pending states where an open offer may expose the sender’s engagement docs. */
+export const DOCUMENT_PENDING_OFFER_BOOKING_STATES = [
+  "applied",
+  "requested",
+] as const;
+
 export function normalizeDocumentTitle(raw: string): string {
   return raw.trim().replace(/\s+/g, " ").slice(0, PROFILE_DOCUMENT_TITLE_MAX);
 }

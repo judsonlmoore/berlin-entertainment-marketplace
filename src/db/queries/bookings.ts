@@ -157,6 +157,7 @@ export async function getLatestOpenTerms(bookingId: string) {
       and(
         eq(bookingTerms.bookingId, bookingId),
         isNull(bookingTerms.acceptedAt),
+        isNull(bookingTerms.supersededAt),
       ),
     )
     .orderBy(desc(bookingTerms.version))

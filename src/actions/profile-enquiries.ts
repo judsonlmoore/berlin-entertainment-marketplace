@@ -27,6 +27,35 @@ import { users } from "@/src/db/schema/auth";
 
 const localeSchema = z.enum(["en", "de"]);
 
+const offerTermsSchema = z.object({
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }),
+  feeEur: z.coerce.number().min(0),
+  performanceFormat: z.string().trim().min(1).max(120),
+  cancellationTerms: z.string().trim().min(1).max(4000),
+  productionObligations: z.string().trim().min(1).max(4000),
+  depositTerms: z.string().trim().max(4000).optional(),
+  changeNote: z.string().trim().max(4000).optional(),
+});
+
+function parseOfferTerms(data: z.infer<typeof offerTermsSchema>) {
+  const startsAt = new Date(data.startsAt);
+  const endsAt = new Date(data.endsAt);
+  if (endsAt <= startsAt) {
+    throw new AppError("validation", "End must be after start");
+  }
+  return {
+    startsAt,
+    endsAt,
+    feeCents: Math.round(data.feeEur * 100),
+    performanceFormat: data.performanceFormat,
+    cancellationTerms: data.cancellationTerms,
+    productionObligations: data.productionObligations,
+    depositTerms: data.depositTerms ?? null,
+    changeNote: data.changeNote ?? null,
+  };
+}
+
 async function notifyUser(input: {
   userId: string;
   type:
@@ -61,6 +90,14 @@ async function notifyUser(input: {
 
 export async function submitProfileEnquiryAction(input: {
   venueId: string;
+  startsAt: string;
+  endsAt: string;
+  feeEur: number;
+  performanceFormat: string;
+  cancellationTerms: string;
+  productionObligations: string;
+  depositTerms?: string;
+  changeNote?: string;
   note?: string;
   locale?: "en" | "de";
 }): Promise<ActionResult & { bookingId?: string; enquiryId?: string }> {
@@ -78,17 +115,20 @@ export async function submitProfileEnquiryAction(input: {
         note: z.string().trim().max(2000).optional(),
         locale: localeSchema.optional(),
       })
+      .merge(offerTermsSchema)
       .safeParse(input);
     if (!parsed.success) {
-      throw new AppError("validation", "Invalid enquiry");
+      throw new AppError("validation", "Invalid offer");
     }
     if (!can(actor, "profile_enquiry.send")) {
       throw new AppError("forbidden", "Published act required to submit");
     }
 
+    const offer = parseOfferTerms(parsed.data);
     const result = await submitProfileEnquiry({
       actor,
       venueId: parsed.data.venueId,
+      offer,
       ...(parsed.data.note ? { note: parsed.data.note } : {}),
     });
 
@@ -124,6 +164,7 @@ export async function submitProfileEnquiryAction(input: {
     const locale = parsed.data.locale ?? "en";
     revalidatePath(`/${locale}/marketplace/venues/${parsed.data.venueId}`);
     revalidatePath(`/${locale}/marketplace/bookings`);
+    revalidatePath(`/${locale}/marketplace/bookings/${result.bookingId}`);
     revalidatePath("/", "layout");
     return {
       ok: true,
@@ -138,6 +179,14 @@ export async function submitProfileEnquiryAction(input: {
 export async function sendVenueConnectionRequestAction(input: {
   venueId: string;
   entertainerProfileId: string;
+  startsAt: string;
+  endsAt: string;
+  feeEur: number;
+  performanceFormat: string;
+  cancellationTerms: string;
+  productionObligations: string;
+  depositTerms?: string;
+  changeNote?: string;
   note?: string;
   locale?: "en" | "de";
 }): Promise<ActionResult & { bookingId?: string; enquiryId?: string }> {
@@ -156,18 +205,21 @@ export async function sendVenueConnectionRequestAction(input: {
         note: z.string().trim().max(2000).optional(),
         locale: localeSchema.optional(),
       })
+      .merge(offerTermsSchema)
       .safeParse(input);
     if (!parsed.success) {
-      throw new AppError("validation", "Invalid connection request");
+      throw new AppError("validation", "Invalid offer");
     }
     if (!can(actor, "direct_request.send", { venueId: parsed.data.venueId })) {
       throw new AppError("forbidden", "Published venue required to connect");
     }
 
+    const offer = parseOfferTerms(parsed.data);
     const result = await sendVenueConnectionRequest({
       actor,
       venueId: parsed.data.venueId,
       entertainerProfileId: parsed.data.entertainerProfileId,
+      offer,
       ...(parsed.data.note ? { note: parsed.data.note } : {}),
     });
 
@@ -203,6 +255,7 @@ export async function sendVenueConnectionRequestAction(input: {
       `/${locale}/marketplace/entertainers/${parsed.data.entertainerProfileId}`,
     );
     revalidatePath(`/${locale}/marketplace/bookings`);
+    revalidatePath(`/${locale}/marketplace/bookings/${result.bookingId}`);
     revalidatePath("/", "layout");
     return {
       ok: true,
@@ -249,19 +302,23 @@ export async function respondToProfileEnquiryAction(input: {
       throw new AppError("forbidden", "Cannot respond to this enquiry");
     }
 
+    if (parsed.data.decision !== "passed") {
+      throw new AppError(
+        "invalid_transition",
+        "Accept or counter the open offer instead of marking interested",
+      );
+    }
+
     const result = await respondToProfileEnquiry({
       actor,
       enquiryId: parsed.data.enquiryId,
-      decision: parsed.data.decision,
+      decision: "passed",
     });
 
     if (initiatedByAct) {
       await notifyUser({
         userId: enquiry.entertainerUserId,
-        type:
-          parsed.data.decision === "interested"
-            ? "profile_enquiry_interested"
-            : "profile_enquiry_passed",
+        type: "profile_enquiry_passed",
         subjectId: enquiry.id,
         params: {
           venueName: enquiry.venueName,
@@ -275,10 +332,7 @@ export async function respondToProfileEnquiryAction(input: {
         operators.map((userId) =>
           notifyUser({
             userId,
-            type:
-              parsed.data.decision === "interested"
-                ? "profile_enquiry_interested"
-                : "profile_enquiry_passed",
+            type: "profile_enquiry_passed",
             subjectId: enquiry.id,
             params: {
               direction: "act",
