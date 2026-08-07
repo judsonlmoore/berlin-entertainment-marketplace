@@ -1,5 +1,7 @@
 import { auth } from "@/src/auth";
 import { getBookingDetail } from "@/src/db/queries/bookings";
+import { isBookingArtifactParty } from "@/src/domain/agreement";
+import { hasMarketplaceAccess } from "@/src/domain/approval";
 import { loadDocumentFile } from "@/src/integrations/document-file-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 import { NextResponse } from "next/server";
@@ -18,15 +20,27 @@ export async function GET(_request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
+  const { actor } = resolved;
+  if (
+    !actor.isPlatformStaff &&
+    (actor.accountStatus === null || !hasMarketplaceAccess(actor.accountStatus))
+  ) {
+    return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
+  }
+
   const detail = await getBookingDetail(bookingId);
   if (!detail?.invoice?.blobKey) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  const { actor } = resolved;
-  const isEntertainer = detail.booking.entertainerUserId === actor.userId;
-  const isVenue = actor.venueId === detail.booking.venueId;
-  if (!isEntertainer && !isVenue && !actor.isPlatformStaff) {
+  const isParty = isBookingArtifactParty({
+    isPlatformStaff: actor.isPlatformStaff,
+    actorVenueId: actor.venueId,
+    actorUserId: actor.userId,
+    bookingVenueId: detail.booking.venueId,
+    bookingEntertainerUserId: detail.booking.entertainerUserId,
+  });
+  if (!isParty) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 

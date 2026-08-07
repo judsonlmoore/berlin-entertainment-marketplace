@@ -77,4 +77,43 @@ describe("buildAgreementPackagePdf", () => {
     expect(result.fingerprint).toHaveLength(64);
     expect(result.pageCount).toBeGreaterThanOrEqual(2);
   }, 30_000);
+
+  it("embeds readable addendum PDFs and notes unreadable ones", async () => {
+    const { PDFDocument } = await import("pdf-lib");
+    const { buildAgreementPackagePdf } = await import(
+      "./agreement-package-pdf"
+    );
+
+    const { StandardFonts } = await import("pdf-lib");
+    const addendumDoc = await PDFDocument.create();
+    const font = await addendumDoc.embedFont(StandardFonts.Helvetica);
+    const page = addendumDoc.addPage([400, 400]);
+    page.drawText("Rider page", { x: 40, y: 350, size: 12, font });
+    const goodBytes = await addendumDoc.save();
+
+    const result = await buildAgreementPackagePdf({
+      agreementId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      actName: "Act",
+      venueName: "Venue",
+      termsVersion: 1,
+      germanBody: "DE body.",
+      englishBody: "EN body.",
+      addenda: [
+        {
+          addendumNumber: 1,
+          title: "Technical rider",
+          pdfBytes: goodBytes,
+        },
+        {
+          addendumNumber: 2,
+          title: "Corrupt rider",
+          pdfBytes: new Uint8Array([1, 2, 3, 4]),
+        },
+      ],
+    });
+
+    // cover + body + 2 banners + embedded page + unreadable note
+    expect(result.pageCount).toBeGreaterThanOrEqual(5);
+    expect(result.bytes.byteLength).toBeGreaterThan(2000);
+  }, 30_000);
 });

@@ -17,6 +17,7 @@ import {
   bookingInvoices,
   bookingTerms,
 } from "@/src/db/schema/marketplace";
+import { canGenerateBookingInvoice } from "@/src/domain/agreement";
 import { AppError } from "@/src/domain/errors";
 import {
   isLegalIdentityComplete,
@@ -70,7 +71,7 @@ export async function generateBookingInvoice(
     if (party !== "venue" && party !== "entertainer" && party !== "staff") {
       throw new AppError("forbidden", "Not a party to this booking");
     }
-    if (booking.state !== "confirmed") {
+    if (!canGenerateBookingInvoice(booking.state)) {
       throw new AppError(
         "validation",
         "Invoice available only after booking is confirmed",

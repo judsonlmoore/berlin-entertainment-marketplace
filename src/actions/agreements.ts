@@ -10,7 +10,7 @@ import {
   bumpBookingVersion,
   loadBookingAccess,
 } from "@/src/actions/_booking-access";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
@@ -42,6 +42,8 @@ import {
 } from "@/src/db/schema/marketplace";
 import {
   canGenerateAgreement,
+  canRebuildAgreementPackage,
+  nextBookingStateAfterSignatures,
   renderAgreementDocuments,
   signatureProgress,
 } from "@/src/domain/agreement";
@@ -486,9 +488,6 @@ export async function ensureAgreementPackage(
       throw new AppError("not_found", "Agreement not found");
     }
     const agreement = agreementBundle.agreement;
-    const anySigned = agreementBundle.signatures.some(
-      (row) => row.status === "signed",
-    );
     if (
       agreement.packagePdfBlobKey &&
       agreement.packageFingerprint &&
@@ -496,7 +495,10 @@ export async function ensureAgreementPackage(
     ) {
       return { ok: true, id: agreement.id };
     }
-    if (parsed.data.force && anySigned) {
+    if (
+      parsed.data.force &&
+      !canRebuildAgreementPackage(agreementBundle.signatures)
+    ) {
       throw new AppError(
         "conflict",
         "Cannot rebuild the package after a signature has been recorded",
@@ -612,21 +614,43 @@ export async function ensureAgreementPackage(
       signerEmails,
     });
 
-    await db
-      .update(agreements)
-      .set({
-        germanBody,
-        englishBody,
-        germanTemplateVersion: rendered.germanTemplateVersion,
-        englishTemplateVersion: rendered.englishTemplateVersion,
-        packagePdfBlobKey: stored.blobKey,
-        packageFingerprint: packagePdf.fingerprint,
-        packagePageCount: packagePdf.pageCount,
-        providerEnvelopeId:
-          agreement.providerEnvelopeId ?? envelope.providerEnvelopeId,
-        updatedAt: new Date(),
-      })
-      .where(eq(agreements.id, agreement.id));
+    await db.transaction(async (tx) => {
+      await tx
+        .select({ id: agreements.id })
+        .from(agreements)
+        .where(eq(agreements.id, agreement.id))
+        .for("update");
+
+      const lockedSignatures = await tx
+        .select({ status: signatures.status })
+        .from(signatures)
+        .where(eq(signatures.agreementId, agreement.id));
+      if (
+        parsed.data.force &&
+        !canRebuildAgreementPackage(lockedSignatures)
+      ) {
+        throw new AppError(
+          "conflict",
+          "Cannot rebuild the package after a signature has been recorded",
+        );
+      }
+
+      await tx
+        .update(agreements)
+        .set({
+          germanBody,
+          englishBody,
+          germanTemplateVersion: rendered.germanTemplateVersion,
+          englishTemplateVersion: rendered.englishTemplateVersion,
+          packagePdfBlobKey: stored.blobKey,
+          packageFingerprint: packagePdf.fingerprint,
+          packagePageCount: packagePdf.pageCount,
+          providerEnvelopeId:
+            agreement.providerEnvelopeId ?? envelope.providerEnvelopeId,
+          updatedAt: new Date(),
+        })
+        .where(eq(agreements.id, agreement.id));
+    });
 
     await db.insert(auditEvents).values({
       actorUserId: auditUserId,
@@ -732,14 +756,6 @@ export async function signAgreementSandbox(
       where: eq(users.id, actor.userId),
       columns: { email: true },
     });
-    await provider.recordSignerAcceptance({
-      providerEnvelopeId: agreementBundle.agreement.providerEnvelopeId,
-      signerUserId: actor.userId,
-      signerEmail: signerUser?.email ?? actor.userId,
-      confirmationPhrase: parsed.data.confirmationPhrase,
-      packageFingerprint: agreementBundle.agreement.packageFingerprint,
-      locale: parsed.data.locale,
-    });
 
     const db = getDb();
     const agreed = await db.query.bookingTerms.findFirst({
@@ -750,7 +766,40 @@ export async function signAgreementSandbox(
     }
 
     await db.transaction(async (tx) => {
-      await tx
+      const [lockedAgreement] = await tx
+        .select()
+        .from(agreements)
+        .where(eq(agreements.id, agreementBundle.agreement.id))
+        .for("update");
+      if (!lockedAgreement?.packageFingerprint) {
+        throw new AppError("validation", "Agreement package fingerprint missing");
+      }
+      if (!lockedAgreement.providerEnvelopeId) {
+        throw new AppError("validation", "Agreement envelope missing");
+      }
+
+      const [lockedSignature] = await tx
+        .select()
+        .from(signatures)
+        .where(eq(signatures.id, target.id))
+        .for("update");
+      if (!lockedSignature) {
+        throw new AppError("not_found", "Signature row missing");
+      }
+      if (lockedSignature.status === "signed") {
+        throw new AppError("conflict", "Already signed");
+      }
+
+      await provider.recordSignerAcceptance({
+        providerEnvelopeId: lockedAgreement.providerEnvelopeId,
+        signerUserId: actor.userId,
+        signerEmail: signerUser?.email ?? actor.userId,
+        confirmationPhrase: parsed.data.confirmationPhrase,
+        packageFingerprint: lockedAgreement.packageFingerprint,
+        locale: parsed.data.locale,
+      });
+
+      const signedRows = await tx
         .update(signatures)
         .set({
           status: "signed",
@@ -758,7 +807,13 @@ export async function signAgreementSandbox(
           signedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(signatures.id, target.id));
+        .where(
+          and(eq(signatures.id, target.id), eq(signatures.status, "pending")),
+        )
+        .returning({ id: signatures.id });
+      if (signedRows.length === 0) {
+        throw new AppError("conflict", "Already signed");
+      }
 
       const refreshed = await tx
         .select()
@@ -769,7 +824,11 @@ export async function signAgreementSandbox(
       let working = booking;
       let expectedVersion = parsed.data.expectedVersion;
 
-      if (progress === "partial" && booking.state === "agreement_generated") {
+      const nextState = nextBookingStateAfterSignatures({
+        bookingState: working.state,
+        progress,
+      });
+      if (nextState === "partially_signed") {
         if (
           !canActorTransitionBooking(
             "agreement_generated",
@@ -884,7 +943,7 @@ export async function signAgreementSandbox(
           signatureId: target.id,
           partyRole: target.partyRole,
           progress,
-          packageFingerprint: agreementBundle.agreement.packageFingerprint,
+          packageFingerprint: lockedAgreement.packageFingerprint,
           note: "Sandbox signature — not a production legal e-signature",
         },
       });

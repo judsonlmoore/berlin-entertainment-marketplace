@@ -72,4 +72,34 @@ describe("SandboxESignProvider", () => {
       }),
     ).rejects.toThrow(/fingerprint/);
   });
+
+  it("is idempotent for a second acceptance by the same signer", async () => {
+    const provider = new SandboxESignProvider();
+    const envelope = await provider.createEnvelope({
+      agreementId: "agr-3",
+      germanControlling: true,
+      packageFingerprint: "fp3",
+      packagePdfBlobKey: "k3",
+      packagePageCount: 1,
+      signerEmails: ["a@example.com", "b@example.com"],
+    });
+    const first = await provider.recordSignerAcceptance({
+      providerEnvelopeId: envelope.providerEnvelopeId,
+      signerUserId: "user-a",
+      signerEmail: "a@example.com",
+      confirmationPhrase: "I agree",
+      packageFingerprint: "fp3",
+      locale: "en",
+    });
+    expect(first.status).toBe("partially_signed");
+    const again = await provider.recordSignerAcceptance({
+      providerEnvelopeId: envelope.providerEnvelopeId,
+      signerUserId: "user-a",
+      signerEmail: "a@example.com",
+      confirmationPhrase: "I agree",
+      packageFingerprint: "fp3",
+      locale: "en",
+    });
+    expect(again.status).toBe("partially_signed");
+  });
 });

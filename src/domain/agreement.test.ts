@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   canGenerateAgreement,
+  canGenerateBookingInvoice,
+  canRebuildAgreementPackage,
+  isBookingArtifactParty,
+  nextBookingStateAfterSignatures,
   renderAgreementDocuments,
   signatureProgress,
   bookingDocumentsLocked,
 } from "./agreement";
+import { canActorTransitionBooking, canTransitionBooking } from "./booking";
 
 describe("agreement domain", () => {
   it("locks booking documents once the agreement package exists", () => {
@@ -52,6 +57,35 @@ describe("agreement domain", () => {
   it("only allows generation after terms_agreed", () => {
     expect(canGenerateAgreement("terms_agreed")).toBe(true);
     expect(canGenerateAgreement("shortlisted")).toBe(false);
+    expect(canGenerateAgreement("agreement_generated")).toBe(false);
+    expect(canGenerateAgreement("confirmed")).toBe(false);
+  });
+
+  it("blocks package rebuild after any signature is signed", () => {
+    expect(
+      canRebuildAgreementPackage([
+        { status: "pending" },
+        { status: "pending" },
+      ]),
+    ).toBe(true);
+    expect(
+      canRebuildAgreementPackage([
+        { status: "signed" },
+        { status: "pending" },
+      ]),
+    ).toBe(false);
+    expect(
+      canRebuildAgreementPackage([
+        { status: "signed" },
+        { status: "signed" },
+      ]),
+    ).toBe(false);
+  });
+
+  it("gates invoice generation on confirmed only", () => {
+    expect(canGenerateBookingInvoice("confirmed")).toBe(true);
+    expect(canGenerateBookingInvoice("partially_signed")).toBe(false);
+    expect(canGenerateBookingInvoice("terms_agreed")).toBe(false);
   });
 
   it("tracks signature progress", () => {
@@ -66,5 +100,98 @@ describe("agreement domain", () => {
         signatures: [{ status: "signed" }, { status: "signed" }],
       }),
     ).toBe("complete");
+  });
+
+  it("maps dual-sign progress onto booking transitions (idempotent when done)", () => {
+    expect(
+      nextBookingStateAfterSignatures({
+        bookingState: "agreement_generated",
+        progress: "partial",
+      }),
+    ).toBe("partially_signed");
+    expect(
+      nextBookingStateAfterSignatures({
+        bookingState: "partially_signed",
+        progress: "complete",
+      }),
+    ).toBe("confirmed");
+    expect(
+      nextBookingStateAfterSignatures({
+        bookingState: "agreement_generated",
+        progress: "complete",
+      }),
+    ).toBe("confirmed");
+    expect(
+      nextBookingStateAfterSignatures({
+        bookingState: "partially_signed",
+        progress: "partial",
+      }),
+    ).toBeNull();
+    expect(
+      nextBookingStateAfterSignatures({
+        bookingState: "confirmed",
+        progress: "complete",
+      }),
+    ).toBeNull();
+
+    expect(
+      canTransitionBooking("agreement_generated", "partially_signed"),
+    ).toBe(true);
+    expect(canTransitionBooking("partially_signed", "confirmed")).toBe(true);
+    expect(
+      canActorTransitionBooking(
+        "partially_signed",
+        "confirmed",
+        "system",
+      ),
+    ).toBe(true);
+    expect(
+      canActorTransitionBooking("partially_signed", "confirmed", "venue"),
+    ).toBe(false);
+  });
+
+  it("authorizes artifact download for parties and staff only", () => {
+    expect(
+      isBookingArtifactParty({
+        isPlatformStaff: true,
+        bookingVenueId: "v1",
+        bookingEntertainerProfileId: "p1",
+      }),
+    ).toBe(true);
+    expect(
+      isBookingArtifactParty({
+        isPlatformStaff: false,
+        actorVenueId: "v1",
+        bookingVenueId: "v1",
+        bookingEntertainerProfileId: "p1",
+      }),
+    ).toBe(true);
+    expect(
+      isBookingArtifactParty({
+        isPlatformStaff: false,
+        actorEntertainerProfileId: "p1",
+        bookingVenueId: "v1",
+        bookingEntertainerProfileId: "p1",
+      }),
+    ).toBe(true);
+    expect(
+      isBookingArtifactParty({
+        isPlatformStaff: false,
+        actorUserId: "u1",
+        bookingVenueId: "v1",
+        bookingEntertainerUserId: "u1",
+      }),
+    ).toBe(true);
+    expect(
+      isBookingArtifactParty({
+        isPlatformStaff: false,
+        actorVenueId: "other",
+        actorEntertainerProfileId: "other",
+        actorUserId: "other",
+        bookingVenueId: "v1",
+        bookingEntertainerProfileId: "p1",
+        bookingEntertainerUserId: "u1",
+      }),
+    ).toBe(false);
   });
 });

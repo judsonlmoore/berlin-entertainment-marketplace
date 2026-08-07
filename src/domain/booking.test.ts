@@ -47,7 +47,7 @@ describe("booking state machine", () => {
     expect(canTransitionBooking("partially_signed", "confirmed")).toBe(true);
   });
 
-  it("requires system for signature progression", () => {
+  it("requires system for signature progression through confirm", () => {
     expect(
       canActorTransitionBooking(
         "agreement_generated",
@@ -61,6 +61,15 @@ describe("booking state machine", () => {
         "partially_signed",
         "system",
       ),
+    ).toBe(true);
+    expect(
+      canActorTransitionBooking("partially_signed", "confirmed", "system"),
+    ).toBe(true);
+    expect(
+      canActorTransitionBooking("partially_signed", "confirmed", "entertainer"),
+    ).toBe(false);
+    expect(
+      canActorTransitionBooking("terms_agreed", "agreement_generated", "venue"),
     ).toBe(true);
   });
 

@@ -38,6 +38,16 @@ describe("buildInvoicePdf", () => {
     expect(bytes.byteLength).toBeGreaterThan(1000);
     expect(Buffer.from(bytes.slice(0, 5)).toString("utf8")).toBe("%PDF-");
   }, 30_000);
+
+  it("builds a German locale specimen with illustrative VAT", async () => {
+    const bytes = await buildInvoicePdf({
+      ...sampleInput,
+      locale: "de",
+      vatRatePercent: 19,
+    });
+    expect(bytes.byteLength).toBeGreaterThan(1000);
+    expect(Buffer.from(bytes.slice(0, 5)).toString("utf8")).toBe("%PDF-");
+  }, 30_000);
 });
 
 describe("SandboxInvoiceProvider", () => {

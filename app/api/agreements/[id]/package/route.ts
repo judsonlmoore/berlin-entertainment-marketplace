@@ -8,6 +8,7 @@ import {
   entertainerProfiles,
 } from "@/src/db/schema/marketplace";
 import { hasMarketplaceAccess } from "@/src/domain/approval";
+import { isBookingArtifactParty } from "@/src/domain/agreement";
 import {
   isDocumentStoreConfigured,
   loadDocumentFile,
@@ -85,10 +86,13 @@ export async function GET(_request: Request, { params }: Props) {
       })
     : null;
 
-  const isParty =
-    actor.isPlatformStaff ||
-    (profile && booking.entertainerProfileId === profile.id) ||
-    (actor.venueId && booking.venueId === actor.venueId);
+  const isParty = isBookingArtifactParty({
+    isPlatformStaff: actor.isPlatformStaff,
+    actorVenueId: actor.venueId,
+    actorEntertainerProfileId: profile?.id ?? null,
+    bookingVenueId: booking.venueId,
+    bookingEntertainerProfileId: booking.entertainerProfileId,
+  });
 
   if (!isParty) {
     return NextResponse.json(
