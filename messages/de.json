@@ -161,10 +161,11 @@
   },
   "signIn": {
     "title": "Anmelden",
-    "body": "Melden Sie sich mit einem OAuth-Provider an, um den E-Mail-Besitz zu bestätigen, und wählen Sie dann Entertainer oder Venue.",
-    "github": "Mit GitHub fortfahren",
-    "google": "Mit Google fortfahren",
-    "unconfigured": "Es sind noch keine Auth.js-Provider konfiguriert. Setzen Sie AUTH_GOOGLE_ID/SECRET oder GitHub-OAuth-Credentials."
+    "body": "Melden Sie sich mit einem OAuth-Provider an, um den E-Mail-Besitz zu bestätigen, und wählen Sie dann Talent oder Buyer.",
+    "github": "Mit GitHub anmelden",
+    "google": "Mit Google anmelden",
+    "microsoft": "Mit Microsoft anmelden",
+    "unconfigured": "Es sind noch keine Auth.js-Provider konfiguriert. Setzen Sie Google-, Microsoft-Entra-ID- oder GitHub-OAuth-Credentials."
   },
   "onboarding": {
     "title": "Willkommen bei Salon",

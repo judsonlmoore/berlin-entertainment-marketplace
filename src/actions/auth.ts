@@ -2,9 +2,10 @@
 
 import { signIn, signOut } from "@/src/auth";
 import type { AppLocale } from "@/src/i18n/routing";
+import type { AuthProviderId } from "@/src/validation/env";
 
 export async function signInWithProvider(
-  provider: "github" | "google",
+  provider: AuthProviderId,
   locale: AppLocale = "en",
 ) {
   await signIn(provider, {

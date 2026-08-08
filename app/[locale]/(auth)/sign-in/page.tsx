@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { listConfiguredProviders } from "@/src/auth";
 import { signInWithProvider } from "@/src/actions/auth";
-import { PendingSubmitButton } from "@/src/components/pending-submit-button";
+import { OAuthSignInButton } from "@/src/components/auth/oauth-sign-in-button";
 import type { AppLocale } from "@/src/i18n/routing";
 
 type Props = { params: Promise<{ locale: string }> };
@@ -21,19 +21,6 @@ export default async function SignInPage({ params }: Props) {
       <p className="mt-4 font-medium text-[var(--text-muted)]">{t("body")}</p>
 
       <div className="panel mt-8 grid gap-3 p-6">
-        {providers.includes("github") ? (
-          <form
-            action={async () => {
-              "use server";
-              await signInWithProvider("github", appLocale);
-            }}
-          >
-            <PendingSubmitButton className="w-full">
-              {t("github")}
-            </PendingSubmitButton>
-          </form>
-        ) : null}
-
         {providers.includes("google") ? (
           <form
             action={async () => {
@@ -41,9 +28,32 @@ export default async function SignInPage({ params }: Props) {
               await signInWithProvider("google", appLocale);
             }}
           >
-            <PendingSubmitButton className="w-full">
-              {t("google")}
-            </PendingSubmitButton>
+            <OAuthSignInButton provider="google" label={t("google")} />
+          </form>
+        ) : null}
+
+        {providers.includes("microsoft-entra-id") ? (
+          <form
+            action={async () => {
+              "use server";
+              await signInWithProvider("microsoft-entra-id", appLocale);
+            }}
+          >
+            <OAuthSignInButton
+              provider="microsoft-entra-id"
+              label={t("microsoft")}
+            />
+          </form>
+        ) : null}
+
+        {providers.includes("github") ? (
+          <form
+            action={async () => {
+              "use server";
+              await signInWithProvider("github", appLocale);
+            }}
+          >
+            <OAuthSignInButton provider="github" label={t("github")} />
           </form>
         ) : null}
 

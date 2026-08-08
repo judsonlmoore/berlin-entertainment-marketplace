@@ -220,6 +220,7 @@ Names only; values belong in Vercel/environment secret stores:
 - `AUTH_TRUST_HOST`
 - `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` (if GitHub provider selected)
 - `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` (if Google provider selected)
+- `AUTH_MICROSOFT_ENTRA_ID_ID`, `AUTH_MICROSOFT_ENTRA_ID_SECRET` (if Microsoft Entra ID / Azure AD selected); optional `AUTH_MICROSOFT_ENTRA_ID_ISSUER` for a single-tenant issuer
 - `EMAIL_SERVER`, `EMAIL_FROM` (if email provider selected)
 - `BLOB_READ_WRITE_TOKEN`
 - `ESIGN_PROVIDER`

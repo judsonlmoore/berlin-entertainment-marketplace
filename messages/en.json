@@ -161,10 +161,11 @@
   },
   "signIn": {
     "title": "Sign in",
-    "body": "Sign in with an OAuth provider to prove email ownership, then choose entertainer or venue.",
-    "github": "Continue with GitHub",
-    "google": "Continue with Google",
-    "unconfigured": "No Auth.js providers are configured yet. Set AUTH_GOOGLE_ID/SECRET or GitHub OAuth credentials."
+    "body": "Sign in with an OAuth provider to prove email ownership, then choose talent or buyer.",
+    "github": "Sign in with GitHub",
+    "google": "Sign in with Google",
+    "microsoft": "Sign in with Microsoft",
+    "unconfigured": "No Auth.js providers are configured yet. Set Google, Microsoft Entra ID, or GitHub OAuth credentials."
   },
   "onboarding": {
     "title": "Welcome to Salon",

@@ -2,6 +2,7 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
+import MicrosoftEntraID from "next-auth/providers/microsoft-entra-id";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
@@ -89,6 +90,18 @@ function buildProviders() {
       Google({
         clientId: env.AUTH_GOOGLE_ID,
         clientSecret: env.AUTH_GOOGLE_SECRET,
+      }),
+    );
+  }
+
+  if (env.AUTH_MICROSOFT_ENTRA_ID_ID && env.AUTH_MICROSOFT_ENTRA_ID_SECRET) {
+    providers.push(
+      MicrosoftEntraID({
+        clientId: env.AUTH_MICROSOFT_ENTRA_ID_ID,
+        clientSecret: env.AUTH_MICROSOFT_ENTRA_ID_SECRET,
+        ...(env.AUTH_MICROSOFT_ENTRA_ID_ISSUER
+          ? { issuer: env.AUTH_MICROSOFT_ENTRA_ID_ISSUER }
+          : {}),
       }),
     );
   }
