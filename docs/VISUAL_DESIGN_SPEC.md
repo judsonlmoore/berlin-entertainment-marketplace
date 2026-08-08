@@ -210,7 +210,7 @@ Reference preview: `~/.gstack/projects/judsonlmoore-berlin-entertainment-marketp
 
 **Hierarchy (profile):** eyebrow → display name title → soft publication status tag + autosave status → optional one-line outcome copy → display-name strip → sectioned form (Media → Basics → Details → Links → Legal). No private-contact section; no Submit for review; no live preview rail.
 
-**Hierarchy (onboarding):** chapter progress → eyebrow → title → short body → step fields → sticky Back + adaptive primary (Skip for now / Next) → go-live checklist with Publish or Explore. Soft exit only at go-live. After exit, returning to setup redirects to `/profile`.
+**Hierarchy (onboarding):** title → short body → step fields → fixed bottom bar (full-width progress line + Back + adaptive Skip/Next) → go-live finale at 100% with confetti (**Publish and continue** or **Continue**, both land on Overview). Soft exit only at go-live. After exit, returning to setup redirects to `/profile`.
 
 **Required modules:**
 - Autosave with `Saving…` / `Saved.` (`aria-live="polite"`) on `/profile`; wizard persists on Next (and Skip when creating a minimum draft) and at go-live exit

@@ -15,6 +15,7 @@ import {
   updateVenue as updateVenueProfile,
   upsertEntertainerProfile,
 } from "@/src/actions/profiles";
+import { ConfettiBurst } from "@/src/components/confetti-burst";
 import { LegalIdentityForm } from "@/src/components/legal-identity-form";
 import {
   PortfolioEditor,
@@ -33,8 +34,6 @@ import { checkEntertainerPublishReadiness } from "@/src/domain/entertainer-publi
 import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import type { LegalIdentityFields } from "@/src/domain/legal-identity";
 import {
-  chapterNumber,
-  wizardChapters,
   wizardStepsForRole,
   type WizardStepDef,
 } from "@/src/domain/onboarding-wizard-steps";
@@ -158,7 +157,6 @@ export function OnboardingSetupWizard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const steps = useMemo(() => wizardStepsForRole(role), [role]);
-  const chapters = useMemo(() => wizardChapters(steps), [steps]);
   const [stepIndex, setStepIndex] = useState(() =>
     Math.min(Math.max(initialStepIndex, 0), steps.length - 1),
   );
@@ -580,12 +578,19 @@ export function OnboardingSetupWizard({
         });
 
   const copyId = stepCopyId(role, step);
-  const title =
-    step.id === "basics"
+  const isFinale = step.kind === "publish";
+  const title = isFinale
+    ? readiness.ok
+      ? t("profileCompleteTitle")
+      : t("profileIncompleteTitle")
+    : step.id === "basics"
       ? t(`chapters.${step.chapter}.${chapterRoleKey}.title`)
       : t(`steps.${copyId}.title`);
-  const body =
-    step.id === "basics"
+  const body = isFinale
+    ? readiness.ok
+      ? t("profileCompleteBody")
+      : t("profileIncompleteBody")
+    : step.id === "basics"
       ? t(`chapters.${step.chapter}.${chapterRoleKey}.body`)
       : t(`steps.${copyId}.body`);
 
@@ -594,53 +599,32 @@ export function OnboardingSetupWizard({
   /** Skippable + incomplete → one primary CTA labeled Skip; otherwise Next (saves when valid). */
   const showAsSkip = canSkip && !stepValid;
   const continueDisabled =
-    pending || (!showAsSkip && !step.skippable && !stepValid);
-  const chapterIdx = chapterNumber(step.chapter);
+    pending ||
+    (!isFinale && !showAsSkip && !step.skippable && !stepValid);
+  const progressPercent = Math.round(
+    ((stepIndex + 1) / Math.max(steps.length, 1)) * 100,
+  );
+
+  function onFinaleContinue() {
+    if (readiness.ok) {
+      publishNow();
+    } else {
+      exploreMarketplace();
+    }
+  }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-2xl flex-col gap-6">
-      <div
-        className="grid gap-2"
-        aria-label={t("chapterOf", {
-          current: chapterIdx,
-          total: chapters.length,
-        })}
-      >
-        <ol className="flex gap-2">
-          {chapters.map((chapter) => {
-            const active = chapter === step.chapter;
-            const past =
-              chapters.indexOf(chapter) < chapters.indexOf(step.chapter);
-            return (
-              <li
-                key={chapter}
-                className={`h-1.5 flex-1 rounded-full ${
-                  active || past ? "bg-[var(--primary)]" : "bg-[var(--rule)]"
-                }`}
-              />
-            );
-          })}
-        </ol>
-        <p className="text-xs font-medium text-[var(--text-muted)]">
-          {t("chapterOf", {
-            current: chapterIdx,
-            total: chapters.length,
-          })}{" "}
-          · {role === "entertainer" ? t("entertainerPath") : t("venuePath")}
-        </p>
-      </div>
+    <>
+      <ConfettiBurst active={isFinale} />
+      <div className="mx-auto flex max-w-2xl flex-col gap-6 pb-28">
+        <div>
+          <h1 className="page-title text-[clamp(1.75rem,2.5vw,2.25rem)]">
+            {title}
+          </h1>
+          <p className="mt-2 text-[var(--text-muted)]">{body}</p>
+        </div>
 
-      <div>
-        <p className="eyebrow text-[var(--accent)]">
-          {t("chapterProgress", { chapter: step.chapter })}
-        </p>
-        <h1 className="page-title mt-2 text-[clamp(1.75rem,2.5vw,2.25rem)]">
-          {title}
-        </h1>
-        <p className="mt-2 text-[var(--text-muted)]">{body}</p>
-      </div>
-
-      <div className="panel grid flex-1 content-start gap-4 p-6">
+        <div className="panel grid content-start gap-4 p-6">
         {step.id === "basics" && role === "entertainer" ? (
           <>
             <Field label={t("fields.actName")}>
@@ -1024,60 +1008,32 @@ export function OnboardingSetupWizard({
         ) : null}
 
         {step.id === "go_live" ? (
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {readiness.ok ? (
-              <>
-                <p className="text-sm font-semibold text-[var(--ink)]">
-                  {t("publishReadyTitle")}
-                </p>
-                <p className="text-sm text-[var(--text-muted)]">
-                  {t("publishReadyBody")}
-                </p>
-              </>
+              <p className="text-sm text-[var(--text-muted)]">
+                {t("profileCompletePanel")}
+              </p>
             ) : (
               <>
-                <p className="text-sm font-semibold text-[var(--ink)]">
-                  {t("publishGapsTitle")}
-                </p>
                 <p className="text-sm text-[var(--text-muted)]">
-                  {t("publishGapsBody")}
+                  {t("profileIncompletePanel")}
                 </p>
-                <ul className="grid gap-1 text-sm text-[var(--danger)]">
+                <ul className="grid gap-1 text-sm text-[var(--text-muted)]">
                   {role === "entertainer" &&
                   !readiness.ok &&
                   "reasons" in readiness
                     ? readiness.reasons.map((reason) => (
-                        <li key={reason}>{reason}</li>
+                        <li key={reason}>· {reason}</li>
                       ))
                     : null}
                   {role === "venue" && !readiness.ok && "issues" in readiness
                     ? readiness.issues.map((issue) => (
-                        <li key={issue.field}>{issue.message}</li>
+                        <li key={issue.field}>· {issue.message}</li>
                       ))
                     : null}
                 </ul>
               </>
             )}
-            <div className="flex flex-wrap gap-3">
-              <Button
-                type="button"
-                variant="primary"
-                pending={pending}
-                pendingLabel={ui("working")}
-                disabled={!readiness.ok}
-                onClick={publishNow}
-              >
-                {t("publish")}
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={pending}
-                onClick={exploreMarketplace}
-              >
-                {t("exploreMarketplace")}
-              </Button>
-            </div>
           </div>
         ) : null}
 
@@ -1086,10 +1042,27 @@ export function OnboardingSetupWizard({
             {error}
           </p>
         ) : null}
+        </div>
       </div>
 
-      {step.kind !== "publish" ? (
-        <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--rule)] bg-[var(--bg)]/95 px-1 py-4 backdrop-blur-sm">
+      <div className="fixed inset-x-0 bottom-0 z-30 bg-[var(--bg)]/95 backdrop-blur-sm">
+        <div
+          className="h-1 w-full bg-[var(--rule)]"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progressPercent}
+          aria-label={t("stepOf", {
+            current: stepIndex + 1,
+            total: steps.length,
+          })}
+        >
+          <div
+            className="h-full bg-[var(--primary)] transition-[width] duration-300 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-between gap-3 border-t border-transparent px-4 py-4 sm:px-6">
           <Button
             type="button"
             variant="secondary"
@@ -1107,12 +1080,24 @@ export function OnboardingSetupWizard({
             pending={pending}
             pendingLabel={ui("working")}
             disabled={continueDisabled}
-            onClick={showAsSkip ? goSkip : goNext}
+            onClick={
+              isFinale
+                ? onFinaleContinue
+                : showAsSkip
+                  ? goSkip
+                  : goNext
+            }
           >
-            {showAsSkip ? t("skip") : t("next")}
+            {isFinale
+              ? readiness.ok
+                ? t("publishAndContinue")
+                : t("continue")
+              : showAsSkip
+                ? t("skip")
+                : t("next")}
           </Button>
         </div>
-      ) : null}
-    </div>
+      </div>
+    </>
   );
 }

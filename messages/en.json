@@ -204,14 +204,18 @@
     "back": "Back",
     "skip": "Skip for now",
     "publish": "Publish profile",
-    "exploreMarketplace": "Explore marketplace",
+    "exploreMarketplace": "Continue to Overview",
+    "continue": "Continue",
+    "publishAndContinue": "Publish and continue",
     "continueToProfile": "Continue to profile",
     "fieldsIncomplete": "Please fill in the required fields for this step.",
     "saveFailed": "Could not save — try again.",
-    "publishGapsTitle": "Still needed to publish",
-    "publishReadyTitle": "Ready to publish",
-    "publishReadyBody": "Your checklist passes. Publish to appear in discovery and contact other members.",
-    "publishGapsBody": "You can explore the marketplace now (search only). Finish remaining fields here or later on your profile.",
+    "profileCompleteTitle": "You’re ready!",
+    "profileCompleteBody": "Go live so the right people can find you — then we’ll take you to Overview.",
+    "profileCompletePanel": "Everything looks solid. Publishing puts you out there.",
+    "profileIncompleteTitle": "Not quite finished yet",
+    "profileIncompleteBody": "You can still browse Overview. Finish your profile when you’re ready — you’ll need it before you can send or respond to offers.",
+    "profileIncompletePanel": "Still open on your profile:",
     "addressConfirmTitle": "Confirm address",
     "addressConfirmBody": "Check the details before continuing.",
     "heroUploadHint": "Drop a hero photo, or click to browse.",
@@ -254,11 +258,11 @@
       "C": {
         "entertainer": {
           "title": "Go live",
-          "body": "Publish when the checklist passes — or explore first and finish on your profile."
+          "body": "Publish when you’re ready — or continue to Overview and finish on your profile."
         },
         "venue": {
           "title": "Go live",
-          "body": "Publish when the checklist passes — or explore first and finish on your profile."
+          "body": "Publish when you’re ready — or continue to Overview and finish on your profile."
         }
       }
     },
@@ -300,8 +304,8 @@
         "body": "Optional technical or production notes."
       },
       "go_live": {
-        "title": "Publish when ready",
-        "body": "Review the checklist, then go live or explore first."
+        "title": "You’re ready!",
+        "body": "Go live so the right people can find you — then we’ll take you to Overview."
       },
       "venue_name": {
         "title": "What’s the venue name?",

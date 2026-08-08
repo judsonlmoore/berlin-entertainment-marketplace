@@ -204,14 +204,18 @@
     "back": "Zurück",
     "skip": "Vorerst überspringen",
     "publish": "Profil veröffentlichen",
-    "exploreMarketplace": "Marktplatz erkunden",
+    "exploreMarketplace": "Weiter zur Übersicht",
+    "continue": "Weiter",
+    "publishAndContinue": "Veröffentlichen und weiter",
     "continueToProfile": "Weiter zum Profil",
     "fieldsIncomplete": "Bitte füllen Sie die erforderlichen Felder für diesen Schritt aus.",
     "saveFailed": "Speichern fehlgeschlagen — bitte erneut versuchen.",
-    "publishGapsTitle": "Noch nötig zum Veröffentlichen",
-    "publishReadyTitle": "Bereit zum Veröffentlichen",
-    "publishReadyBody": "Ihre Checkliste ist erfüllt. Veröffentlichen Sie, um in der Discovery zu erscheinen und andere Mitglieder zu kontaktieren.",
-    "publishGapsBody": "Sie können den Marktplatz jetzt erkunden (nur Suche). Fehlende Felder hier oder später im Profil ergänzen.",
+    "profileCompleteTitle": "Sie sind bereit!",
+    "profileCompleteBody": "Gehen Sie live, damit die richtigen Leute Sie finden — danach geht’s zur Übersicht.",
+    "profileCompletePanel": "Alles wirkt rund. Mit dem Veröffentlichen sind Sie auffindbar.",
+    "profileIncompleteTitle": "Noch nicht ganz fertig",
+    "profileIncompleteBody": "Sie können die Übersicht schon erkunden. Vervollständigen Sie Ihr Profil, bevor Sie Angebote senden oder darauf reagieren.",
+    "profileIncompletePanel": "Noch offen in Ihrem Profil:",
     "addressConfirmTitle": "Adresse bestätigen",
     "addressConfirmBody": "Prüfen Sie die Angaben, bevor Sie weitergehen.",
     "heroUploadHint": "Hero-Foto ablegen oder klicken zum Auswählen.",
@@ -254,11 +258,11 @@
       "C": {
         "entertainer": {
           "title": "Live gehen",
-          "body": "Veröffentlichen, wenn die Checkliste passt — oder zuerst erkunden und im Profil fertigstellen."
+          "body": "Veröffentlichen, wenn Sie bereit sind — oder weiter zur Übersicht und im Profil fertigstellen."
         },
         "venue": {
           "title": "Live gehen",
-          "body": "Veröffentlichen, wenn die Checkliste passt — oder zuerst erkunden und im Profil fertigstellen."
+          "body": "Veröffentlichen, wenn Sie bereit sind — oder weiter zur Übersicht und im Profil fertigstellen."
         }
       }
     },
@@ -300,8 +304,8 @@
         "body": "Optionale technische oder Produktionshinweise."
       },
       "go_live": {
-        "title": "Veröffentlichen, wenn bereit",
-        "body": "Checkliste prüfen, dann live gehen oder zuerst erkunden."
+        "title": "Sie sind bereit!",
+        "body": "Gehen Sie live, damit die richtigen Leute Sie finden — danach geht’s zur Übersicht."
       },
       "venue_name": {
         "title": "Wie heißt das Venue?",

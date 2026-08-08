@@ -43,7 +43,7 @@ export default async function OnboardingLayout({ children, params }: Props) {
 
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--ink)]">
-      <header className="border-b border-[var(--rule)]">
+      <header className="sticky top-0 z-30 border-b border-[var(--rule)] bg-[var(--bg)]/95 backdrop-blur-sm">
         <div className="shell flex min-h-14 items-center justify-between py-3">
           <Link href="/" className="display text-2xl font-medium no-underline">
             Salon
