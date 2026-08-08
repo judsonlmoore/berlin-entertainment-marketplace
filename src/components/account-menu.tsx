@@ -8,7 +8,7 @@ import { signOutAction } from "@/src/actions/auth";
 
 export type AccountNavItem = {
   href: string;
-  labelKey: "profile" | "account" | "help" | "admin" | "superAdmin";
+  labelKey: "profile" | "account" | "help" | "superAdmin";
   match: string;
 };
 

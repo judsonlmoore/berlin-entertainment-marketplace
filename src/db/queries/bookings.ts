@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
   agreements,
+  bookingInvoices,
   bookingTerms,
   bookings,
   depositStatusEvents,
@@ -73,6 +74,8 @@ export async function getBookingDetail(bookingId: string) {
       venueId: venues.id,
       venueName: venues.name,
       district: venues.district,
+      venueOwnerUserId: venues.ownerUserId,
+      venuePublicationState: venues.publicationState,
       entertainerProfileId: entertainerProfiles.id,
       actName: entertainerProfiles.actName,
       entertainerUserId: entertainerProfiles.userId,
@@ -112,10 +115,15 @@ export async function getBookingDetail(bookingId: string) {
         .orderBy(signatures.createdAt)
     : [];
 
+  const invoice = await db.query.bookingInvoices.findFirst({
+    where: eq(bookingInvoices.bookingId, bookingId),
+  });
+
   return {
     booking,
     terms,
     depositEvents,
+    invoice: invoice ?? null,
     agreement: agreement
       ? {
           ...agreement,
@@ -149,6 +157,7 @@ export async function getLatestOpenTerms(bookingId: string) {
       and(
         eq(bookingTerms.bookingId, bookingId),
         isNull(bookingTerms.acceptedAt),
+        isNull(bookingTerms.supersededAt),
       ),
     )
     .orderBy(desc(bookingTerms.version))

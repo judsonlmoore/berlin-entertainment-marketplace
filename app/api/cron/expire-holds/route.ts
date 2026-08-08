@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { expireStaleHolds } from "@/src/db/queries/calendar-ops";
 import { expireOverdueDirectRequests } from "@/src/db/queries/direct-requests";
+import { expireStaleProfileOffers } from "@/src/db/queries/profile-enquiries";
 import { getDb } from "@/src/db/client";
 import { auditEvents } from "@/src/db/schema/marketplace";
 
 /**
- * Idempotent hold-expiry and direct-request expiry reconciliation for Vercel Cron.
+ * Idempotent hold, direct-request, and profile-offer expiry for Vercel Cron.
  * Authorize with Authorization: Bearer $CRON_SECRET.
  */
 export async function GET(request: Request) {
@@ -33,6 +34,7 @@ export async function GET(request: Request) {
 
   const holdResult = await expireStaleHolds();
   const requestResult = await expireOverdueDirectRequests();
+  const offerResult = await expireStaleProfileOffers();
   const db = getDb();
   await db.insert(auditEvents).values({
     actorUserId: null,
@@ -42,6 +44,7 @@ export async function GET(request: Request) {
     metadata: {
       expiredHolds: holdResult.expired,
       expiredRequests: requestResult.expired,
+      expiredProfileOffers: offerResult.expired,
       checkedAt: holdResult.checkedAt.toISOString(),
     },
   });
@@ -50,6 +53,7 @@ export async function GET(request: Request) {
     ok: true,
     expiredHolds: holdResult.expired,
     expiredRequests: requestResult.expired,
+    expiredProfileOffers: offerResult.expired,
     checkedAt: holdResult.checkedAt,
   });
 }

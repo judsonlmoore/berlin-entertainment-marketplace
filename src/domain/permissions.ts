@@ -30,9 +30,6 @@ export type Permission =
   | "discover.venues"
   | "onboarding.submit"
   | "admin.review_accounts"
-  | "admin.change_approval"
-  | "admin.review_profiles"
-  | "admin.operations"
   | "venue.create"
   | "venue.manage"
   | "venue.operate"
@@ -78,9 +75,6 @@ export function can(
       return Boolean(actor.userId);
 
     case "admin.review_accounts":
-    case "admin.change_approval":
-    case "admin.review_profiles":
-    case "admin.operations":
       return actor.isPlatformStaff;
 
     case "marketplace.discover":

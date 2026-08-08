@@ -87,5 +87,8 @@ export async function canViewVenueDiscoveryDetail(
   if (can(actor, "discover.venues")) {
     return true;
   }
+  if (actor.venueId === venueId) {
+    return true;
+  }
   return actorSharesBookingWithVenue(actor, venueId);
 }

@@ -39,7 +39,14 @@ export function AppModal({
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
 
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  // Focus close only when the dialog opens — not when parent re-renders with a
+  // new onClose identity (e.g. typing in a controlled confirmation field).
   useEffect(() => {
     if (!open) return;
 
@@ -50,7 +57,7 @@ export function AppModal({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -59,7 +66,7 @@ export function AppModal({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 

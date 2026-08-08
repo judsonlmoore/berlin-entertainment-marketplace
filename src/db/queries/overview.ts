@@ -3,12 +3,12 @@ import { getDb } from "@/src/db/client";
 import {
   applications,
   bookings,
-  directRequests,
   entertainerProfiles,
   marketplaceAccounts,
   opportunities,
   venues,
 } from "@/src/db/schema/marketplace";
+import { listLeadsForActor } from "@/src/db/queries/leads";
 import type { ActorContext } from "@/src/domain/permissions";
 
 export async function countApprovedMembers() {
@@ -74,38 +74,16 @@ export async function getOverviewMetrics(actor: ActorContext) {
     openOpportunities = ops?.value ?? 0;
   }
 
-  let incomingRequests = 0;
-  if (entertainer) {
-    const [reqs] = await db
-      .select({ value: count() })
-      .from(directRequests)
-      .where(
-        and(
-          eq(directRequests.entertainerProfileId, entertainer.id),
-          eq(directRequests.state, "requested"),
-        ),
-      );
-    incomingRequests = reqs?.value ?? 0;
-  }
-
-  let outgoingRequests = 0;
-  if (venueIds.length > 0) {
-    const [reqs] = await db
-      .select({ value: count() })
-      .from(directRequests)
-      .where(
-        and(
-          inArray(directRequests.venueId, venueIds),
-          eq(directRequests.state, "requested"),
-        ),
-      );
-    outgoingRequests = reqs?.value ?? 0;
-  }
-
   const party = bookingPartyFilter({
     venueIds,
     entertainerProfileId: entertainer?.id ?? null,
   });
+
+  let actionNeeded = 0;
+  if (party) {
+    const openLeads = await listLeadsForActor(actor, { status: "open" });
+    actionNeeded = openLeads.filter((lead) => lead.needsAction).length;
+  }
 
   let activeBookings = 0;
   let confirmedBookings = 0;
@@ -135,9 +113,10 @@ export async function getOverviewMetrics(actor: ActorContext) {
   return {
     pendingApplications,
     openOpportunities,
-    pendingRequests: incomingRequests + outgoingRequests,
-    incomingRequests,
-    outgoingRequests,
+    actionNeeded,
+    pendingRequests: actionNeeded,
+    incomingRequests: 0,
+    outgoingRequests: 0,
     activeBookings,
     confirmedBookings,
     canPostOpportunity: venueIds.length > 0,

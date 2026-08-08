@@ -1,4 +1,4 @@
-import { eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import { users } from "@/src/db/schema";
 import {
@@ -31,6 +31,7 @@ export type AdminAccountSearchHit = {
 /**
  * Staff search across member accounts, act names, and venue names.
  * Batched hydration (no per-user query fan-out) — eng-review P1A.
+ * Anonymized account shells are never returned.
  */
 export async function searchAdminAccounts(
   query: string,
@@ -41,6 +42,7 @@ export async function searchAdminAccounts(
   if (q.length < 2) return [];
 
   const pattern = `%${q.replace(/[%_]/g, "\\$&")}%`;
+  const notAnonymized = isNull(users.anonymizedAt);
 
   const matchingUserIds = new Set<string>();
 
@@ -48,10 +50,13 @@ export async function searchAdminAccounts(
     .select({ id: users.id })
     .from(users)
     .where(
-      or(
-        ilike(users.email, pattern),
-        ilike(users.name, pattern),
-        sql`${users.id}::text ilike ${pattern}`,
+      and(
+        notAnonymized,
+        or(
+          ilike(users.email, pattern),
+          ilike(users.name, pattern),
+          sql`${users.id}::text ilike ${pattern}`,
+        ),
       ),
     )
     .limit(limit);
@@ -61,7 +66,8 @@ export async function searchAdminAccounts(
   const actRows = await db
     .select({ userId: entertainerProfiles.userId })
     .from(entertainerProfiles)
-    .where(ilike(entertainerProfiles.actName, pattern))
+    .innerJoin(users, eq(users.id, entertainerProfiles.userId))
+    .where(and(notAnonymized, ilike(entertainerProfiles.actName, pattern)))
     .limit(limit);
 
   for (const row of actRows) matchingUserIds.add(row.userId);
@@ -69,7 +75,8 @@ export async function searchAdminAccounts(
   const venueOwnerRows = await db
     .select({ userId: venues.ownerUserId })
     .from(venues)
-    .where(ilike(venues.name, pattern))
+    .innerJoin(users, eq(users.id, venues.ownerUserId))
+    .where(and(notAnonymized, ilike(venues.name, pattern)))
     .limit(limit);
 
   for (const row of venueOwnerRows) matchingUserIds.add(row.userId);

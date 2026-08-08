@@ -68,7 +68,9 @@ Published profiles stay published across edits. Owners may **unpublish** (back t
 
 ### 4.1 Shared onboarding
 
-After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider. Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Agency may appear on the role picker as a non-selectable coming-soon option.
+After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Agency may appear on the role picker as a non-selectable coming-soon option with a link to Contact.
+
+A one-shot chaptered setup wizard (Airbnb-inspired interaction: one focus per step, full-width progress line on a fixed bottom bar, Skip on optional incomplete steps) collects publish-path fields. There is no mid-flow help link or Save & exit — members move through with Back and one adaptive primary button (**Skip for now** when a skippable step is incomplete, **Next** when valid) so they see every publish-path step even when skipping. Soft exit is at the final go-live step (100% progress, confetti): publish and continue to Overview when ready, or continue to Overview when incomplete (finish profile before sending or responding to offers). After exit, further edits and publish happen only on `/profile` (wizard is not resumed). Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Email ownership comes from the configured authentication provider.
 
 Buyer onboarding may search Google Places (New) to prefill venue name/address/coords/website; all prefilled fields remain editable. Places is optional — manual entry always works.
 
@@ -79,7 +81,7 @@ One account → one venue → one room (calendar resource). Profile builder matc
 Required before self-serve publication:
 
 - Public-to-members venue name and short description
-- Structured Berlin address, district, and map coordinates (Places prefill or manual)
+- Structured Berlin address and district (Places prefill optional; map coordinates optional when available)
 - Venue type and audience description
 - Capacity (and optional seated/standing context)
 - Production resources: PA, mixer, microphones, backline, lighting, stage dimensions, power, accessibility/load-in notes
@@ -97,11 +99,11 @@ Required before self-serve publication (built-in QA):
 - At least one portfolio photo
 - At least one public URL (website, social, or featured video)
 - Group size and Berlin base / travel radius
-- Indicative price minimum and maximum (EUR for MVP)
+- Typical fee minimum and maximum (EUR for MVP)
 - At least one private contact method
 - Native availability calendar
 
-Optional: performance formats, technical requirements, accessibility notes, languages, equipment supplied, additional links, technical rider uploads. Prices are indicative; agreed booking terms are authoritative. An entertainer profile is discoverable only to **venue operators** (and staff) after publication.
+Optional: performance formats, technical requirements, accessibility notes, languages, equipment supplied, additional links, technical rider uploads. Prices are a typical range for discovery; agreed booking terms are authoritative. An entertainer profile is discoverable only to **venue operators** (and staff) after publication.
 
 ### 4.4 Review behavior
 
@@ -121,13 +123,13 @@ Members save drafts and publish when the checklist passes. Publishing sets `appr
 - Search/filter venues by location, venue type, audience, capacity, and production resources. Open-call badges may surface on venue cards.
 - Member IA is three ops rails plus overview/profile: **Marketplace** (directory), **Bookings** (match pipeline), **Calendar** (time). There is no separate Leads or Opportunities top-level browse.
 - Store contact methods separately from discoverable profile data.
-- Reveal the selected external contact method only after mutual opt-in: direct-request acceptance, application shortlist, or profile-enquiry interest. Until then contacts stay locked.
+- Reveal the selected external contact method only after mutual opt-in: direct-request acceptance, application shortlist, or **Accept / Counter** on a profile-origin offer. Until then contacts stay locked. Sending an offer does **not** unlock contacts; the sender’s engagement documents are visible to the receiver with that open offer (opt-in by sending).
 - Log contact-unlock reason, parties, and timestamp.
 - Do not build in-platform chat. After unlock, the product clearly hands off to email/phone/other chosen external channel while preserving booking pipeline status in Salon.
 
 ## 6. Matching paths
 
-Matching produces a shared **booking** both parties track in one inbox. Internal CRM projection may still say “lead.” UI copy uses **open call** for venue-published needs (schema table may still be named `opportunities`).
+Matching produces a shared **booking** both parties track in one inbox. Internal CRM projection may still say “lead.” Member UI uses **booking** / **negotiation** (never “lead” in user-facing copy). UI copy uses **open call** for venue-published needs (schema table may still be named `opportunities`).
 
 ### 6.1 Open calls and applications
 
@@ -142,55 +144,70 @@ Publishing makes the call visible on that venue’s marketplace profile (and as 
 
 An approved venue operator sends a request to an approved entertainer for a venue, date/time, proposed fee, format, notes, and optional response deadline. The entertainer declines, accepts, or proposes changes; unanswered requests may expire. Acceptance unlocks the chosen contact method and opens the same booking engine used by shortlisted applications.
 
-### 6.3 Profile enquiries
+### 6.3 Profile offers (connection)
 
-An approved entertainer may submit their act profile to an approved venue from the venue discovery page (optional short note; no date required). An approved venue may likewise send a one-click connection request from an act profile. Either creates a pending booking. The receiving party may mark **Interested** or **Pass**. Interest unlocks preferred contacts both ways and opens the booking without requiring dates, fees, or terms yet. Pass closes it as lost without unlocking contacts. One active pending/open undated profile enquiry is allowed per act↔venue pair. After any contact request for a pair, a new request is blocked for **7 days** (inactive CTA + message). After Pass, further undated enquiries are also blocked for a **30-day** cooldown unless the venue re-opens.
+An approved entertainer may **Send offer** to an approved venue from the venue discovery page. An approved venue may likewise **Send offer** from an act profile. The CTA opens a modal composer for commercial terms (dates, fee, format, cancellation, production, optional deposit terms / note), not a “may I contact you” request. Sending requires complete **legal identity** on Profile (otherwise the CTA directs to `/profile`). Sending creates a pending booking with `booking_terms` v1 and makes the **sender’s** engagement PDFs visible to the receiver with that open offer. Contacts stay locked until the receiver **Accepts** or **Counters**. **Decline** (Pass) closes the booking as lost without unlocking contacts and does not require legal identity. Accept and Counter require the receiver’s complete legal identity on Profile. Accept locks terms (`terms_agreed`). Counter unlocks contacts, opens the booking, and continues the offer/counter timeline. After unlock, both parties’ engagement documents are visible.
+
+**Multiple engagements:** the same act↔venue pair may have many concurrent open offers (e.g. a weekly series). Profile CTAs stay **Send offer** plus **See offer** / **See offers (N)** linking to unanswered pending bookings — there is no re-send cooldown and no single-active-pair uniqueness. The initiator may **withdraw** a pending offer before the receiver responds. Unanswered pending offers **expire after 7 days** (cron + domain filter); expiry closes the booking as expired without unlocking contacts.
 
 ### 6.4 One booking engine
 
-Every booking records its origin (`application`, `direct_request`, or `profile_enquiry`) but uses the same terms, agreement, signature, confirmation, deposit, calendar, audit, and cancellation behavior once enough structure exists. Performance dates may be null until agreed (standing open-call applies and profile enquiries); calendar conflict checks and holds run only when a start/end window is known.
+Every booking records its origin (`application`, `direct_request`, or `profile_enquiry`) but uses the same terms, agreement, signature, confirmation, deposit, calendar, audit, and cancellation behavior once enough structure exists. Performance dates may be null until agreed (standing open-call applies); profile-origin offers include a performance window from v1. Calendar conflict checks and holds run only when a start/end window is known.
 
 ### 6.5 Bookings inbox (member-facing)
 
-Members track matches in **Bookings** with pipeline statuses projected from booking state:
+Members track matches in **Bookings** with pipeline statuses projected from booking state. Default filter is **Open**. Filters order: Open → Confirmed → Done → Lost → All.
 
 | Status | Meaning |
 |--------|---------|
-| Needs you / Pending | One-sided outreach; awaiting opt-in |
-| In progress / Open | Mutual interest; contacts unlocked; negotiate and fill terms |
-| Confirmed / Won | Booking confirmed (agreement signed) |
+| Open | Outreach or negotiation in flight (`applied` / `requested` through `partially_signed`) |
+| Confirmed | Booking confirmed (agreement signed); performance end not yet passed |
+| Done | Confirmed, and the performance window has ended |
 | Lost | Passed, declined, rejected, withdrawn, expired, or cancelled before confirm |
-| Done / Completed | Confirmed, and the performance window has ended |
 
-Contact unlock fires once on transition into Open (shortlist / accept / enquiry interest). The former separate “Leads” inbox and the old bookings-only list are one surface.
+**Action needed is not a status.** When the current user must respond (offer, direct request, signature, or application review), the inbox row and the open offer card show an ochre cue. Waiting on the other party is not a separate filter.
+
+Contact unlock fires once on mutual opt-in (application shortlist, direct-request accept, or profile-offer Accept/Counter) — independent of the Open filter (early `applied` / `requested` stay contact-locked). The former separate “Leads” inbox and the old bookings-only list are one surface.
 
 ## 7. Booking lifecycle
 
 Canonical lifecycle:
 
-1. `requested` or `applied` (booking inbox: Pending)
-2. `shortlisted` (application / profile enquiry interest) or `accepted` (direct request) (Open)
+1. `requested` or `applied` (booking inbox: Open; action cue for the receiver) — profile-origin includes an open commercial offer
+2. `shortlisted` (application shortlist or profile-offer Counter) or `accepted` (direct request accept or profile-offer Counter) (still Open; contacts unlocked); profile-offer **Accept** may move early Open → `terms_agreed` in one step after unlock
 3. `terms_agreed`
 4. `agreement_generated`
 5. `partially_signed`
-6. `confirmed` when both required parties have signed (Confirmed / Won)
+6. `confirmed` when both required parties have signed (Confirmed)
 
-Terminal/exception states: `declined`, `rejected`, `withdrawn`, `expired`, `cancelled` (Lost). After Confirmed, when the performance end time has passed, the inbox projects as Done / Completed.
+Terminal/exception states: `declined`, `rejected`, `withdrawn`, `expired`, `cancelled` (Lost). After Confirmed, when the performance end time has passed, the inbox projects as Done.
 
 State changes must be validated, idempotent, authorized, and audited.
 
 Agreed terms snapshot venue, act, service date/times/time zone (when known), fee/currency, performance format, cancellation terms, production obligations, and optional deposit terms. Later profile edits do not alter this snapshot. Undated open bookings may add or edit date/fee/format progressively before terms agreement.
 
-## 8. Agreement, signatures, and deposits
+### 7.1 Negotiation page (contract builder)
 
-- Generated agreements have German controlling text and an English convenience translation linked to the same versioned terms.
-- The product defines an e-signature provider boundary and test/sandbox status. It does not deliver production legal documents or live e-signatures until provisioned and counsel-approved.
+The booking detail surface is a **shared negotiation / contract builder**:
+
+- Both parties see act and venue imagery and names once the booking is Open.
+- **Offers / counters:** Either party may send a versioned commercial offer (dates, fee, format, cancellation, production, deposit terms, optional change note). At most one open offer exists at a time. The counterparty **Accepts** (→ `terms_agreed`), **Counters** (supersedes the open offer and sends the next version), or **Declines** while Pending. The proposer waits until the other party responds; there is no second “agree” from the proposer. Draft fields stay local until **Send offer** / **Send counter** (not autosaved into new versions). Profile-origin connection starts with Send offer (v1 on the pending booking); Accept or Counter establishes the connection (contacts + mutual engagement docs). After Open, negotiation continues on this timeline until Accept → agreement generation.
+- **Documents package:** marketplace/engagement profile PDFs from both act and venue, plus booking-scoped uploads by either party (uploader may delete their own booking upload). While a profile-origin offer is open and Pending, only the **sender’s** engagement PDFs are visible to the receiver. After Accept/Counter unlock, both sides’ engagement docs are visible. Before generate, each file receives a stable **Addendum N** order (act profile → venue profile → booking uploads by upload time). Profile docs are managed on Profile; booking uploads are for night-specific PDFs.
+- **Agreement package** = a single immutable **PDF**: cover page naming venue and act (plus Salon convenience disclaimer), bilingual two-column contract (German controlling on the left, English convenience on the right, paragraphs aligned on the same baseline), **plus** numbered addenda pages appended in the same file. Every page carries a large **MUSTER** watermark until counsel-approved production templates replace specimen copy. Addendum file IDs/titles are frozen on the agreement row; the package fingerprint (SHA-256 of PDF bytes) and page numbers appear in page footers and on the booking UI. Later profile edits do not change the signed package.
+- **Section order** after terms are locked (`terms_agreed` and later): Overview → **Agreement** → Documents package → Offers. Agreement is the next primary action (generate / review PDF / sign). Cancel is a danger-zone control. Deposit **terms** live inside each offer; deposit **status** recording is outside this negotiation surface (post-contract).
+
+## 8. Agreement, signatures, deposits, and invoices
+
+- Generated agreements are a **PDF package** (not on-page plain text): cover with parties + Salon disclaimer, German controlling text and an English convenience translation linked to the same versioned terms, addenda appended as pages, and a **MUSTER** watermark on specimen packages.
+- Signing is **double opt-in**: each designated signer reviews the package, types the locale confirmation phrase (`I agree` / `Ich stimme zu`), and presses Sign. Both must complete this on the **same package fingerprint** for `confirmed`.
+- The product defines an `ESignProvider` boundary (create envelope around the package artifact, record signer acceptance, status, artifact ref, webhooks). Sandbox adapter supports the full local flow; it does not deliver production legal documents or live/QES e-signatures until provisioned and counsel-approved.
 - Legal text requires qualified German counsel before production use.
-- Both designated signers must sign the same agreement version for `confirmed`.
-- Signature-provider webhooks must be authenticated, idempotent, and reconciled with local state.
+- Signature-provider webhooks must be authenticated, idempotent, and reconciled with local state (local DB remains authoritative for booking confirmation and calendar blocks).
 - Deposit status is separate: `not_required`, `pending`, `received`, `refunded`, or `disputed`.
 - A deposit never confirms a booking and lack of a deposit never prevents signature-based confirmation.
 - Salon does not collect, hold, escrow, route, or refund money in the current product.
+- **Legal / payment identity** lives on the member **Profile** (individual / freelancer / registered business), not Account settings. It is **not** required to publish or appear in discovery. It **is** required to **Send offer**, **Accept**, or **Counter** an offer (Decline/Pass does not require it) and to generate agreements/optional invoices (see `docs/INVOICE_LIBRARY_SPIKE.md`). Counterparty legal/payment details are revealed only at/after `terms_agreed` (not at contact unlock) and are never shown on the public discovery profile. Identity is snapshotted onto the agreement at generate time.
+- **Invoices** are optional post-`confirmed` PDF/e-invoice **artifacts** for the parties (talent seller → venue buyer by default). Generation uses an `InvoiceProvider` boundary (sandbox first). Invoices are not checkout, escrow, or payouts.
 
 ## 9. Availability and calendar
 
@@ -216,40 +233,34 @@ Native states are `available`, `unavailable`, `tentative_hold`, `requested`, and
 - Missing translation keys fail CI for required catalogs.
 - Public and private pages define localized metadata; private pages are `noindex, nofollow`.
 
-## 11. Admin operations
+## 11. Staff operations
 
-Staff require a protected admin surface to:
+Platform staff (`users.is_platform_staff`) keep elevated in-product access: dual discovery, open booking visibility, and rider download including quarantined files.
 
-- Review profile publication and change publication states with reasons
-- Inspect venue memberships and restore access safely
-- View and moderate profiles, opportunities, applications, requests, bookings, calendar conflicts, contact unlocks, and upload metadata
-- Suspend/reactivate accounts without deleting history
-- Retry/reconcile agreement-provider events
-- Record manual deposit-status corrections without processing money
-- View immutable audit events and operational metrics
+**Super admin** (`/admin` → `/admin/accounts`) is the staff account search surface: find members by email/name/act/venue and start a support session to act as their marketplace entity. Audits stay on the staff user; exit from the banner or the Super admin page. There is no broader ops console (profile review queue, hold expiry buttons, rider quarantine UI) in the member app — hold expiry runs via cron; other moderation stays operational tooling.
 
-Destructive hard deletion is not a routine admin action. Data-subject deletion requests require a separate retention/legal procedure.
+Destructive hard deletion is not a routine action; data-subject deletion requests require a separate retention/legal procedure.
 
 ## 12. Out of scope (current product)
 
-No consumer event pages, public profile directory, public listings, public reviews/ratings, in-platform chat, escrow, payment custody, checkout, automatic payouts/refunds, live legal advice, live e-signatures (until provisioned), complex automatic verification, dual-role accounts, recommendation ML, ticketing, or tax/insurance verification. External calendar sync is deferred to its own milestone, not claimed as operational until implemented.
+No consumer event pages, public profile directory, public listings, public reviews/ratings, in-platform chat, escrow, payment custody, checkout, automatic payouts/refunds, live legal advice, live e-signatures (until provisioned), complex automatic verification, dual-role accounts, recommendation ML, ticketing, tax/insurance verification, or tax-authority e-invoice filing/PEPPOL network submission. Invoice **PDF/e-invoice artifacts** for parties are in scope (see §8); money movement is not. External calendar sync is deferred to its own milestone, not claimed as operational until implemented.
 
 ## 13. Acceptance criteria
 
 - Anonymous and suspended users cannot access private profiles, opportunities, contact data, or booking records.
 - Self-serve signup creates an active account with exactly one role (entertainer XOR venue) without staff account approval.
-- Staff can suspend/reactivate accounts and suspend/restore profile publication with an audit trail.
+- Staff can suspend/reactivate accounts and suspend/restore profile publication with an audit trail (operational tooling; not a member `/admin` UI).
 - Unpublished members can search the opposite side but cannot contact (apply / direct request) until their profile is published; unpublished profiles are invisible in discovery.
 - An owner can invite/manage venue members.
-- Venue and entertainer profiles capture required fields and support self-serve publish/unpublish with a built-in checklist.
+- Venue and entertainer profiles capture required discovery fields and support self-serve publish/unpublish with a built-in checklist. Legal/payment identity is collected on Profile for offers and agreements (not required to publish).
 - Entertainers cannot browse other entertainers; venues cannot browse other venues (server-enforced).
 - A published entertainer can apply once to an open call (including one-click from the venue profile); a venue can shortlist or reject.
-- A published entertainer can submit a profile enquiry to a venue; a venue can mark Interested or Pass.
+- A published entertainer or venue can Send offer on the opposite profile; the receiver Accepts, Counters, or Declines.
 - A published venue can send a direct request; an entertainer can accept or decline.
 - All origins converge on one enforced booking state machine projected as a lead pipeline.
-- Contact unlock occurs only at mutual opt-in (shortlist / accept / enquiry interest) and is audited.
+- Contact unlock occurs only at mutual opt-in (shortlist / direct-request accept / profile-offer Accept or Counter) and is audited.
 - Undated open leads do not create calendar holds until a performance window exists.
-- Both signatures on the current agreement version confirm the booking and atomically block both calendars.
+- Both designated signers complete double opt-in on the same agreement package fingerprint to confirm the booking and atomically block both calendars.
 - Deposit status can change independently without confirming a booking.
 - Expired holds stop blocking; overlapping confirmations are rejected under concurrent requests.
 - English and German cover all critical flows, with the agreement-language hierarchy visible.

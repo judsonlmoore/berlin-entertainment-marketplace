@@ -21,12 +21,13 @@ The current prototype is reference material, not the production architecture. Pr
 app/
   [locale]/(public)/
   [locale]/(auth)/sign-in/
-  [locale]/(marketplace)/marketplace/
-  [locale]/(admin)/admin/
+  [locale]/(app)/marketplace/
+  [locale]/(app)/profile/
   api/session/[...nextauth]/route.ts
   api/auth/[...nextauth]/route.ts
   api/webhooks/esign/route.ts
   api/uploads/rider/route.ts
+  api/cron/expire-holds/route.ts
 src/
   auth.ts
   db/{client,schema,queries}/
@@ -50,6 +51,7 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 - `users`: Auth.js-compatible identity plus locale and platform staff flag
 - `accounts`, `sessions`, `verification_tokens`, `authenticators`: Auth.js adapter tables
 - `marketplace_accounts`: user ID, account status (`active`/`suspended`), terms acceptance, reviewed by/at/reason for suspend
+- `account_legal_identities`: one row per user — entity type (`individual`/`freelancer`/`registered_business`), legal/trading name, address, country, tax ID, company register ID, invoice email, optional IBAN/BIC/payment note (payee instructions only; never card numbers)
 - `user_roles`: user ID + exactly one of `entertainer`/`venue` (unique per user)
 - `contact_methods`: owner type/ID, kind, encrypted-or-protected value, preferred flag
 - `audit_events`: actor, action, subject, structured metadata, request correlation, timestamp
@@ -60,21 +62,22 @@ Use UUID primary keys, `timestamptz`, explicit foreign keys, check constraints/e
 - `venue_spaces`: exactly one room per venue for calendar ownership (MVP); capacity/stage fields synced from the buyer profile
 - `entertainer_profiles`: act identity, category, description, group size, price range, duration, travel/production data
 - `portfolio_items`: metadata and restricted/public-to-members Blob key, not a public URL
-- `rider_files` / profile documents: Blob key, owner, MIME type, size, checksum, scan status, uploader
+- `rider_files` / profile documents: Blob key, owner (entertainer XOR venue), optional `booking_id` for booking-scoped uploads, MIME type, size, checksum, scan status, uploader, visibility
 
 ### Matching and booking
 
 - `opportunities`: venue/space, **kind** `dated` | `standing`, window (required for dated; null for standing), optional standing schedule text, budget, constraints, deadline, draft/open/closed/cancelled state (member UI: **open call**)
 - `applications`: opportunity + entertainer, message/quote, lifecycle; unique pair
 - `direct_requests`: venue + entertainer, proposed terms, lifecycle
-- `profile_enquiries`: act↔venue undated (or optionally dated) profile / connection request; pending/interested/passed/withdrawn; one active pending/interested pair per act↔venue (partial unique index); 7-day re-request cooldown after any request; 30-day pass cooldown before re-submit
-- `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI is the **Bookings** inbox (Pending/Open/Confirmed/Lost/Done)
-- `booking_terms`: immutable versioned snapshots with currency amounts in integer cents (required once formal terms exist; open undated bookings may negotiate dates/fees on the origin row first)
-- `contact_unlocks`: booking/application/request/profile_enquiry, parties, reason, timestamp; unlock on mutual opt-in (shortlist / accept / enquiry interested). Undated opens skip calendar holds until a performance window exists; adding dates later places requested holds.
+- `profile_enquiries`: act↔venue profile-origin connection; pending/interested/passed/withdrawn; first step creates pending booking + `booking_terms` offer v1; multiple concurrent pending offers allowed per act↔venue; unanswered pending offers expire after 7 days (idempotent cron with hold/direct-request expiry); initiator may withdraw while pending
+- `bookings`: origin type/ID (`application` | `direct_request` | `profile_enquiry`), parties, lifecycle, version, cancelled metadata — member UI is the **Bookings** inbox (Open/Confirmed/Done/Lost + All; action cues on rows)
+- `booking_terms`: immutable versioned offer snapshots (cents); at most one open offer (`accepted_at` and `superseded_at` both null); counters supersede prior open rows; optional `change_note`
+- `contact_unlocks`: booking/application/request/profile_enquiry, parties, reason, timestamp; unlock on mutual opt-in (shortlist / direct-request accept / profile-offer Accept or Counter). Standing open-call applies skip calendar holds until a performance window exists; profile offers include dates from v1.
 - `agreement_templates`: locale, version, legal review status
-- `agreements`: booking terms version, German/English rendered artifact references, provider/status
+- `agreements`: booking terms version, German/English rendered artifact references, provider/status, **addenda snapshot** (ordered document IDs/titles frozen at generate)
 - `signatures`: agreement, signer user/party, provider reference, status/timestamps
 - `deposit_status_events`: append-only status and optional reference/note; never payment credentials
+- `booking_invoices`: booking ID, format, Blob key, seller/buyer identity snapshot, validation status; optional post-confirm artifact via `InvoiceProvider`
 
 ### Calendar
 
@@ -113,15 +116,14 @@ Representative pages:
 - Public: `/[locale]`, `/[locale]/apply`, `/[locale]/privacy`, `/[locale]/terms`
 - Auth: `/[locale]/sign-in`, `/api/session/[...nextauth]` (Auth.js `basePath`; legacy `/api/auth/*` redirects to sign-in)
 - Onboarding: `/[locale]/onboarding`, `/[locale]/onboarding/status`
-- Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (pipeline + terms/agreement), `/calendar`, `/profile` (incl. open-call manage). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
-- Admin: `/[locale]/admin/reviews`, `/accounts/[id]`, `/operations`
-- Integrations: `/api/webhooks/esign`, `/api/uploads/rider`, `/api/places/autocomplete`, `/api/places/details`, authorized download route
+- Marketplace: `/[locale]/marketplace` (overview), role-segregated discovery (`/entertainers`, `/venues`), `/bookings` (unified inbox), `/bookings/[id]` (**negotiation / contract builder**: overview, versioned offer/counter timeline, documents package, agreement; cancel danger zone), `/calendar`, `/profile` (incl. open-call manage and **legal/payment identity**), `/account` (locale, deletion). Legacy `/requests`, `/leads/[id]`, and `/opportunities` browse redirect into Bookings / Marketplace / profile as appropriate. Open-call detail may remain at `/opportunities/[id]` for apply/manage.
+- Integrations: `/api/webhooks/esign`, `/api/agreements/[id]/package`, `/api/uploads/rider`, `/api/places/autocomplete`, `/api/places/details`, authorized document download routes
 
 Discovery authorization is role-scoped: `discover.entertainers` for venue operators/staff; `discover.venues` for entertainers/staff. Dual-role actors may hold both. Queries and pages must enforce this; navigation alone is insufficient.
 
 Use Server Components for initial reads. Use Server Actions for same-origin form mutations where progressive enhancement helps; use Route Handlers for Auth.js, webhooks, uploads/downloads, and external APIs. Every mutation validates Zod input, authorizes, uses an idempotency/concurrency strategy, writes audit events, and returns typed expected errors. Revalidate affected paths/tags after commit.
 
-Key actions include: submit onboarding/profile; Google Places autocomplete/details prefill for buyer venues; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); submit/respond profile enquiry (Interested/Pass); update open-lead proposal fields; shortlist/reject; send/accept/decline request; propose/accept terms; generate agreement; process signature event; cancel booking; set availability/hold; expire holds; record deposit status; staff suspend/reactivate.
+Key actions include: submit onboarding/profile; Google Places autocomplete/details prefill for buyer venues; publish/close opportunity; apply/withdraw (including one-click apply from venue profile); send profile-origin offer (booking + terms v1; multiple concurrent per act↔venue; requires sender legal identity); Accept/Counter/Decline/Withdraw on pending offers (Accept/Counter require responder legal identity; Decline does not; Counter/Accept unlock contacts; unanswered expire after 7 days); shortlist/reject applications; send/accept/decline request; send/counter/accept booking terms offers; upload/delete booking-scoped documents; generate agreement package (with addenda snapshot; both parties’ legal identity); process signature event; generate optional invoice artifact after confirm; cancel booking; set availability/hold; expire holds; record deposit status (outside negotiation UI); update account legal identity; staff suspend/reactivate.
 
 ## 7. Booking and calendar concurrency
 
@@ -130,7 +132,7 @@ Key actions include: submit onboarding/profile; Google Places autocomplete/detai
 - Assign idempotency keys to provider webhooks and high-value mutations.
 - When the second valid signature arrives, lock booking/related resources, verify current agreement and absence of conflicts, transition to `confirmed`, create both confirmed calendar entries, and commit atomically.
 - Use exclusion constraints for confirmed overlaps and application-level checks for requested/active unexpired holds.
-- Expire holds by timestamp during reads and a scheduled Vercel Cron reconciliation job; expiry jobs must be idempotent.
+- Expire holds, overdue direct requests, and unanswered profile offers (7 days) by timestamp during reads where needed and a scheduled Vercel Cron reconciliation job; expiry jobs must be idempotent.
 - Store UTC instants and an IANA timezone; format in `Europe/Berlin` by default. Explicitly test DST boundaries.
 - External calendar synchronization is a later milestone delivered in phases:
   - Phase A: secure server-side iCalendar/ICS import (busy overlays only) and revocable ICS export for confirmed bookings.
@@ -145,7 +147,20 @@ Separate private contact data from discovery projections. Return view models wit
 
 ## 9. Agreement and e-signature boundary
 
-Define an `ESignProvider` interface for creating an envelope, retrieving status, obtaining authorized artifact references, and verifying/parsing webhooks. Provide a fake adapter only for tests/local demos. Local domain state remains authoritative after verified provider events. Store provider IDs and event hashes, not credentials. German and English documents must derive from one immutable terms version and template versions; the UI labels German controlling status. No production template is enabled before legal approval.
+Generate an immutable **agreement PDF package** with `pdf-lib`: bilingual two-column contract (DE controlling | EN convenience, paragraph-aligned) plus snapshotted addendum PDFs appended as pages. Store private Blob key, SHA-256 `package_fingerprint`, and `package_page_count` on `agreements`. Page footers include page `n / m` and a truncated fingerprint. Serve the package only via an authorized download route (booking parties and staff).
+
+Define an `ESignProvider` interface that:
+
+- `createEnvelope` — bind an envelope to the package artifact (fingerprint, blob key, page count, signers)
+- `recordSignerAcceptance` — validate locale confirmation phrase (`I agree` / `Ich stimme zu`) and package fingerprint, then record that signer
+- `getStatus` / `getPackageArtifactRef` — status and artifact lookup
+- `verifyWebhook` — authenticate and parse provider events for future remote adapters
+
+Provide a **sandbox** adapter for local/demo (typed confirm + local envelope state). Local domain state remains authoritative after verified provider events (booking confirm + calendar blocks). Store provider IDs, confirmation phrases, and event hashes — not credentials. German and English bodies derive from one immutable terms version and template versions; the UI labels German controlling status. No production template or live e-sign provider is enabled before legal approval.
+
+## 9.1 Invoice artifact boundary
+
+Define an `InvoiceProvider` interface for generating a party-facing invoice PDF (and optionally EN 16931 XML) from a booking terms + legal-identity snapshot. Sandbox adapter first; production DE path targets `@jasy/zugferd` (see `docs/INVOICE_LIBRARY_SPIKE.md`). Never process payments. Store Blob keys and validation status on `booking_invoices`.
 
 ## 10. Internationalization and UI
 
@@ -177,7 +192,7 @@ Testing layers:
 - Schema/migration: clean apply, upgrade path, constraints, seed idempotence
 - Integration: Auth.js adapter/session, server actions, contact projections, concurrent confirmation, webhook idempotency
 - Component/accessibility: critical forms and states in both locales
-- E2E: apply → publish → discover → profile enquiry / application / direct request → Interest/shortlist/accept (contact unlock) → terms → two signatures → calendar confirmation; undated lead skips holds until dates exist; suspension denial
+- E2E: apply → publish → discover → profile offer / application / direct request → Accept|Counter/shortlist/accept (contact unlock) → terms → two signatures → calendar confirmation; standing open-call apply skips holds until dates exist; suspension denial
 - Production build and preview smoke test before release
 
 ## 13. Deployment and provisioning sequence
@@ -205,6 +220,7 @@ Names only; values belong in Vercel/environment secret stores:
 - `AUTH_TRUST_HOST`
 - `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` (if GitHub provider selected)
 - `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` (if Google provider selected)
+- `AUTH_MICROSOFT_ENTRA_ID_ID`, `AUTH_MICROSOFT_ENTRA_ID_SECRET` (if Microsoft Entra ID / Azure AD selected); optional `AUTH_MICROSOFT_ENTRA_ID_ISSUER` for a single-tenant issuer
 - `EMAIL_SERVER`, `EMAIL_FROM` (if email provider selected)
 - `BLOB_READ_WRITE_TOKEN`
 - `ESIGN_PROVIDER`

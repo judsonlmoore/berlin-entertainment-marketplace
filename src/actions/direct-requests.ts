@@ -5,7 +5,7 @@ import {
   requireActor,
   toActionError,
 } from "@/src/actions/_shared";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
@@ -417,6 +417,16 @@ export async function proposeDirectRequestChanges(
           .limit(1);
 
         const version = nextTermsVersion(latest?.version ?? null);
+        await tx
+          .update(bookingTerms)
+          .set({ supersededAt: new Date() })
+          .where(
+            and(
+              eq(bookingTerms.bookingId, booking.id),
+              isNull(bookingTerms.acceptedAt),
+              isNull(bookingTerms.supersededAt),
+            ),
+          );
         await tx.insert(bookingTerms).values({
           bookingId: booking.id,
           version,
@@ -430,6 +440,7 @@ export async function proposeDirectRequestChanges(
           productionObligations:
             "Parties to confirm production obligations after accepting proposed changes.",
           depositTerms: null,
+          changeNote: notes?.trim() || "Direct-request counter-proposal",
           snapshot: {
             directRequestId: request.id,
             proposedFeeCents,

@@ -91,9 +91,13 @@ export type VenueDiscoveryCard = {
   capacity: number;
   capacityContext: string | null;
   openCallCount: number;
+  /** First servable portfolio image id for card thumbnails, if any. */
+  heroImageId: string | null;
 };
 
 export type VenueDiscoveryDetail = VenueDiscoveryCard & {
+  ownerUserId: string;
+  publicationState: string;
   addressLine1: string;
   addressLine2: string | null;
   postalCode: string;
@@ -108,6 +112,7 @@ export type VenueDiscoveryDetail = VenueDiscoveryCard & {
   socialLinks: Record<string, string>;
   contacts: RevealedContact[] | null;
   contactLocked: boolean;
+  portfolio: PortfolioDiscoveryItem[] | null;
 };
 
 export type EntertainerFilters = {
@@ -420,6 +425,38 @@ async function loadHeroImageIds(
   return heroes;
 }
 
+/** First servable portfolio image id per venue (batched). */
+async function loadVenueHeroImageIds(
+  venueIds: string[],
+): Promise<Map<string, string>> {
+  const heroes = new Map<string, string>();
+  if (venueIds.length === 0) return heroes;
+
+  const db = getDb();
+  const rows = await db
+    .select({
+      venueId: portfolioItems.venueId,
+      id: portfolioItems.id,
+      blobKey: portfolioItems.blobKey,
+    })
+    .from(portfolioItems)
+    .where(
+      and(
+        inArray(portfolioItems.venueId, venueIds),
+        eq(portfolioItems.kind, "image"),
+      ),
+    )
+    .orderBy(asc(portfolioItems.sortOrder), asc(portfolioItems.createdAt));
+
+  for (const row of rows) {
+    if (!row.venueId || heroes.has(row.venueId)) continue;
+    if (isServablePortfolioImageKey(row.blobKey)) {
+      heroes.set(row.venueId, row.id);
+    }
+  }
+  return heroes;
+}
+
 export async function listDiscoverableVenues(
   filters: VenueFilters = {},
   options: { page?: number; pageSize?: number } = {},
@@ -454,9 +491,9 @@ export async function listDiscoverableVenues(
     .offset(offset);
 
   const venueIds = items.map((item) => item.id);
-  const openCallRows =
+  const [openCallRows, heroByVenue] = await Promise.all([
     venueIds.length > 0
-      ? await db
+      ? db
           .select({
             venueId: opportunities.venueId,
             value: count(),
@@ -469,7 +506,11 @@ export async function listDiscoverableVenues(
             ),
           )
           .groupBy(opportunities.venueId)
-      : [];
+      : Promise.resolve(
+          [] as Array<{ venueId: string; value: number | bigint }>,
+        ),
+    loadVenueHeroImageIds(venueIds),
+  ]);
   const openCallByVenue = new Map(
     openCallRows.map((row) => [row.venueId, Number(row.value)]),
   );
@@ -479,6 +520,7 @@ export async function listDiscoverableVenues(
     items: items.map((item) => ({
       ...item,
       openCallCount: openCallByVenue.get(item.id) ?? 0,
+      heroImageId: heroByVenue.get(item.id) ?? null,
     })),
     total,
     page,
@@ -506,15 +548,21 @@ export async function getDiscoverableEntertainerDetail(input: {
   entertainerProfileId: string;
   viewerUserId: string;
   includePortfolio?: boolean;
+  /** Owner may open draft/suspended for profile preview. */
+  allowOwnerDraft?: boolean;
 }): Promise<EntertainerDiscoveryDetail | null> {
   const db = getDb();
   const profile = await db.query.entertainerProfiles.findFirst({
-    where: and(
-      eq(entertainerProfiles.id, input.entertainerProfileId),
-      eq(entertainerProfiles.publicationState, "approved"),
-    ),
+    where: eq(entertainerProfiles.id, input.entertainerProfileId),
   });
   if (!profile) {
+    return null;
+  }
+  const isOwner = profile.userId === input.viewerUserId;
+  if (
+    profile.publicationState !== "approved" &&
+    !(input.allowOwnerDraft && isOwner)
+  ) {
     return null;
   }
 
@@ -597,15 +645,21 @@ export async function getDiscoverableEntertainerDetail(input: {
 export async function getDiscoverableVenueDetail(input: {
   venueId: string;
   viewerUserId: string;
+  /** Owner may open draft/suspended for profile preview. */
+  allowOwnerDraft?: boolean;
 }): Promise<VenueDiscoveryDetail | null> {
   const db = getDb();
   const venue = await db.query.venues.findFirst({
-    where: and(
-      eq(venues.id, input.venueId),
-      eq(venues.publicationState, "approved"),
-    ),
+    where: eq(venues.id, input.venueId),
   });
   if (!venue) {
+    return null;
+  }
+  const isOwner = venue.ownerUserId === input.viewerUserId;
+  if (
+    venue.publicationState !== "approved" &&
+    !(input.allowOwnerDraft && isOwner)
+  ) {
     return null;
   }
 
@@ -634,15 +688,42 @@ export async function getDiscoverableVenueDetail(input: {
   );
   const unlocked = unlockedMethodIds.length > 0;
 
-  const [openCallRow] = await db
-    .select({ value: count() })
-    .from(opportunities)
-    .where(
-      and(eq(opportunities.venueId, venue.id), eq(opportunities.state, "open")),
-    );
+  const [openCallRow, portfolio] = await Promise.all([
+    db
+      .select({ value: count() })
+      .from(opportunities)
+      .where(
+        and(
+          eq(opportunities.venueId, venue.id),
+          eq(opportunities.state, "open"),
+        ),
+      )
+      .then((rows) => rows[0]),
+    db
+      .select({
+        id: portfolioItems.id,
+        kind: portfolioItems.kind,
+        caption: portfolioItems.caption,
+        altText: portfolioItems.altText,
+        url: portfolioItems.url,
+        blobKey: portfolioItems.blobKey,
+        sortOrder: portfolioItems.sortOrder,
+      })
+      .from(portfolioItems)
+      .where(eq(portfolioItems.venueId, venue.id))
+      .orderBy(portfolioItems.sortOrder, portfolioItems.createdAt),
+  ]);
+
+  const heroImageId =
+    portfolio.find(
+      (item) =>
+        item.kind === "image" && isServablePortfolioImageKey(item.blobKey),
+    )?.id ?? null;
 
   return {
     id: venue.id,
+    ownerUserId: venue.ownerUserId,
+    publicationState: venue.publicationState,
     name: venue.name,
     shortDescription: venue.shortDescription,
     district: venue.district,
@@ -651,6 +732,7 @@ export async function getDiscoverableVenueDetail(input: {
     capacity: venue.capacity,
     capacityContext: venue.capacityContext,
     openCallCount: openCallRow?.value ?? 0,
+    heroImageId,
     addressLine1: venue.addressLine1,
     addressLine2: venue.addressLine2,
     postalCode: venue.postalCode,
@@ -666,5 +748,6 @@ export async function getDiscoverableVenueDetail(input: {
     socialLinks: venue.socialLinks ?? {},
     contacts,
     contactLocked: !unlocked,
+    portfolio,
   };
 }

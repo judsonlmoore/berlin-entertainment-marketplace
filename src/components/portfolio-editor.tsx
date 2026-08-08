@@ -58,6 +58,10 @@ type Props = {
   entertainerProfileId?: string;
   venueId?: string;
   items: PortfolioItemRow[];
+  /** Fired when the image list changes (upload, remove, reorder). */
+  onImagesChange?: (images: PortfolioItemRow[]) => void;
+  /** Fired when the YouTube portfolio item changes. */
+  onYoutubeChange?: (youtube: PortfolioItemRow | null) => void;
 };
 
 function portfolioOwnerFields(
@@ -79,6 +83,13 @@ type PendingUpload = {
   progress: number;
   fileName: string;
 };
+
+function youtubeThumbnailSrc(url: string): string | null {
+  const parsed = validateYouTubeUrl(url);
+  return parsed.ok
+    ? `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault.jpg`
+    : null;
+}
 
 const dropAnimation: DropAnimation = {
   duration: 180,
@@ -382,6 +393,8 @@ export function PortfolioEditor({
   entertainerProfileId,
   venueId,
   items,
+  onImagesChange,
+  onYoutubeChange,
 }: Props) {
   const t = useTranslations("profile");
   const reactId = useId();
@@ -411,7 +424,16 @@ export function PortfolioEditor({
   const [youtubeSyncedId, setYoutubeSyncedId] = useState(
     () => items.find((item) => item.kind === "youtube")?.id ?? null,
   );
+  const [removedYoutubeId, setRemovedYoutubeId] = useState<string | null>(null);
+  const [youtubePending, setYoutubePending] = useState(false);
   const persistGeneration = useRef(0);
+  const onImagesChangeRef = useRef(onImagesChange);
+  const onYoutubeChangeRef = useRef(onYoutubeChange);
+
+  useEffect(() => {
+    onImagesChangeRef.current = onImagesChange;
+    onYoutubeChangeRef.current = onYoutubeChange;
+  }, [onImagesChange, onYoutubeChange]);
 
   const serverImages = useMemo(() => serverImageList(items), [items]);
   const serverImageKey = useMemo(() => imageSignature(items), [items]);
@@ -436,10 +458,29 @@ export function PortfolioEditor({
     setImages(serverImages);
   }
 
-  const serverYoutubeId = serverYoutube?.id ?? null;
-  if (youtubeSyncedId !== serverYoutubeId) {
-    setYoutubeSyncedId(serverYoutubeId);
-    setYoutube(serverYoutube);
+  // Clear youtube remove marker once props no longer include that row.
+  if (removedYoutubeId && serverYoutube?.id !== removedYoutubeId) {
+    setRemovedYoutubeId(null);
+  }
+
+  const effectiveServerYoutube =
+    removedYoutubeId && serverYoutube?.id === removedYoutubeId
+      ? null
+      : serverYoutube;
+  const effectiveServerYoutubeId = effectiveServerYoutube?.id ?? null;
+
+  if (youtubeSyncedId !== effectiveServerYoutubeId) {
+    // Optimistic add: keep local youtube when parent items are still stale.
+    if (
+      effectiveServerYoutubeId === null &&
+      youtubeSyncedId !== null &&
+      youtube?.id === youtubeSyncedId
+    ) {
+      // no-op
+    } else {
+      setYoutubeSyncedId(effectiveServerYoutubeId);
+      setYoutube(effectiveServerYoutube);
+    }
   }
 
   const imageIds = images.map((item) => item.id);
@@ -453,6 +494,7 @@ export function PortfolioEditor({
       : null;
   const activeIsHero = Boolean(activeItem && images[0]?.id === activeItem.id);
   const showGrid = images.length > 0 || pendingUploads.length > 0;
+  const youtubeThumb = youtube?.url ? youtubeThumbnailSrc(youtube.url) : null;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -462,6 +504,14 @@ export function PortfolioEditor({
     const timeoutId = window.setTimeout(() => setMounted(true), 0);
     return () => window.clearTimeout(timeoutId);
   }, []);
+
+  useEffect(() => {
+    onImagesChangeRef.current?.(images);
+  }, [images]);
+
+  useEffect(() => {
+    onYoutubeChangeRef.current?.(youtube);
+  }, [youtube]);
 
   useEffect(() => {
     if (!videoOpen) return;
@@ -684,31 +734,38 @@ export function PortfolioEditor({
       );
       return;
     }
+    if (youtubePending) return;
     setVideoError(null);
+    setYoutubePending(true);
     startTransition(async () => {
-      const result = await addPortfolioYouTube({
-        ...owner,
-        url: parsed.canonicalUrl,
-        locale,
-      });
-      if (!result.ok) {
-        setVideoError(result.message);
-        return;
-      }
-      if (result.id) {
-        setYoutube({
-          id: result.id,
-          kind: "youtube",
-          caption: null,
-          altText: null,
+      try {
+        const result = await addPortfolioYouTube({
+          ...owner,
           url: parsed.canonicalUrl,
-          blobKey: null,
-          sortOrder: images.length,
+          locale,
         });
-        setYoutubeSyncedId(result.id);
+        if (!result.ok) {
+          setVideoError(result.message);
+          return;
+        }
+        if (result.id) {
+          setYoutube({
+            id: result.id,
+            kind: "youtube",
+            caption: null,
+            altText: null,
+            url: parsed.canonicalUrl,
+            blobKey: null,
+            sortOrder: images.length,
+          });
+          setYoutubeSyncedId(result.id);
+          setRemovedYoutubeId(null);
+        }
+        setYoutubeDraft("");
+        setYoutubeStatus("idle");
+      } finally {
+        setYoutubePending(false);
       }
-      setYoutubeDraft("");
-      setYoutubeStatus("idle");
     });
   }
 
@@ -893,14 +950,46 @@ export function PortfolioEditor({
         <span className="text-sm font-medium text-[var(--ink)]">
           {t("portfolioYouTubeTitle")}
         </span>
-        {youtube?.url ? (
-          <div className="grid gap-3 sm:grid-cols-[180px_1fr] sm:items-center">
+        {youtubePending && !youtube?.url ? (
+          <div
+            className="grid gap-3 sm:grid-cols-[180px_1fr] sm:items-center"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <div className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--canvas)]">
+              <span className="absolute inset-0 animate-pulse bg-[color-mix(in_srgb,var(--rule)_55%,transparent)]" />
+              <span className="absolute inset-0 m-auto h-0 w-0 border-y-[10px] border-r-0 border-l-[16px] border-y-transparent border-l-[color-mix(in_srgb,var(--ink)_35%,transparent)]" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-[var(--ink)]">
+                {t("portfolioYouTubeSaving")}
+              </p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                {t("portfolioPlayHint")}
+              </p>
+            </div>
+          </div>
+        ) : youtube?.url ? (
+          <div
+            className="grid gap-3 sm:grid-cols-[180px_1fr] sm:items-center"
+            aria-busy={youtubePending || undefined}
+          >
             <button
               type="button"
               onClick={() => setVideoOpen(true)}
-              className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[#1e2a25]"
+              disabled={youtubePending}
+              className="relative aspect-video overflow-hidden rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[#1e2a25] disabled:opacity-70"
               aria-label={t("portfolioPlayVideo")}
             >
+              {youtubeThumb ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={youtubeThumb}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : null}
+              <span className="absolute inset-0 bg-[rgba(20,24,22,0.35)]" />
               <span className="absolute inset-0 m-auto h-0 w-0 border-y-[10px] border-r-0 border-l-[16px] border-y-transparent border-l-white" />
             </button>
             <div>
@@ -908,10 +997,13 @@ export function PortfolioEditor({
                 {youtube.caption || t("portfolioYouTubeTitle")}
               </p>
               <p className="mt-1 text-xs text-[var(--text-muted)]">
-                {t("portfolioPlayHint")}
+                {youtubePending
+                  ? t("portfolioYouTubeSaving")
+                  : t("portfolioPlayHint")}
               </p>
               <button
                 type="button"
+                disabled={youtubePending}
                 onClick={() => {
                   if (!owner) {
                     setVideoError(
@@ -921,23 +1013,37 @@ export function PortfolioEditor({
                     );
                     return;
                   }
+                  const itemId = youtube.id;
+                  const previous = youtube;
+                  setVideoError(null);
+                  setYoutubePending(true);
+                  setRemovedYoutubeId(itemId);
                   startTransition(async () => {
-                    const result = await removePortfolioItem({
-                      ...owner,
-                      itemId: youtube.id,
-                      locale,
-                    });
-                    if (!result.ok) {
-                      setVideoError(result.message);
-                      return;
+                    try {
+                      const result = await removePortfolioItem({
+                        ...owner,
+                        itemId,
+                        locale,
+                      });
+                      if (!result.ok) {
+                        setVideoError(result.message);
+                        setRemovedYoutubeId(null);
+                        setYoutube(previous);
+                        setYoutubeSyncedId(itemId);
+                        return;
+                      }
+                      setYoutube(null);
+                      setYoutubeSyncedId(null);
+                    } finally {
+                      setYoutubePending(false);
                     }
-                    setYoutube(null);
-                    setYoutubeSyncedId(null);
                   });
                 }}
-                className="mt-2 text-xs font-medium text-[var(--danger)]"
+                className="mt-2 text-xs font-medium text-[var(--danger)] disabled:opacity-60"
               >
-                {t("portfolioRemoveYouTube")}
+                {youtubePending
+                  ? t("portfolioYouTubeRemoving")
+                  : t("portfolioRemoveYouTube")}
               </button>
             </div>
           </div>
@@ -949,9 +1055,12 @@ export function PortfolioEditor({
               } ${youtubeStatus === "valid" ? "border-[color-mix(in_srgb,var(--primary)_45%,var(--rule))]" : ""}`}
               value={youtubeDraft}
               placeholder="https://youtu.be/…"
+              disabled={youtubePending}
+              aria-busy={youtubePending || undefined}
               onChange={(event) => {
                 const next = event.target.value;
                 setYoutubeDraft(next);
+                setVideoError(null);
                 if (!next.trim()) {
                   setYoutubeStatus("idle");
                   return;

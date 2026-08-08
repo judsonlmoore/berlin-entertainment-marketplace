@@ -25,11 +25,11 @@ describe("permissions", () => {
     expect(can(actor(), "marketplace.discover")).toBe(true);
   });
 
-  it("allows staff to change account status", () => {
+  it("allows staff to open super admin account search", () => {
     expect(
       can(
         actor({ isPlatformStaff: true, accountStatus: null, roles: [] }),
-        "admin.change_approval",
+        "admin.review_accounts",
       ),
     ).toBe(true);
   });

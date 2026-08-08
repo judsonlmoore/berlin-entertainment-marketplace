@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/src/i18n/navigation";
 import { updateLeadProposalAction } from "@/src/actions/profile-enquiries";
-import { Button } from "@/src/components/ui/button";
+import { AutosaveStatus } from "@/src/components/profile/autosave-status";
+import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
 import { parseDatetimeLocalInTimeZone } from "@/src/lib/format";
 
 type Props = {
@@ -19,51 +19,56 @@ type Props = {
   };
 };
 
+type Payload = {
+  note: string;
+  proposedFormat: string;
+  proposedFeeEur: number | null;
+  proposedStartsAt: string | null;
+  proposedEndsAt: string | null;
+};
+
 export function LeadProposalForm({ locale, enquiryId, initial }: Props) {
   const t = useTranslations("leads");
-  const errors = useTranslations("errors");
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
 
-  function onSubmit(formData: FormData) {
-    setError(null);
-    setSaved(false);
-    const startsLocal = String(formData.get("proposedStartsAt") ?? "").trim();
-    const endsLocal = String(formData.get("proposedEndsAt") ?? "").trim();
-    const feeRaw = String(formData.get("proposedFeeEur") ?? "").trim();
+  const readPayload = useCallback((form: FormData): Payload => {
+    const startsLocal = String(form.get("proposedStartsAt") ?? "").trim();
+    const endsLocal = String(form.get("proposedEndsAt") ?? "").trim();
+    const feeRaw = String(form.get("proposedFeeEur") ?? "").trim();
+    return {
+      note: String(form.get("note") ?? ""),
+      proposedFormat: String(form.get("proposedFormat") ?? ""),
+      proposedFeeEur: feeRaw === "" ? null : Number(feeRaw),
+      proposedStartsAt: startsLocal
+        ? parseDatetimeLocalInTimeZone(startsLocal).toISOString()
+        : null,
+      proposedEndsAt: endsLocal
+        ? parseDatetimeLocalInTimeZone(endsLocal).toISOString()
+        : null,
+    };
+  }, []);
 
-    startTransition(async () => {
-      const result = await updateLeadProposalAction({
+  const autosave = useProfileAutosave({
+    formRef,
+    readPayload,
+    save: async (payload) =>
+      updateLeadProposalAction({
         enquiryId,
         locale,
-        note: String(formData.get("note") ?? ""),
-        proposedFormat: String(formData.get("proposedFormat") ?? ""),
-        proposedFeeEur: feeRaw === "" ? null : Number(feeRaw),
-        proposedStartsAt: startsLocal
-          ? parseDatetimeLocalInTimeZone(startsLocal).toISOString()
-          : null,
-        proposedEndsAt: endsLocal
-          ? parseDatetimeLocalInTimeZone(endsLocal).toISOString()
-          : null,
-      });
-      if (!result.ok) {
-        setError(
-          result.code === "validation" || result.code === "forbidden"
-            ? errors(result.code)
-            : result.message,
-        );
-        return;
-      }
-      setSaved(true);
-      router.refresh();
-    });
-  }
+        ...payload,
+      }),
+    debounceMs: 2000,
+  });
 
   return (
-    <form action={onSubmit} className="grid gap-3">
-      <h3 className="text-lg font-medium">{t("proposalTitle")}</h3>
+    <form ref={formRef} className="grid gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-lg font-medium">{t("proposalTitle")}</h3>
+        <AutosaveStatus
+          phase={autosave.phase}
+          errorMessage={autosave.errorMessage}
+        />
+      </div>
       <p className="text-sm text-[var(--text-muted)]">{t("proposalBody")}</p>
       <label className="label">
         <span className="field-label">{t("proposedFormat")}</span>
@@ -113,19 +118,6 @@ export function LeadProposalForm({ locale, enquiryId, initial }: Props) {
           className="field"
         />
       </label>
-      <Button type="submit" disabled={pending} className="justify-self-start">
-        {pending ? t("savingProposal") : t("saveProposal")}
-      </Button>
-      {error ? (
-        <p role="alert" className="text-sm text-[var(--danger)]">
-          {error}
-        </p>
-      ) : null}
-      {saved ? (
-        <p role="status" className="text-sm text-[var(--ink)]">
-          {t("proposalSaved")}
-        </p>
-      ) : null}
     </form>
   );
 }

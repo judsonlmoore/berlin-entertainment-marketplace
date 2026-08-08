@@ -14,6 +14,7 @@ type Props = {
   label: string;
   defaultValue?: string | null | undefined;
   required?: boolean;
+  onValueChange?: (value: string) => void;
 };
 
 /**
@@ -25,6 +26,7 @@ export function PrefixedUrlInput({
   label,
   defaultValue,
   required = false,
+  onValueChange,
 }: Props) {
   const t = useTranslations("profile");
   const id = useId();
@@ -75,6 +77,7 @@ export function PrefixedUrlInput({
             setValue(next);
             setTouched(true);
             syncHidden(next.trim());
+            onValueChange?.(next.trim());
           }}
           onBlur={() => setTouched(true)}
           className={`field w-full pr-20 ${

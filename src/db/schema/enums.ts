@@ -182,3 +182,15 @@ export const emailStatusEnum = pgEnum("email_status", [
   "failed",
   "bounced",
 ]);
+
+export const legalEntityTypeEnum = pgEnum("legal_entity_type", [
+  "individual",
+  "freelancer",
+  "registered_business",
+]);
+
+export const bookingInvoiceStatusEnum = pgEnum("booking_invoice_status", [
+  "draft",
+  "generated",
+  "failed",
+]);

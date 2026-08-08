@@ -1,26 +1,16 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import {
-  RespondDirectRequestButtons,
-  VenueRespondToChangesButtons,
-  WithdrawDirectRequestButton,
-} from "@/src/components/direct-request-actions";
-import { ProfileEnquiryRespondButtons } from "@/src/components/profile-enquiry-actions";
 import { PageHeader } from "@/src/components/ui/page-header";
 import { StatusLabel } from "@/src/components/ui/status-label";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { listLeadsForActor } from "@/src/db/queries/leads";
-import {
-  listProfileEnquiriesForEntertainer,
-  listProfileEnquiriesForVenues,
-} from "@/src/db/queries/profile-enquiries";
-import {
-  listDirectRequestsForEntertainer,
-  listDirectRequestsForVenues,
-} from "@/src/db/queries/direct-requests";
 import { can } from "@/src/domain/permissions";
-import type { LeadStatus } from "@/src/domain/lead";
+import {
+  LEAD_STATUSES,
+  normalizeLeadStatusFilter,
+  type BookingNeedsAction,
+  type LeadStatus,
+} from "@/src/domain/lead";
 import { Link } from "@/src/i18n/navigation";
-import { formatEur } from "@/src/lib/format";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -31,14 +21,20 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-const STATUS_FILTERS: Array<LeadStatus | "all"> = [
-  "all",
-  "pending",
-  "open",
-  "won",
-  "lost",
-  "completed",
-];
+const STATUS_FILTERS: Array<LeadStatus | "all"> = [...LEAD_STATUSES, "all"];
+
+function needsActionMessageKey(action: BookingNeedsAction): string {
+  switch (action) {
+    case "respond_offer":
+      return "needsActionRespondOffer";
+    case "respond_request":
+      return "needsActionRespondRequest";
+    case "sign":
+      return "needsActionSign";
+    case "review_application":
+      return "needsActionReviewApplication";
+  }
+}
 
 export default async function BookingsInboxPage({
   params,
@@ -51,10 +47,7 @@ export default async function BookingsInboxPage({
   const market = await getTranslations("marketplace");
   const access = await requireDiscoveryAccess();
   const query = await searchParams;
-  const statusRaw = first(query.status) ?? "all";
-  const statusFilter = (
-    STATUS_FILTERS.includes(statusRaw as LeadStatus | "all") ? statusRaw : "all"
-  ) as LeadStatus | "all";
+  const statusFilter = normalizeLeadStatusFilter(first(query.status));
 
   if (!access.ok || !can(access.actor, "booking.view")) {
     return (
@@ -64,40 +57,9 @@ export default async function BookingsInboxPage({
     );
   }
 
-  const operableVenueIds = access.actor.venueId ? [access.actor.venueId] : [];
-
-  const [leads, incomingEnquiries, outgoingEnquiries, incomingDr, outgoingDr] =
-    await Promise.all([
-      listLeadsForActor(access.actor, {
-        status: statusFilter,
-      }),
-      operableVenueIds.length > 0
-        ? listProfileEnquiriesForVenues(operableVenueIds)
-        : Promise.resolve([]),
-      access.actor.roles.includes("entertainer")
-        ? listProfileEnquiriesForEntertainer(access.actor.userId)
-        : Promise.resolve([]),
-      can(access.actor, "direct_request.respond")
-        ? listDirectRequestsForEntertainer(access.actor.userId)
-        : Promise.resolve([]),
-      operableVenueIds.length > 0
-        ? listDirectRequestsForVenues(operableVenueIds)
-        : Promise.resolve([]),
-    ]);
-
-  const pendingVenueEnquiries = incomingEnquiries.filter(
-    (e) => e.state === "pending" && e.submittedByUserId === e.entertainerUserId,
-  );
-  const pendingActConnectionRequests = outgoingEnquiries.filter(
-    (e) => e.state === "pending" && e.submittedByUserId !== e.entertainerUserId,
-  );
-  const pendingEnquiriesToReview = [
-    ...pendingVenueEnquiries,
-    ...pendingActConnectionRequests,
-  ];
-  const venueOutgoingEnquiries = incomingEnquiries.filter(
-    (e) => e.submittedByUserId !== e.entertainerUserId,
-  );
+  const leads = await listLeadsForActor(access.actor, {
+    status: statusFilter,
+  });
 
   const dateFmt = new Intl.DateTimeFormat(locale === "de" ? "de-DE" : "en-GB", {
     dateStyle: "medium",
@@ -109,10 +71,6 @@ export default async function BookingsInboxPage({
     <section className="grid gap-8">
       <PageHeader eyebrow={t("eyebrow")} title={t("title")} body={t("body")} />
 
-      <p className="panel border-[var(--warning-soft)] bg-[var(--warning-soft)]/40 p-4 text-sm">
-        {t("depositNotice")}
-      </p>
-
       {access.actor.roles.includes("entertainer") &&
       !access.actor.entertainerVerified ? (
         <p className="panel p-6 text-sm text-[var(--text-muted)]">
@@ -123,7 +81,7 @@ export default async function BookingsInboxPage({
       <div className="flex flex-wrap gap-2">
         {STATUS_FILTERS.map((status) => {
           const href =
-            status === "all"
+            status === "open"
               ? "/marketplace/bookings"
               : `/marketplace/bookings?status=${status}`;
           const active = statusFilter === status;
@@ -143,68 +101,16 @@ export default async function BookingsInboxPage({
         })}
       </div>
 
-      {pendingEnquiriesToReview.length > 0 ? (
-        <div className="panel grid gap-3 p-6">
-          <h2 className="page-title text-xl">
-            {leadsT("pendingEnquiriesTitle")}
-          </h2>
-          <ul className="grid gap-3">
-            {pendingEnquiriesToReview.map((enquiry) => {
-              const initiatedByAct =
-                enquiry.submittedByUserId === enquiry.entertainerUserId;
-              return (
-                <li
-                  key={enquiry.id}
-                  className="border border-[var(--rule)] p-4 text-sm"
-                >
-                  <p className="font-medium">
-                    {initiatedByAct
-                      ? `${enquiry.actName} → ${enquiry.venueName}`
-                      : `${enquiry.venueName} → ${enquiry.actName}`}
-                  </p>
-                  {enquiry.note ? (
-                    <p className="mt-1 text-[var(--text-muted)]">
-                      {enquiry.note}
-                    </p>
-                  ) : null}
-                  <div className="mt-3 flex flex-wrap items-center gap-3">
-                    <Link
-                      href={
-                        initiatedByAct
-                          ? `/marketplace/entertainers/${enquiry.entertainerProfileId}`
-                          : `/marketplace/venues/${enquiry.venueId}`
-                      }
-                      className="text-sm font-medium underline"
-                    >
-                      {initiatedByAct
-                        ? leadsT("viewActProfile")
-                        : leadsT("viewVenueProfile")}
-                    </Link>
-                    {enquiry.bookingId ? (
-                      <Link
-                        href={`/marketplace/bookings/${enquiry.bookingId}`}
-                        className="text-sm font-medium underline"
-                      >
-                        {t("open")}
-                      </Link>
-                    ) : null}
-                    <ProfileEnquiryRespondButtons
-                      locale={locale as "en" | "de"}
-                      enquiryId={enquiry.id}
-                      state={enquiry.state}
-                    />
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
-
       <div className="panel grid gap-3 p-6">
         <h2 className="page-title text-xl">{t("pipelineTitle")}</h2>
         {leads.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">{t("empty")}</p>
+          <p className="text-sm text-[var(--text-muted)]">
+            {statusFilter === "all" || statusFilter === "open"
+              ? t("empty")
+              : t("emptyFiltered", {
+                  status: leadsT(`status.${statusFilter}`),
+                })}
+          </p>
         ) : (
           <ul className="grid gap-3">
             {leads.map((lead) => (
@@ -212,8 +118,8 @@ export default async function BookingsInboxPage({
                 key={lead.bookingId}
                 className="border border-[var(--rule)] p-4 text-sm"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="font-medium">
                       {lead.actName} · {lead.venueName}
                     </p>
@@ -234,136 +140,43 @@ export default async function BookingsInboxPage({
                         {leadsT("noDateYet")}
                       </p>
                     )}
+                    {lead.needsAction ? (
+                      <p className="mt-2 inline-flex items-center gap-2 text-xs font-semibold tracking-[0.04em] text-[var(--ochre-soft)]">
+                        <span
+                          className="size-2 shrink-0 rounded-full bg-[var(--ochre-soft)]"
+                          aria-hidden="true"
+                        />
+                        {leadsT(needsActionMessageKey(lead.needsAction))}
+                      </p>
+                    ) : null}
                   </div>
-                  <StatusLabel>
-                    {leadsT(`status.${lead.leadStatus}`)}
-                  </StatusLabel>
-                </div>
-                <div className="mt-3">
-                  <Link
-                    href={`/marketplace/bookings/${lead.bookingId}`}
-                    className="font-medium underline"
-                  >
-                    {t("open")}
-                  </Link>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <StatusLabel
+                      tone={
+                        lead.leadStatus === "confirmed"
+                          ? "success"
+                          : lead.leadStatus === "done"
+                            ? "info"
+                            : lead.leadStatus === "lost"
+                              ? "danger"
+                              : "warning"
+                      }
+                    >
+                      {leadsT(`status.${lead.leadStatus}`)}
+                    </StatusLabel>
+                    <Link
+                      href={`/marketplace/bookings/${lead.bookingId}`}
+                      className="inline-flex min-h-9 items-center justify-center rounded-[var(--radius-md)] border border-[var(--primary)] bg-[var(--primary)] px-3 text-xs font-semibold text-[var(--primary-foreground)] no-underline"
+                    >
+                      {t("view")}
+                    </Link>
+                  </div>
                 </div>
               </li>
             ))}
           </ul>
         )}
       </div>
-
-      {can(access.actor, "direct_request.respond") ? (
-        <div className="panel grid gap-3 p-6">
-          <h2 className="page-title text-xl">
-            {leadsT("incomingRequestsTitle")}
-          </h2>
-          {incomingDr.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
-              {leadsT("emptyIncomingRequests")}
-            </p>
-          ) : null}
-          <ul className="grid gap-3">
-            {incomingDr.map((request) => (
-              <li
-                key={request.id}
-                className="border border-[var(--rule)] p-4 text-sm"
-              >
-                <p className="font-medium">
-                  {request.venueName} · {request.district}
-                </p>
-                <p className="text-[var(--text-muted)]">
-                  {request.formatCategory} · {request.state}
-                </p>
-                <p className="mt-2">
-                  {dateFmt.format(request.startsAt)} –{" "}
-                  {dateFmt.format(request.endsAt)}
-                </p>
-                <p>
-                  {leadsT("proposedFee")}:{" "}
-                  {formatEur(request.proposedFeeCents, locale)}
-                </p>
-                <div className="mt-3">
-                  <RespondDirectRequestButtons
-                    locale={locale as "en" | "de"}
-                    requestId={request.id}
-                    state={request.state}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-
-      {operableVenueIds.length > 0 ? (
-        <div className="panel grid gap-3 p-6">
-          <h2 className="page-title text-xl">
-            {leadsT("outgoingRequestsTitle")}
-          </h2>
-          {outgoingDr.length === 0 && venueOutgoingEnquiries.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">
-              {leadsT("emptyOutgoingRequests")}
-            </p>
-          ) : null}
-          <ul className="grid gap-3">
-            {outgoingDr.map((request) => (
-              <li
-                key={request.id}
-                className="border border-[var(--rule)] p-4 text-sm"
-              >
-                <p className="font-medium">
-                  {request.actName} ← {request.venueName}
-                </p>
-                <p className="text-[var(--text-muted)]">
-                  {request.formatCategory} · {request.state}
-                </p>
-                <div className="mt-3">
-                  <WithdrawDirectRequestButton
-                    locale={locale as "en" | "de"}
-                    requestId={request.id}
-                    state={request.state}
-                  />
-                  <VenueRespondToChangesButtons
-                    locale={locale as "en" | "de"}
-                    requestId={request.id}
-                    state={request.state}
-                  />
-                </div>
-              </li>
-            ))}
-            {venueOutgoingEnquiries.map((enquiry) => (
-              <li
-                key={enquiry.id}
-                className="border border-[var(--rule)] p-4 text-sm"
-              >
-                <p className="font-medium">
-                  {enquiry.actName} ← {enquiry.venueName}
-                </p>
-                <p className="text-[var(--text-muted)]">
-                  {leadsT("channel.profile_enquiry")} · {enquiry.state}
-                </p>
-                <div className="mt-3 flex flex-wrap items-center gap-3">
-                  <Link
-                    href={`/marketplace/entertainers/${enquiry.entertainerProfileId}`}
-                    className="text-sm font-medium underline"
-                  >
-                    {leadsT("viewActProfile")}
-                  </Link>
-                  {enquiry.bookingId ? (
-                    <Link
-                      href={`/marketplace/bookings/${enquiry.bookingId}`}
-                      className="text-sm font-medium underline"
-                    >
-                      {t("open")}
-                    </Link>
-                  ) : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </section>
   );
 }

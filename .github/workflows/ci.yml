@@ -10,16 +10,48 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-      - run: npm ci
-      - run: npm run format:check
-      - run: npm run typecheck
-      - run: npm run lint
-      - run: npm run test
-      - run: npm run build
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code formatting
+        run: |
+          echo "::group::Checking code formatting with Prettier"
+          npm run format:check || {
+            echo "::error::Code formatting issues found! Run 'npm run format' locally to fix."
+            echo "::notice::Tip: Install pre-commit hooks with 'npm run prepare' to auto-format before commits."
+            exit 1
+          }
+          echo "::endgroup::"
+
+      - name: Type check
+        run: |
+          echo "::group::Running TypeScript type checking"
+          npm run typecheck
+          echo "::endgroup::"
+
+      - name: Lint code
+        run: |
+          echo "::group::Running ESLint"
+          npm run lint
+          echo "::endgroup::"
+
+      - name: Run tests
+        run: |
+          echo "::group::Running test suite"
+          npm run test
+          echo "::endgroup::"
+
+      - name: Build application
+        run: |
+          echo "::group::Building production bundle"
+          npm run build
+          echo "::endgroup::"
         env:
           AUTH_SECRET: ci-build-placeholder-not-a-real-secret
           NEXT_PUBLIC_APP_URL: http://localhost:3000

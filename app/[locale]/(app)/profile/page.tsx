@@ -23,10 +23,8 @@ import { can } from "@/src/domain/permissions";
 import { isDocumentStoreConfigured } from "@/src/integrations/document-file-store";
 import { resolveEffectiveActor } from "@/src/lib/effective-actor";
 import { Link } from "@/src/i18n/navigation";
-import {
-  listRiderFilesForProfile,
-  listRiderFilesForVenue,
-} from "@/src/db/queries/admin-ops";
+import { listDocumentsForOwner } from "@/src/db/queries/rider-access";
+import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -83,7 +81,9 @@ export default async function ProfilePage({ params }: Props) {
   const primarySpace = venueSpaces[0] ?? null;
   const riderFiles =
     entertainerProfile && process.env.DATABASE_URL
-      ? await listRiderFilesForProfile(entertainerProfile.id)
+      ? await listDocumentsForOwner({
+          entertainerProfileId: entertainerProfile.id,
+        })
       : [];
   const portfolioItems =
     entertainerProfile && process.env.DATABASE_URL
@@ -91,7 +91,7 @@ export default async function ProfilePage({ params }: Props) {
       : [];
   const venueRiderFiles =
     venue && process.env.DATABASE_URL
-      ? await listRiderFilesForVenue(venue.id)
+      ? await listDocumentsForOwner({ venueId: venue.id })
       : [];
   const venuePortfolioItems =
     venue && process.env.DATABASE_URL
@@ -105,14 +105,19 @@ export default async function ProfilePage({ params }: Props) {
     venue && can(effectiveActor, "opportunity.manage", { venueId: venue.id }),
   );
   const storeConfigured = isDocumentStoreConfigured();
+  const legalIdentity = process.env.DATABASE_URL
+    ? await getLegalIdentityForUser(profileUserId)
+    : null;
 
   const entertainerPanel = showEntertainer ? (
     <div className="grid gap-8">
       <EntertainerProfileForm
         locale={locale as "en" | "de"}
         accountEmail={accountEmail}
+        legalIdentity={legalIdentity}
         {...(entertainerProfile
           ? {
+              profileId: entertainerProfile.id,
               publicationState: entertainerProfile.publicationState,
               mediaSlot: (
                 <PortfolioEditor
@@ -189,6 +194,7 @@ export default async function ProfilePage({ params }: Props) {
       <VenueProfileForm
         locale={locale as "en" | "de"}
         accountEmail={accountEmail}
+        legalIdentity={legalIdentity}
         {...(venue
           ? {
               venueId: venue.id,

@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   canViewDocumentVisibility,
+  computeDocumentAccessFlags,
   filterDocumentsForViewer,
+  hasBookingScopedEngagementAccess,
   isEngagementWindowOpen,
   normalizeDocumentTitle,
+  resolveDocumentOwnerFromIds,
   titleFromFilename,
   validateProfileDocumentUpload,
   type ProfileDocumentAccessContext,
@@ -38,6 +41,87 @@ const stranger: ProfileDocumentAccessContext = {
 };
 
 describe("profile-document domain", () => {
+  it("resolves XOR document owners and rejects both/neither", () => {
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: "e1",
+        venueId: null,
+      }),
+    ).toEqual({ kind: "entertainer", entertainerProfileId: "e1" });
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: null,
+        venueId: "v1",
+      }),
+    ).toEqual({ kind: "venue", venueId: "v1" });
+    // Regression: venue-owned riders must not be treated as unowned.
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: null,
+        venueId: "v1",
+      })?.kind,
+    ).toBe("venue");
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: null,
+        venueId: null,
+      }),
+    ).toBeNull();
+    expect(
+      resolveDocumentOwnerFromIds({
+        entertainerProfileId: "e1",
+        venueId: "v1",
+      }),
+    ).toBeNull();
+  });
+
+  it("computes marketplace flags with discover.venues vs discover.entertainers gates", () => {
+    const talentViewingApprovedVenue = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "approved",
+      canDiscoverMarketplace: true,
+      hasOpenEngagement: false,
+    });
+    expect(talentViewingApprovedVenue.canSeeMarketplace).toBe(true);
+    expect(talentViewingApprovedVenue.canSeeEngagement).toBe(false);
+
+    const draftVenue = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "draft",
+      canDiscoverMarketplace: true,
+      hasOpenEngagement: false,
+    });
+    expect(draftVenue.canSeeMarketplace).toBe(false);
+
+    const noDiscover = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "approved",
+      canDiscoverMarketplace: false,
+      hasOpenEngagement: false,
+    });
+    expect(noDiscover.canSeeMarketplace).toBe(false);
+
+    const engaged = computeDocumentAccessFlags({
+      isOwner: false,
+      isStaff: false,
+      publicationState: "approved",
+      canDiscoverMarketplace: true,
+      hasOpenEngagement: true,
+    });
+    expect(engaged.canSeeEngagement).toBe(true);
+
+    expect(
+      canViewDocumentVisibility("marketplace", talentViewingApprovedVenue),
+    ).toBe(true);
+    expect(
+      canViewDocumentVisibility("engagement", talentViewingApprovedVenue),
+    ).toBe(false);
+    expect(canViewDocumentVisibility("engagement", engaged)).toBe(true);
+  });
+
   it("allows empty title on upload and trims provided titles", () => {
     expect(
       validateProfileDocumentUpload({
@@ -138,6 +222,54 @@ describe("profile-document domain", () => {
       isEngagementWindowOpen({
         now,
         endsAt: new Date("2026-08-06T11:00:00Z"),
+      }),
+    ).toBe(false);
+  });
+
+  it("scopes pending engagement docs to the offer sender on that booking", () => {
+    const now = new Date("2026-08-06T12:00:00Z");
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "requested",
+        openOfferProposedByOwner: true,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "requested",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(false);
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "applied",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(false);
+  });
+
+  it("allows both sides after unlock until endsAt", () => {
+    const now = new Date("2026-08-06T12:00:00Z");
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "shortlisted",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: null,
+        now,
+      }),
+    ).toBe(true);
+    expect(
+      hasBookingScopedEngagementAccess({
+        bookingState: "confirmed",
+        openOfferProposedByOwner: false,
+        engagementEndsAt: new Date("2026-08-06T11:00:00Z"),
+        now,
       }),
     ).toBe(false);
   });

@@ -13,17 +13,20 @@ import { LanguageMultiSelect } from "@/src/components/profile/language-multi-sel
 import { LocationAutocomplete } from "@/src/components/profile/location-autocomplete";
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
 import { PublicationControl } from "@/src/components/profile/publication-control";
+import { ProfilePreviewButton } from "@/src/components/profile/profile-preview-button";
 import {
   ParagraphTextField,
   toParagraphEditorHtml,
 } from "@/src/components/profile/paragraph-text-field";
 import { useProfileAutosave } from "@/src/components/profile/use-profile-autosave";
+import { LegalIdentityForm } from "@/src/components/legal-identity-form";
 import {
   canOwnerPublishProfile,
   canOwnerUnpublishProfile,
   isProfilePublished,
   type ProfilePublicationState,
 } from "@/src/domain/profile-publication";
+import type { LegalIdentityFields } from "@/src/domain/legal-identity";
 import {
   ENTERTAINER_SOCIAL_ORDER,
   type SocialPlatform,
@@ -52,6 +55,8 @@ type SocialLinks = Partial<
 
 type Props = {
   locale: "en" | "de";
+  /** Existing profile id — enables marketplace preview. */
+  profileId?: string;
   mediaSlot?: ReactNode;
   defaultValues?: {
     actName: string;
@@ -77,6 +82,7 @@ type Props = {
   publicationState?: string;
   /** Account email used for contact upsert — not shown on this form. */
   accountEmail: string;
+  legalIdentity?: LegalIdentityFields | null;
 };
 
 function Section({
@@ -151,16 +157,19 @@ function canOwnerPublish(state: string | undefined): boolean {
 
 export function EntertainerProfileForm({
   locale,
+  profileId,
   mediaSlot,
   defaultValues,
   publicationState,
   accountEmail,
+  legalIdentity = null,
 }: Props) {
   const t = useTranslations("profile");
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [actName, setActName] = useState(defaultValues?.actName ?? "");
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [legalError, setLegalError] = useState<string | null>(null);
   const [isPublishing, startPublish] = useTransition();
   const social = defaultValues?.socialLinks ?? {};
   const pubState = (publicationState ?? "draft") as ProfilePublicationState;
@@ -213,8 +222,23 @@ export function EntertainerProfileForm({
     save: (payload) => upsertEntertainerProfile(payload),
   });
 
+  function focusPublishField(field: string | undefined) {
+    if (!field || typeof document === "undefined") return;
+    requestAnimationFrame(() => {
+      const target =
+        document.getElementById(`field-${field}`) ??
+        document.querySelector<HTMLElement>(`[data-field="${field}"]`);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const focusable = target?.matches("input,select,textarea")
+        ? target
+        : target?.querySelector<HTMLElement>("input,select,textarea");
+      focusable?.focus?.();
+    });
+  }
+
   function publishProfile() {
     setPublishError(null);
+    setLegalError(null);
     startPublish(async () => {
       const saved = await autosave.saveNow();
       if (!saved?.ok) {
@@ -224,6 +248,11 @@ export function EntertainerProfileForm({
       const result = await publishEntertainerProfile(locale);
       if (!result.ok) {
         setPublishError(result.message || t("publishProfileFailed"));
+        const legalMessage = result.fields?.legalIdentity ?? null;
+        setLegalError(legalMessage);
+        if (result.field === "legalIdentity" || legalMessage) {
+          focusPublishField("legalIdentity");
+        }
         return;
       }
       router.refresh();
@@ -232,6 +261,7 @@ export function EntertainerProfileForm({
 
   function unpublishProfile() {
     setPublishError(null);
+    setLegalError(null);
     startPublish(async () => {
       const result = await unpublishEntertainerProfile(locale);
       if (!result.ok) {
@@ -261,6 +291,13 @@ export function EntertainerProfileForm({
                 phase={autosave.phase}
                 errorMessage={autosave.errorMessage}
               />
+              {profileId ? (
+                <ProfilePreviewButton
+                  href={`/marketplace/entertainers/${profileId}?preview=1`}
+                  onBeforeNavigate={() => autosave.saveNow()}
+                  disabled={autosave.phase === "saving"}
+                />
+              ) : null}
               <PublicationControl
                 state={pubState}
                 unpublishedLabel={t("statusUnpublished")}
@@ -400,39 +437,62 @@ export function EntertainerProfileForm({
               className="field"
             />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium">{t("priceMinEur")}</span>
+          <div className="grid gap-2">
+            <span className="text-sm font-medium text-[var(--ink)]">
+              {t("feeRange")}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="text-sm font-medium text-[var(--text-muted)]"
+                aria-hidden
+              >
+                €
+              </span>
+              <label className="sr-only" htmlFor="profile-fee-min">
+                {t("priceMinEur")}
+              </label>
               <input
+                id="profile-fee-min"
                 name="priceMinEur"
                 type="number"
+                inputMode="numeric"
                 min={0}
-                step="1"
+                step={1}
                 required
+                placeholder={t("priceFromPlaceholder")}
                 defaultValue={
-                  defaultValues
+                  defaultValues && defaultValues.priceMinCents > 0
                     ? Math.round(defaultValues.priceMinCents / 100)
-                    : 0
+                    : undefined
                 }
-                className="field"
+                className="field w-[7.5rem] shrink-0"
               />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium">{t("priceMaxEur")}</span>
+              <span className="text-sm text-[var(--text-muted)]" aria-hidden>
+                –
+              </span>
+              <label className="sr-only" htmlFor="profile-fee-max">
+                {t("priceMaxEur")}
+              </label>
               <input
+                id="profile-fee-max"
                 name="priceMaxEur"
                 type="number"
+                inputMode="numeric"
                 min={0}
-                step="1"
+                step={1}
                 required
+                placeholder={t("priceToPlaceholder")}
                 defaultValue={
-                  defaultValues
+                  defaultValues && defaultValues.priceMaxCents > 0
                     ? Math.round(defaultValues.priceMaxCents / 100)
-                    : 0
+                    : undefined
                 }
-                className="field"
+                className="field w-[7.5rem] shrink-0"
               />
-            </label>
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              {t("feeRangeHint")}
+            </p>
           </div>
 
           <LanguageMultiSelect
@@ -496,6 +556,12 @@ export function EntertainerProfileForm({
           </div>
         </Section>
       </form>
+
+      <LegalIdentityForm
+        locale={locale}
+        initial={legalIdentity}
+        error={legalError}
+      />
     </div>
   );
 }

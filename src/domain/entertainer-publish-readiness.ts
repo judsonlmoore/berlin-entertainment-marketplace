@@ -98,11 +98,11 @@ export function checkEntertainerPublishReadiness(
     snapshot.priceMinCents < 0 ||
     snapshot.priceMaxCents < 0
   ) {
-    reasons.push("Set indicative price minimum and maximum.");
+    reasons.push("Set a typical fee minimum and maximum.");
   } else if (snapshot.priceMaxCents < snapshot.priceMinCents) {
     reasons.push("Price maximum must be at least the minimum.");
   } else if (snapshot.priceMaxCents <= 0) {
-    reasons.push("Set an indicative price range greater than zero.");
+    reasons.push("Set a typical fee range greater than zero.");
   }
 
   if (snapshot.imageCount < 1) {

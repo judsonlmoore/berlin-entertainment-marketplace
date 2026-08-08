@@ -7,6 +7,7 @@ export type DocumentLinkItem = {
   sizeBytes?: number;
 };
 
+/** Booking / ops document list (public profiles use PublicProfileView sidebar). */
 export async function ProfileDocumentList({
   documents,
   locale,

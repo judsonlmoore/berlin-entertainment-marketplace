@@ -15,6 +15,7 @@ import { users } from "./auth";
 import {
   accountStatusEnum,
   applicationStateEnum,
+  bookingInvoiceStatusEnum,
   bookingOriginEnum,
   bookingStateEnum,
   calendarEntryStateEnum,
@@ -23,6 +24,7 @@ import {
   contactOwnerTypeEnum,
   depositStatusEnum,
   directRequestStateEnum,
+  legalEntityTypeEnum,
   marketplaceRoleEnum,
   postGigSurveyPartyRoleEnum,
   postGigSurveyStatusEnum,
@@ -61,6 +63,40 @@ export const marketplaceAccounts = pgTable(
       .defaultNow(),
   },
   (table) => [index("marketplace_accounts_status_idx").on(table.accountStatus)],
+);
+
+export const accountLegalIdentities = pgTable(
+  "account_legal_identities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" })
+      .unique(),
+    entityType: legalEntityTypeEnum("entity_type")
+      .notNull()
+      .default("individual"),
+    legalName: text("legal_name").notNull().default(""),
+    tradingName: text("trading_name"),
+    addressLine1: text("address_line1").notNull().default(""),
+    addressLine2: text("address_line2"),
+    postalCode: text("postal_code").notNull().default(""),
+    city: text("city").notNull().default(""),
+    countryCode: text("country_code").notNull().default("DE"),
+    taxId: text("tax_id"),
+    companyRegisterId: text("company_register_id"),
+    invoiceEmail: text("invoice_email").notNull().default(""),
+    iban: text("iban"),
+    bic: text("bic"),
+    paymentNote: text("payment_note"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [index("account_legal_identities_user_idx").on(table.userId)],
 );
 
 export const userRoles = pgTable(
@@ -399,9 +435,6 @@ export const profileEnquiries = pgTable(
       table.entertainerProfileId,
       table.state,
     ),
-    uniqueIndex("profile_enquiries_active_pair_uidx")
-      .on(table.venueId, table.entertainerProfileId)
-      .where(sql`${table.state} IN ('pending', 'interested')`),
   ],
 );
 
@@ -509,6 +542,13 @@ export const bookingTerms = pgTable(
     cancellationTerms: text("cancellation_terms").notNull(),
     productionObligations: text("production_obligations").notNull(),
     depositTerms: text("deposit_terms"),
+    /** Explains what changed vs prior offer; required for counters (version > 1). */
+    changeNote: text("change_note"),
+    /** Set when a later offer supersedes this row (counter sent). */
+    supersededAt: timestamp("superseded_at", {
+      withTimezone: true,
+      mode: "date",
+    }),
     snapshot: jsonb("snapshot")
       .$type<Record<string, unknown>>()
       .notNull()
@@ -802,6 +842,28 @@ export const agreements = pgTable(
     /** Immutable rendered bodies captured at generation time. */
     germanBody: text("german_body").notNull(),
     englishBody: text("english_body").notNull(),
+    /** Frozen addenda list: [{ id, title, source, addendumNumber }] */
+    addendaSnapshot: jsonb("addenda_snapshot")
+      .$type<
+        Array<{
+          id: string;
+          title: string;
+          source: "act_profile" | "venue_profile" | "booking";
+          addendumNumber: number;
+        }>
+      >()
+      .notNull()
+      .default([]),
+    /** Frozen legal identity for both parties at generate time. */
+    legalIdentitySnapshot: jsonb("legal_identity_snapshot").$type<{
+      entertainer: Record<string, unknown>;
+      venue: Record<string, unknown>;
+    } | null>(),
+    /** Private Blob / local-doc key for the immutable package PDF. */
+    packagePdfBlobKey: text("package_pdf_blob_key"),
+    /** SHA-256 hex of final package PDF bytes. */
+    packageFingerprint: text("package_fingerprint"),
+    packagePageCount: integer("package_page_count"),
     provider: text("provider"),
     providerEnvelopeId: text("provider_envelope_id"),
     status: text("status").notNull().default("draft"),
@@ -833,6 +895,8 @@ export const signatures = pgTable(
     partyRole: text("party_role").notNull(),
     providerReference: text("provider_reference"),
     status: text("status").notNull().default("pending"),
+    /** Locale confirmation phrase typed at sign (double opt-in). */
+    confirmationPhrase: text("confirmation_phrase"),
     signedAt: timestamp("signed_at", { withTimezone: true, mode: "date" }),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -861,6 +925,38 @@ export const depositStatusEvents = pgTable("deposit_status_events", {
     .notNull()
     .defaultNow(),
 });
+
+export const bookingInvoices = pgTable(
+  "booking_invoices",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    bookingId: uuid("booking_id")
+      .notNull()
+      .references(() => bookings.id, { onDelete: "cascade" }),
+    status: bookingInvoiceStatusEnum("status").notNull().default("draft"),
+    format: text("format").notNull().default("sandbox_pdf"),
+    blobKey: text("blob_key"),
+    sellerSnapshot: jsonb("seller_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    buyerSnapshot: jsonb("buyer_snapshot")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    validationNotes: text("validation_notes"),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("booking_invoices_booking_idx").on(table.bookingId),
+    uniqueIndex("booking_invoices_booking_uidx").on(table.bookingId),
+  ],
+);
 
 export const postGigSurveys = pgTable(
   "post_gig_surveys",
@@ -926,6 +1022,10 @@ export const riderFiles = pgTable(
     venueId: uuid("venue_id").references(() => venues.id, {
       onDelete: "cascade",
     }),
+    /** When set, document is booking-scoped (night pack / addendum candidate). */
+    bookingId: uuid("booking_id").references(() => bookings.id, {
+      onDelete: "cascade",
+    }),
     blobKey: text("blob_key").notNull(),
     title: text("title").notNull().default("Technical rider"),
     visibility: profileDocumentVisibilityEnum("visibility")
@@ -950,6 +1050,7 @@ export const riderFiles = pgTable(
       table.sortOrder,
     ),
     index("rider_files_venue_sort_idx").on(table.venueId, table.sortOrder),
+    index("rider_files_booking_sort_idx").on(table.bookingId, table.sortOrder),
     check(
       "rider_files_owner_xor_check",
       sql`(

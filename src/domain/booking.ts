@@ -43,8 +43,8 @@ export const TERMS_ELIGIBLE_STATES = [
 ] as const satisfies readonly BookingState[];
 
 const LEGAL_TRANSITIONS: Record<BookingState, readonly BookingState[]> = {
-  requested: ["accepted", "declined", "withdrawn", "expired"],
-  applied: ["shortlisted", "rejected", "withdrawn", "expired"],
+  requested: ["accepted", "terms_agreed", "declined", "withdrawn", "expired"],
+  applied: ["shortlisted", "terms_agreed", "rejected", "withdrawn", "expired"],
   shortlisted: [
     "terms_agreed",
     "rejected",
@@ -71,12 +71,14 @@ const ACTOR_TRANSITIONS: Record<
 > = {
   requested: {
     accepted: ["entertainer", "system"],
+    terms_agreed: ["venue", "entertainer"],
     declined: ["entertainer"],
     withdrawn: ["venue"],
     expired: ["system"],
   },
   applied: {
     shortlisted: ["venue", "system"],
+    terms_agreed: ["venue", "entertainer"],
     rejected: ["venue"],
     withdrawn: ["entertainer"],
     expired: ["system"],
@@ -169,4 +171,70 @@ export function canRecordDepositStatus(
 
 export function nextTermsVersion(currentMaxVersion: number | null): number {
   return (currentMaxVersion ?? 0) + 1;
+}
+
+/** Open offer: not accepted and not superseded. */
+export function isOpenTermsOffer(terms: {
+  acceptedAt: Date | null;
+  supersededAt?: Date | null;
+}): boolean {
+  return !terms.acceptedAt && !terms.supersededAt;
+}
+
+export type TermsOfferAction =
+  | { kind: "compose" }
+  | { kind: "wait" }
+  | { kind: "respond"; termsId: string }
+  | { kind: "none" };
+
+/** Pending profile-origin bookings that already carry offer v1. */
+export function isPendingOfferState(state: BookingState): boolean {
+  return state === "requested" || state === "applied";
+}
+
+/**
+ * Who may act on commercial offers.
+ * - Open (shortlisted/accepted): compose / wait / respond as usual
+ * - Pending profile offer: wait or respond only (first Send offer creates the booking)
+ */
+export function resolveTermsOfferAction(input: {
+  bookingState: BookingState;
+  actorUserId: string;
+  openOffer: { id: string; proposedByUserId: string } | null;
+  /** Profile-origin pending bookings allow respond/wait on the opening offer. */
+  allowPendingOfferResponse?: boolean;
+}): TermsOfferAction {
+  const pendingOfferFlow =
+    Boolean(input.allowPendingOfferResponse) &&
+    isPendingOfferState(input.bookingState);
+
+  if (!isTermsEligibleState(input.bookingState) && !pendingOfferFlow) {
+    return { kind: "none" };
+  }
+  if (!input.openOffer) {
+    if (pendingOfferFlow) return { kind: "none" };
+    return { kind: "compose" };
+  }
+  if (input.openOffer.proposedByUserId === input.actorUserId) {
+    return { kind: "wait" };
+  }
+  return { kind: "respond", termsId: input.openOffer.id };
+}
+
+/** Open state after Counter on a pending profile-origin booking. */
+export function openStateAfterPendingCounter(
+  pendingState: BookingState,
+): "shortlisted" | "accepted" | null {
+  if (pendingState === "applied") return "shortlisted";
+  if (pendingState === "requested") return "accepted";
+  return null;
+}
+
+/** Counters (version > 1) require a non-empty change note. */
+export function requireChangeNoteForVersion(
+  version: number,
+  changeNote: string | null | undefined,
+): boolean {
+  if (version <= 1) return true;
+  return Boolean(changeNote?.trim());
 }

@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
-import { listRiderFilesForProfile } from "@/src/db/queries/admin-ops";
+import { listDocumentsForOwner } from "@/src/db/queries/rider-access";
 import { getActorContext } from "@/src/db/queries/actor";
 import {
   auditEvents,
@@ -133,5 +133,5 @@ export async function listOwnRiderFiles(entertainerProfileId: string) {
     where: eq(entertainerProfiles.id, entertainerProfileId),
   });
   if (!profile || profile.userId !== session.user.id) return [];
-  return listRiderFilesForProfile(entertainerProfileId);
+  return listDocumentsForOwner({ entertainerProfileId });
 }

@@ -24,6 +24,55 @@ export type ProfileDocumentAccessContext = {
   canSeeEngagement: boolean;
 };
 
+/** XOR owner for rider_files / document ACL (entertainer profile XOR venue). */
+export type DocumentOwnerRef =
+  | { kind: "entertainer"; entertainerProfileId: string }
+  | { kind: "venue"; venueId: string };
+
+/**
+ * Resolve document owner from XOR ids.
+ *
+ *   entertainerProfileId ──┐
+ *                          ├── exactly one set → owner ref
+ *   venueId ───────────────┘
+ *   both or neither → null (invalid / unowned)
+ */
+export function resolveDocumentOwnerFromIds(input: {
+  entertainerProfileId?: string | null;
+  venueId?: string | null;
+}): DocumentOwnerRef | null {
+  const entertainerProfileId = input.entertainerProfileId?.trim() || null;
+  const venueId = input.venueId?.trim() || null;
+  if (Boolean(entertainerProfileId) === Boolean(venueId)) return null;
+  if (entertainerProfileId) {
+    return { kind: "entertainer", entertainerProfileId };
+  }
+  return { kind: "venue", venueId: venueId! };
+}
+
+/** Pure flags for marketplace/engagement visibility (after async engagement resolved). */
+export function computeDocumentAccessFlags(input: {
+  isOwner: boolean;
+  isStaff: boolean;
+  publicationState: string;
+  canDiscoverMarketplace: boolean;
+  hasOpenEngagement: boolean;
+}): ProfileDocumentAccessContext {
+  const approved = input.publicationState === "approved";
+  const canSeeMarketplace =
+    input.isOwner ||
+    input.isStaff ||
+    (input.canDiscoverMarketplace && approved);
+  const canSeeEngagement =
+    input.isOwner || input.isStaff || input.hasOpenEngagement;
+  return {
+    isOwner: input.isOwner,
+    isStaff: input.isStaff,
+    canSeeMarketplace,
+    canSeeEngagement,
+  };
+}
+
 export type ProfileDocumentListItem = {
   id: string;
   visibility: ProfileDocumentVisibility;
@@ -42,6 +91,12 @@ export const DOCUMENT_ENGAGEMENT_BOOKING_STATES = [
   "agreement_generated",
   "partially_signed",
   "confirmed",
+] as const;
+
+/** Pending states where an open offer may expose the sender’s engagement docs. */
+export const DOCUMENT_PENDING_OFFER_BOOKING_STATES = [
+  "applied",
+  "requested",
 ] as const;
 
 export function normalizeDocumentTitle(raw: string): string {
@@ -115,6 +170,41 @@ export function isEngagementWindowOpen(input: {
 }): boolean {
   if (!input.endsAt) return true;
   return input.endsAt.getTime() > input.now.getTime();
+}
+
+/**
+ * Booking-scoped engagement ACL for a specific booking being viewed.
+ *
+ * Pending: only the open offer *sender's* engagement docs are visible.
+ * After unlock (shortlisted…confirmed): both sides, until the performance window ends.
+ * Pair-level concurrent offers must not grant access on a different booking.
+ */
+export function hasBookingScopedEngagementAccess(input: {
+  bookingState: string;
+  /** True when this booking has an open (unaccepted, unsuperseded) offer from the document owner. */
+  openOfferProposedByOwner: boolean;
+  engagementEndsAt: Date | null;
+  now?: Date;
+}): boolean {
+  const now = input.now ?? new Date();
+  if (
+    (DOCUMENT_ENGAGEMENT_BOOKING_STATES as readonly string[]).includes(
+      input.bookingState,
+    )
+  ) {
+    return isEngagementWindowOpen({
+      now,
+      endsAt: input.engagementEndsAt,
+    });
+  }
+  if (
+    (DOCUMENT_PENDING_OFFER_BOOKING_STATES as readonly string[]).includes(
+      input.bookingState,
+    )
+  ) {
+    return input.openOfferProposedByOwner;
+  }
+  return false;
 }
 
 export function filenameFromTitle(title: string): string {

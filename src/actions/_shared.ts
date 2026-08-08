@@ -15,11 +15,35 @@ export type ActionResult =
       expiredHolds?: number;
       expiredRequests?: number;
     }
-  | { ok: false; code: string; message: string };
+  | {
+      ok: false;
+      code: string;
+      message: string;
+      /** Form field name when validation points at a specific input. */
+      field?: string;
+      /** All field-level validation issues (publish checklist, etc.). */
+      fields?: Record<string, string>;
+    };
 
 export function toActionError(error: unknown): ActionResult {
   if (error instanceof AppError) {
-    return { ok: false, code: error.code, message: error.message };
+    const field =
+      typeof error.details?.field === "string"
+        ? error.details.field
+        : undefined;
+    const fields =
+      error.details?.fields &&
+      typeof error.details.fields === "object" &&
+      !Array.isArray(error.details.fields)
+        ? (error.details.fields as Record<string, string>)
+        : undefined;
+    return {
+      ok: false,
+      code: error.code,
+      message: error.message,
+      ...(field ? { field } : {}),
+      ...(fields ? { fields } : {}),
+    };
   }
   throw error;
 }
