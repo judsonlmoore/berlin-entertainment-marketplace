@@ -108,21 +108,15 @@ export default async function HomePage({ params }: Props) {
           <div className="flex items-center justify-center gap-4 rounded-lg border border-[var(--rule)] bg-[var(--canvas)] p-8 sm:p-12">
             <Monogram
               name="Local Scene"
-              size="lg"
-              colorSeed="local-1"
-              className="shadow-sm"
+              className="size-20 shrink-0 rounded-full shadow-sm [&_span]:text-2xl"
             />
             <Monogram
               name="Community Arts"
-              size="lg"
-              colorSeed="local-2"
-              className="shadow-sm"
+              className="size-20 shrink-0 rounded-full shadow-sm [&_span]:text-2xl"
             />
             <Monogram
               name="Independent Venues"
-              size="lg"
-              colorSeed="local-3"
-              className="shadow-sm"
+              className="size-20 shrink-0 rounded-full shadow-sm [&_span]:text-2xl"
             />
           </div>
         }
