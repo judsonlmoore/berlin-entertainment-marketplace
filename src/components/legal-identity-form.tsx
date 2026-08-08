@@ -10,9 +10,11 @@ import type { LegalIdentityFields } from "@/src/domain/legal-identity";
 type Props = {
   locale: "en" | "de";
   initial: LegalIdentityFields | null;
-  /** Publish-gate field error shown on the section. */
+  /** Section field error shown above the form. */
   error?: string | null;
   onSaved?: (fields: LegalIdentityFields) => void;
+  /** Wizard already shows the page title — hide the form heading. */
+  embedded?: boolean;
 };
 
 export function LegalIdentityForm({
@@ -20,6 +22,7 @@ export function LegalIdentityForm({
   initial,
   error = null,
   onSaved,
+  embedded = false,
 }: Props) {
   const t = useTranslations("profile");
   const formRef = useRef<HTMLFormElement>(null);
@@ -90,10 +93,14 @@ export function LegalIdentityForm({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold tracking-[0.12em] text-[var(--ink)] uppercase">
-            {t("sectionLegal")}
-          </h3>
-          <p className="mt-1 text-sm text-[var(--text-muted)]">
+          {embedded ? null : (
+            <h3 className="text-sm font-semibold tracking-[0.12em] text-[var(--ink)] uppercase">
+              {t("sectionLegal")}
+            </h3>
+          )}
+          <p
+            className={`text-sm text-[var(--text-muted)]${embedded ? "" : " mt-1"}`}
+          >
             {t("legalBody")}
           </p>
         </div>

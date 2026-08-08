@@ -6,6 +6,10 @@ import { auth } from "@/src/auth";
 import { getDb } from "@/src/db/client";
 import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 import {
+  listPortfolioItemsForProfile,
+  listPortfolioItemsForVenue,
+} from "@/src/db/queries/profiles";
+import {
   entertainerProfiles,
   portfolioItems,
   userRoles,
@@ -16,6 +20,7 @@ import {
   type EntertainerDraft,
   type VenueDraft,
 } from "@/src/components/onboarding-setup-wizard";
+import type { PortfolioItemRow } from "@/src/components/portfolio-editor";
 import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import { resolveOnboardingDestination } from "@/src/lib/onboarding-gate";
 import { firstIncompleteWizardStepIndex } from "@/src/lib/onboarding-wizard-progress";
@@ -127,6 +132,8 @@ export default async function OnboardingSetupPage({ params }: Props) {
     heroImageId: null,
   };
 
+  let initialPortfolio: PortfolioItemRow[] = [];
+
   if (setupRole === "entertainer") {
     const profile = await db.query.entertainerProfiles.findFirst({
       where: eq(entertainerProfiles.userId, userId),
@@ -182,6 +189,7 @@ export default async function OnboardingSetupPage({ params }: Props) {
         heroImageId: hero?.id ?? null,
         hasExternalOrVideoLink,
       };
+      initialPortfolio = await listPortfolioItemsForProfile(profile.id);
     }
   } else {
     const venue = await db.query.venues.findFirst({
@@ -231,6 +239,7 @@ export default async function OnboardingSetupPage({ params }: Props) {
         imageCount: imageRow?.value ?? 0,
         heroImageId: hero?.id ?? null,
       };
+      initialPortfolio = await listPortfolioItemsForVenue(venue.id);
     }
   }
 
@@ -279,6 +288,7 @@ export default async function OnboardingSetupPage({ params }: Props) {
       accountEmail={accountEmail}
       entertainerDraft={entertainerDraft}
       venueDraft={venueDraft}
+      portfolioItems={initialPortfolio}
       legalIdentity={legalIdentity}
       initialStepIndex={initialStepIndex}
     />

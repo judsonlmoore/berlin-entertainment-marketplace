@@ -10,7 +10,6 @@ const ready = {
   venueType: "bar|live_music",
   audienceDescription: `<p>${"b".repeat(50)}</p>`,
   capacity: 80,
-  legalIdentityComplete: true,
 };
 
 describe("checkVenuePublishReadiness", () => {
@@ -38,13 +37,7 @@ describe("checkVenuePublishReadiness", () => {
     );
   });
 
-  it("requires complete legal identity", () => {
-    const result = checkVenuePublishReadiness({
-      ...ready,
-      legalIdentityComplete: false,
-    });
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.issues.some((i) => i.field === "legalIdentity")).toBe(true);
+  it("does not require legal identity to publish", () => {
+    expect(checkVenuePublishReadiness(ready).ok).toBe(true);
   });
 });

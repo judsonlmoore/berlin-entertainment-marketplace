@@ -15,8 +15,7 @@ export type VenuePublishField =
   | "postalCode"
   | "venueCategory"
   | "capacity"
-  | "audienceDescription"
-  | "legalIdentity";
+  | "audienceDescription";
 
 export type VenuePublishIssue = {
   field: VenuePublishField;
@@ -32,8 +31,6 @@ export type VenuePublishSnapshot = {
   venueType: string;
   audienceDescription: string;
   capacity: number;
-  /** Required to appear in the marketplace; private until terms are agreed. */
-  legalIdentityComplete: boolean;
 };
 
 export type VenuePublishReadinessResult =
@@ -109,14 +106,6 @@ export function checkVenuePublishReadiness(
         length === 0
           ? "Audience description is required."
           : `Audience description needs at least ${DESCRIPTION_MIN} characters (currently ${length}).`,
-    });
-  }
-
-  if (!snapshot.legalIdentityComplete) {
-    issues.push({
-      field: "legalIdentity",
-      message:
-        "Complete legal and payment identity before publishing to the marketplace.",
     });
   }
 

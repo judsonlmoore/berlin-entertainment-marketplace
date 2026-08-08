@@ -70,7 +70,7 @@ Published profiles stay published across edits. Owners may **unpublish** (back t
 
 After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Agency may appear on the role picker as a non-selectable coming-soon option with a link to Contact.
 
-A one-shot chaptered setup wizard (Airbnb-inspired interaction: one focus per step, chapter progress, Save & exit, Skip) collects publish-path fields. Soft exit is allowed after a minimum draft (role + display name): unpublished members may search the opposite side; contact stays blocked until published. After any wizard exit, further edits and publish happen only on `/profile` (wizard is not resumed). Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Email ownership comes from the configured authentication provider.
+A one-shot chaptered setup wizard (Airbnb-inspired interaction: one focus per step, chapter progress, Skip on optional incomplete steps) collects publish-path fields. There is no mid-flow help link or Save & exit — members move through with Back and one adaptive primary button (**Skip for now** when a skippable step is incomplete, **Next** when valid) so they see every publish-path step even when skipping. Soft exit is available only at the final go-live step (Publish or Explore marketplace). After exit, further edits and publish happen only on `/profile` (wizard is not resumed). Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Email ownership comes from the configured authentication provider.
 
 Buyer onboarding may search Google Places (New) to prefill venue name/address/coords/website; all prefilled fields remain editable. Places is optional — manual entry always works.
 
@@ -99,11 +99,11 @@ Required before self-serve publication (built-in QA):
 - At least one portfolio photo
 - At least one public URL (website, social, or featured video)
 - Group size and Berlin base / travel radius
-- Indicative price minimum and maximum (EUR for MVP)
+- Typical fee minimum and maximum (EUR for MVP)
 - At least one private contact method
 - Native availability calendar
 
-Optional: performance formats, technical requirements, accessibility notes, languages, equipment supplied, additional links, technical rider uploads. Prices are indicative; agreed booking terms are authoritative. An entertainer profile is discoverable only to **venue operators** (and staff) after publication.
+Optional: performance formats, technical requirements, accessibility notes, languages, equipment supplied, additional links, technical rider uploads. Prices are a typical range for discovery; agreed booking terms are authoritative. An entertainer profile is discoverable only to **venue operators** (and staff) after publication.
 
 ### 4.4 Review behavior
 
@@ -206,7 +206,7 @@ The booking detail surface is a **shared negotiation / contract builder**:
 - Deposit status is separate: `not_required`, `pending`, `received`, `refunded`, or `disputed`.
 - A deposit never confirms a booking and lack of a deposit never prevents signature-based confirmation.
 - Salon does not collect, hold, escrow, route, or refund money in the current product.
-- **Legal / payment identity** lives on the member **Profile** (individual / freelancer / registered business), not Account settings. It is **required to publish** and appear in the marketplace. Fields support agreement parties and optional invoice artifacts (see `docs/INVOICE_LIBRARY_SPIKE.md`). Counterparty legal/payment details are revealed only at/after `terms_agreed` (not at contact unlock) and are never shown on the public discovery profile. Identity is snapshotted onto the agreement at generate time.
+- **Legal / payment identity** lives on the member **Profile** (individual / freelancer / registered business), not Account settings. It is **not** required to publish or appear in discovery. It **is** required to **Send offer**, **Accept**, or **Counter** an offer (Decline/Pass does not require it) and to generate agreements/optional invoices (see `docs/INVOICE_LIBRARY_SPIKE.md`). Counterparty legal/payment details are revealed only at/after `terms_agreed` (not at contact unlock) and are never shown on the public discovery profile. Identity is snapshotted onto the agreement at generate time.
 - **Invoices** are optional post-`confirmed` PDF/e-invoice **artifacts** for the parties (talent seller → venue buyer by default). Generation uses an `InvoiceProvider` boundary (sandbox first). Invoices are not checkout, escrow, or payouts.
 
 ## 9. Availability and calendar
@@ -252,7 +252,7 @@ No consumer event pages, public profile directory, public listings, public revie
 - Staff can suspend/reactivate accounts and suspend/restore profile publication with an audit trail (operational tooling; not a member `/admin` UI).
 - Unpublished members can search the opposite side but cannot contact (apply / direct request) until their profile is published; unpublished profiles are invisible in discovery.
 - An owner can invite/manage venue members.
-- Venue and entertainer profiles capture required fields (including legal/payment identity) and support self-serve publish/unpublish with a built-in checklist.
+- Venue and entertainer profiles capture required discovery fields and support self-serve publish/unpublish with a built-in checklist. Legal/payment identity is collected on Profile for offers and agreements (not required to publish).
 - Entertainers cannot browse other entertainers; venues cannot browse other venues (server-enforced).
 - A published entertainer can apply once to an open call (including one-click from the venue profile); a venue can shortlist or reject.
 - A published entertainer or venue can Send offer on the opposite profile; the receiver Accepts, Counters, or Declines.

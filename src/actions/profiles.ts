@@ -18,9 +18,7 @@ import {
   venues,
 } from "@/src/db/schema/marketplace";
 import { AppError } from "@/src/domain/errors";
-import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 import { checkEntertainerPublishReadiness } from "@/src/domain/entertainer-publish-readiness";
-import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import { checkVenuePublishReadiness } from "@/src/domain/venue-publish-readiness";
 import { can } from "@/src/domain/permissions";
 import {
@@ -223,23 +221,17 @@ function sanitizeVenueProse(data: z.infer<typeof venueSchema>) {
   };
 }
 
-function assertVenueReadyForPublish(
-  venue: {
-    name: string;
-    shortDescription: string;
-    addressLine1: string;
-    district: string;
-    postalCode: string;
-    venueType: string;
-    audienceDescription: string;
-    capacity: number;
-  },
-  legalIdentityComplete: boolean,
-) {
-  const readiness = checkVenuePublishReadiness({
-    ...venue,
-    legalIdentityComplete,
-  });
+function assertVenueReadyForPublish(venue: {
+  name: string;
+  shortDescription: string;
+  addressLine1: string;
+  district: string;
+  postalCode: string;
+  venueType: string;
+  audienceDescription: string;
+  capacity: number;
+}) {
+  const readiness = checkVenuePublishReadiness(venue);
   if (!readiness.ok) {
     const fields = Object.fromEntries(
       readiness.issues.map((issue) => [issue.field, issue.message]),
@@ -441,7 +433,6 @@ export async function publishEntertainerProfile(
       (item) => item.kind === "youtube" || item.kind === "link",
     );
 
-    const legal = await getLegalIdentityForUser(actor.userId);
     const readiness = checkEntertainerPublishReadiness({
       actName: profile.actName,
       category: profile.category,
@@ -457,26 +448,11 @@ export async function publishEntertainerProfile(
         (profile.socialLinks as Record<string, string> | null) ?? null,
       imageCount: imageRow?.value ?? 0,
       hasExternalOrVideoLink,
-      legalIdentityComplete: isLegalIdentityComplete(legal),
     });
     if (!readiness.ok) {
-      const legalMissing = readiness.reasons.some((r) =>
-        /legal and payment identity/i.test(r),
-      );
       throw new AppError(
         "validation",
         readiness.reasons[0] ?? "Profile incomplete",
-        legalMissing
-          ? {
-              field: "legalIdentity",
-              fields: {
-                legalIdentity:
-                  readiness.reasons.find((r) =>
-                    /legal and payment identity/i.test(r),
-                  ) ?? readiness.reasons[0]!,
-              },
-            }
-          : undefined,
       );
     }
 
@@ -801,10 +777,7 @@ export async function publishVenueProfile(
       throw new AppError("not_found", "Venue not found");
     }
 
-    const legal = venue.ownerUserId
-      ? await getLegalIdentityForUser(venue.ownerUserId)
-      : null;
-    assertVenueReadyForPublish(venue, isLegalIdentityComplete(legal));
+    assertVenueReadyForPublish(venue);
 
     const from = venue.publicationState as ProfilePublicationState;
     if (!canOwnerTransitionProfile(from, "approved")) {

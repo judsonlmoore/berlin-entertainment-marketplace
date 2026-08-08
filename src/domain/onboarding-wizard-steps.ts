@@ -5,8 +5,7 @@
 
 export type WizardRole = "entertainer" | "venue";
 
-export type WizardStepKind =
-  "chapter_intro" | "field" | "media" | "legal" | "publish";
+export type WizardStepKind = "field" | "media" | "legal" | "publish";
 
 export type WizardStepDef = {
   id: string;
@@ -21,32 +20,11 @@ export type WizardStepDef = {
 /** Talent publish-path steps in order. */
 export const ENTERTAINER_WIZARD_STEPS: readonly WizardStepDef[] = [
   {
-    id: "chapter_a",
-    chapter: "A",
-    kind: "chapter_intro",
-    required: true,
-    skippable: false,
-  },
-  {
-    id: "act_name",
+    id: "basics",
     chapter: "A",
     kind: "field",
     required: true,
     skippable: false,
-  },
-  {
-    id: "category",
-    chapter: "A",
-    kind: "field",
-    required: true,
-    skippable: false,
-  },
-  {
-    id: "description",
-    chapter: "A",
-    kind: "field",
-    required: false,
-    skippable: true,
   },
   {
     id: "hero_photo",
@@ -77,13 +55,6 @@ export const ENTERTAINER_WIZARD_STEPS: readonly WizardStepDef[] = [
     skippable: true,
   },
   {
-    id: "chapter_b",
-    chapter: "B",
-    kind: "chapter_intro",
-    required: true,
-    skippable: false,
-  },
-  {
     id: "legal",
     chapter: "B",
     kind: "legal",
@@ -109,32 +80,11 @@ export const ENTERTAINER_WIZARD_STEPS: readonly WizardStepDef[] = [
 /** Buyer publish-path steps in order. */
 export const VENUE_WIZARD_STEPS: readonly WizardStepDef[] = [
   {
-    id: "chapter_a",
-    chapter: "A",
-    kind: "chapter_intro",
-    required: true,
-    skippable: false,
-  },
-  {
-    id: "venue_name",
+    id: "basics",
     chapter: "A",
     kind: "field",
     required: true,
     skippable: false,
-  },
-  {
-    id: "venue_type",
-    chapter: "A",
-    kind: "field",
-    required: true,
-    skippable: false,
-  },
-  {
-    id: "description",
-    chapter: "A",
-    kind: "field",
-    required: false,
-    skippable: true,
   },
   {
     id: "address",
@@ -156,13 +106,6 @@ export const VENUE_WIZARD_STEPS: readonly WizardStepDef[] = [
     kind: "media",
     required: false,
     skippable: true,
-  },
-  {
-    id: "chapter_b",
-    chapter: "B",
-    kind: "chapter_intro",
-    required: true,
-    skippable: false,
   },
   {
     id: "legal",
@@ -187,8 +130,12 @@ export const VENUE_WIZARD_STEPS: readonly WizardStepDef[] = [
   },
 ] as const;
 
-export function wizardStepsForRole(role: WizardRole): readonly WizardStepDef[] {
-  return role === "entertainer" ? ENTERTAINER_WIZARD_STEPS : VENUE_WIZARD_STEPS;
+export function wizardStepsForRole(
+  role: WizardRole,
+): readonly WizardStepDef[] {
+  return role === "entertainer"
+    ? ENTERTAINER_WIZARD_STEPS
+    : VENUE_WIZARD_STEPS;
 }
 
 export function wizardChapters(
@@ -210,4 +157,8 @@ export function stepIndexById(
   id: string,
 ): number {
   return steps.findIndex((step) => step.id === id);
+}
+
+export function chapterNumber(chapter: "A" | "B" | "C"): number {
+  return chapter === "A" ? 1 : chapter === "B" ? 2 : 3;
 }

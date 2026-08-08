@@ -12,14 +12,13 @@ describe("onboarding wizard steps", () => {
     expect(VENUE_WIZARD_STEPS.at(-1)?.id).toBe("go_live");
   });
 
-  it("requires name before skippable steps", () => {
+  it("starts with combined basics before skippable steps", () => {
     const talent = wizardStepsForRole("entertainer");
-    const nameIdx = talent.findIndex((s) => s.id === "act_name");
+    expect(talent[0]?.id).toBe("basics");
+    expect(talent[0]?.required).toBe(true);
+    expect(talent[0]?.skippable).toBe(false);
     const skipIdx = talent.findIndex((s) => s.skippable);
-    expect(nameIdx).toBeGreaterThanOrEqual(0);
-    expect(skipIdx).toBeGreaterThan(nameIdx);
-    expect(talent[nameIdx]?.required).toBe(true);
-    expect(talent[nameIdx]?.skippable).toBe(false);
+    expect(skipIdx).toBeGreaterThan(0);
   });
 
   it("has three chapters", () => {

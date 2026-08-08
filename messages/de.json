@@ -198,12 +198,11 @@
     "entertainerPath": "Talent-Einrichtung",
     "venuePath": "Buyer-Einrichtung",
     "stepOf": "Schritt {current} von {total}",
+    "chapterOf": "Kapitel {current} von {total}",
     "chapterProgress": "Kapitel {chapter}",
     "next": "Weiter",
     "back": "Zurück",
     "skip": "Vorerst überspringen",
-    "saveAndExit": "Speichern & beenden",
-    "questions": "Fragen?",
     "publish": "Profil veröffentlichen",
     "exploreMarketplace": "Marktplatz erkunden",
     "continueToProfile": "Weiter zum Profil",
@@ -217,15 +216,14 @@
     "addressConfirmBody": "Prüfen Sie die Angaben, bevor Sie weitergehen.",
     "heroUploadHint": "Hero-Foto ablegen oder klicken zum Auswählen.",
     "linksHint": "Mindestens einen öffentlichen Link — Website, Instagram oder YouTube.",
-    "legalPrivacy": "Rechtliche und Zahlungsdaten bleiben privat, bis beide Seiten Konditionen vereinbaren.",
     "valueActName": "So erscheinen Sie in der Discovery.",
     "valueCategory": "Hilft Buyern beim passenden Match.",
     "valueDescription": "Was zur Shortlist führt.",
     "valueHero": "Visuelles Vertrauen auf einen Blick.",
     "valueLocation": "Passung und Logistik für Berlin-Buchungen.",
-    "valueFee": "Kommerzielles Signal — nur Richtwert.",
+    "valueFee": "Übliche Gage für Buyer — das finale Honorar steht in den Buchungskonditionen.",
     "valueLinks": "Nachweis, dem Buyer folgen können.",
-    "valueLegal": "Zum Veröffentlichen nötig; bis zum Vertrag verborgen.",
+    "valueLegal": "Zum Senden oder Annehmen von Angeboten nötig; bis zu vereinbarten Konditionen verborgen.",
     "valueNotes": "Optionale Produktions- oder Technikhinweise.",
     "valueVenueName": "So erscheint Ihr Raum in der Discovery.",
     "valueVenueType": "Hilft Talent, den Raum zu verstehen.",
@@ -246,11 +244,11 @@
       "B": {
         "entertainer": {
           "title": "Buchungsbereitschaft",
-          "body": "Rechtliche Identität und optionale Hinweise, damit Sie veröffentlichen und Gigs bestätigen können."
+          "body": "Rechtliche Identität für Angebote und Vereinbarungen, plus optionale Hinweise."
         },
         "venue": {
           "title": "Buchungsbereitschaft",
-          "body": "Rechtliche Identität und optionale Produktionshinweise, damit Sie veröffentlichen und Gigs bestätigen können."
+          "body": "Rechtliche Identität für Angebote und Vereinbarungen, plus optionale Produktionshinweise."
         }
       },
       "C": {
@@ -278,16 +276,16 @@
         "body": "Kurze Bio, die Buyer beim Shortlisten lesen."
       },
       "hero_photo": {
-        "title": "Hero-Foto hinzufügen",
-        "body": "Ein starkes Bild für Discovery-Karten."
+        "title": "Fotos hinzufügen",
+        "body": "Hero zuerst — per Drag neu ordnen. Mehrere Bilder für die Discovery."
       },
       "location": {
         "title": "Wo sind Sie basiert?",
         "body": "Berlin-Basis und Reiseradius."
       },
       "fee": {
-        "title": "Preisrichtwert",
-        "body": "EUR-Spanne — das finale Honorar steht in den Buchungskonditionen."
+        "title": "Übliche Gage",
+        "body": "Was Sie üblicherweise verlangen — das finale Honorar steht in den Buchungskonditionen."
       },
       "links": {
         "title": "Öffentliche Links",
@@ -295,7 +293,7 @@
       },
       "legal": {
         "title": "Rechtliche & Zahlungsidentität",
-        "body": "Zum Veröffentlichen nötig. Für Gegenparteien verborgen, bis Konditionen vereinbart sind."
+        "body": "Nötig, um ein Angebot zu senden, anzunehmen oder gegenzubieten. Ablehnen geht ohne. Bleibt privat, bis Buchungskonditionen vereinbart sind."
       },
       "notes": {
         "title": "Noch etwas?",
@@ -334,8 +332,12 @@
       "berlinBase": "Berlin-Basis",
       "travelRadiusKm": "Reiseradius (km)",
       "durationMinutes": "Set-Dauer (Minuten)",
-      "priceMinEur": "Preisrichtwert min (EUR)",
-      "priceMaxEur": "Preisrichtwert max (EUR)",
+      "priceMinEur": "Von (EUR)",
+      "priceMaxEur": "Bis (EUR)",
+      "feeRange": "Übliche Gage (EUR)",
+      "feeRangeHint": "Orientierung für Buyer — das finale Honorar steht in den Buchungskonditionen.",
+      "priceFromPlaceholder": "Von",
+      "priceToPlaceholder": "Bis",
       "technicalRequirements": "Technische Anforderungen",
       "venueName": "Venue-Name",
       "venueType": "Venue-Typ",
@@ -375,7 +377,7 @@
     "calendarLink": "Verfügbarkeitskalender verwalten",
     "languagePanel": "Oberflächensprache",
     "languagePanelBody": "Wählen Sie die Oberflächensprache für Salon. Wechselt zwischen Englisch und Deutsch im Marktplatz.",
-    "builderIntro": "Bauen Sie das Act-Profil, das Venues in der Discovery sehen — Medien, Bio, Links und rechtliche Identität für die Veröffentlichung. Sprache und Löschung finden Sie unter Konto.",
+    "builderIntro": "Bauen Sie das Act-Profil, das Venues in der Discovery sehen — Medien, Bio, Links und rechtliche Identität für Angebote. Sprache und Löschung finden Sie unter Konto.",
     "whyFinishThisLabel": "Warum fertigstellen:",
     "whyFinishThis": "Veröffentlichte Profile erscheinen im Marktplatz und können andere kontaktieren. Vollständigere Profile werden öfter short-listet.",
     "sectionBasics": "Basics",
@@ -385,8 +387,8 @@
     "sectionProduction": "Produktion & Haus",
     "sectionLinks": "Website & Social",
     "sectionLegal": "Rechtliche & Zahlungsidentität",
-    "legalBody": "Erforderlich zur Veröffentlichung und Aufnahme in den Marktplatz. Wird für Vereinbarungen und optionale Rechnungen genutzt. Salon verarbeitet keine Kartenzahlungen.",
-    "legalHiddenUntilContract": "Diese Angaben bleiben der Gegenseite verborgen, bis Sie Konditionen zu einer Buchung vereinbaren (der Vertrag). Sie erscheinen nie auf Ihrem öffentlichen Marktplatzprofil.",
+    "legalBody": "Nötig, bevor Sie ein Angebot senden, annehmen oder gegenzubieten können. Ablehnen geht ohne. Wird für Vereinbarungen und optionale Rechnungen genutzt — Salon verarbeitet keine Kartenzahlungen.",
+    "legalHiddenUntilContract": "Diese Angaben bleiben der Gegenseite verborgen, bis Sie Konditionen zu einer Buchung vereinbaren. Sie erscheinen nie auf Ihrem öffentlichen Marktplatzprofil.",
     "entityType": "Rechtsform",
     "entityIndividual": "Privatperson",
     "entityFreelancer": "Freiberufler:in",
@@ -420,8 +422,8 @@
     "statusVerified": "Veröffentlicht",
     "publishProfile": "Veröffentlichen",
     "publishingProfile": "Wird veröffentlicht…",
-    "publishProfileHint": "Profile können veröffentlicht werden, sobald die folgenden Elemente bereitgestellt sind: Foto, Beschreibung, Kategorie, Standort, Preise, mindestens ein Link und rechtliche Identität. Sie können jederzeit zurückziehen.",
-    "publishVenueProfileHint": "Veröffentlichen Sie, wenn Name, Kurzbeschreibung, Adresse, Bezirk, PLZ, Veranstaltungstyp, Kapazität, Publikumsbeschreibung und rechtliche Identität vollständig sind. Koordinaten sind optional.",
+    "publishProfileHint": "Profile können veröffentlicht werden, sobald die folgenden Elemente bereitgestellt sind: Foto, Beschreibung, Kategorie, Standort, Preise und mindestens ein Link. Sie können jederzeit zurückziehen.",
+    "publishVenueProfileHint": "Veröffentlichen Sie, wenn Name, Kurzbeschreibung, Adresse, Bezirk, PLZ, Veranstaltungstyp, Kapazität und Publikumsbeschreibung vollständig sind. Koordinaten sind optional.",
     "publishProfileFailed": "Veröffentlichen fehlgeschlagen — Checkliste zuerst erfüllen.",
     "previewProfile": "Vorschau",
     "previewOpening": "Wird geöffnet…",
@@ -470,6 +472,8 @@
     "portfolioUploadFailed": "Bild-Upload fehlgeschlagen.",
     "portfolioYouTubeTitle": "Featured Video",
     "portfolioYouTubeBody": "Ein Video-Embed für Ihr Profil. Watch-URL, Short-Link oder Kanal-Pfad einfügen.",
+    "portfolioYouTubeSaving": "Video wird gespeichert…",
+    "portfolioYouTubeRemoving": "Wird entfernt…",
     "portfolioRemoveYouTube": "Video entfernen",
     "portfolioPlayVideo": "Featured Video abspielen",
     "portfolioPlayHint": "YouTube · Thumbnail antippen zum Abspielen.",
@@ -507,7 +511,7 @@
     "documentLimit": "Dokumentenlimit erreicht ({max}). Entfernen Sie eines, um ein weiteres hinzuzufügen.",
     "documentUploadFailed": "Dokument-Upload fehlgeschlagen.",
     "documentStoreUnconfigured": "Dokumentspeicher ist nicht konfiguriert. Setzen Sie BLOB_READ_WRITE_TOKEN für Production oder nutzen Sie lokale Disk in der Entwicklung.",
-    "body": "Bauen Sie das Act-Profil, das Venues in der Discovery sehen — Medien, Bio, Links und rechtliche Identität für die Veröffentlichung. Sprache und Löschung finden Sie unter Konto.",
+    "body": "Bauen Sie das Act-Profil, das Venues in der Discovery sehen — Medien, Bio, Links und rechtliche Identität für Angebote. Sprache und Löschung finden Sie unter Konto.",
     "signedOut": "Bitte anmelden, um Profile zu verwalten.",
     "entertainerTitle": "Entertainer-Profil",
     "venuesTitle": "Ihr Venue",
@@ -553,8 +557,12 @@
     "durationMinutes": "Set-Dauer (Minuten)",
     "berlinBase": "Berlin-Basis",
     "travelRadiusKm": "Anreiseradius (km)",
-    "priceMinEur": "Richtpreis min (EUR)",
-    "priceMaxEur": "Richtpreis max (EUR)",
+    "priceMinEur": "Von (EUR)",
+    "priceMaxEur": "Bis (EUR)",
+    "feeRange": "Übliche Gage (EUR)",
+    "feeRangeHint": "Orientierung für Buyer — das finale Honorar steht in den Buchungskonditionen.",
+    "priceFromPlaceholder": "Von",
+    "priceToPlaceholder": "Bis",
     "technicalRequirements": "Technische Anforderungen",
     "contactEmail": "Private Kontakt-E-Mail",
     "venueName": "Venue-Name (Anzeigename)",
@@ -716,7 +724,7 @@
     "groupSize": "Gruppengröße",
     "duration": "Dauer",
     "minutes": "Minuten",
-    "priceRange": "Richtpreis",
+    "priceRange": "Übliche Gage",
     "travelRadius": "Anreiseradius",
     "travelRadiusFrom": "{km} km von {location}",
     "technicalRequirements": "Technische Anforderungen",
@@ -798,7 +806,7 @@
     "legalOwnTitle": "Ihre rechtliche Identität",
     "legalCounterpartyTitle": "Rechtliche Identität der Gegenseite",
     "legalHiddenUntilTerms": "Rechtliche und Zahlungsdaten der Gegenseite erscheinen nach vereinbarten Konditionen.",
-    "legalRequiredToRespond": "Vervollständigen Sie Ihre rechtliche Identität unter Profil, bevor Sie annehmen oder gegenbieten können.",
+    "legalRequiredToRespond": "Vervollständigen Sie Ihre rechtliche Identität unter Profil, bevor Sie annehmen oder gegenbieten können. Ablehnen geht ohne.",
     "legalRequiredToGenerate": "Beide Parteien brauchen vollständige rechtliche Identität unter Profil, bevor die Vereinbarung erzeugt wird.",
     "goToAccount": "Zum Profil",
     "goToProfile": "Zum Profil",

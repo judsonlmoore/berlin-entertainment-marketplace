@@ -16,6 +16,10 @@ import {
   upsertEntertainerProfile,
 } from "@/src/actions/profiles";
 import { LegalIdentityForm } from "@/src/components/legal-identity-form";
+import {
+  PortfolioEditor,
+  type PortfolioItemRow,
+} from "@/src/components/portfolio-editor";
 import { CategorySubcategorySelect } from "@/src/components/profile/category-subcategory-select";
 import { LocationAutocomplete } from "@/src/components/profile/location-autocomplete";
 import {
@@ -25,11 +29,11 @@ import {
 import { PrefixedUrlInput } from "@/src/components/profile/prefixed-url-input";
 import { VenuePlacesSearch } from "@/src/components/profile/venue-places-search";
 import { Button } from "@/src/components/ui/button";
-import { WizardHeroUpload } from "@/src/components/wizard-hero-upload";
 import { checkEntertainerPublishReadiness } from "@/src/domain/entertainer-publish-readiness";
 import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import type { LegalIdentityFields } from "@/src/domain/legal-identity";
 import {
+  chapterNumber,
   wizardChapters,
   wizardStepsForRole,
   type WizardStepDef,
@@ -51,7 +55,7 @@ import {
   validateRichTextField,
 } from "@/src/domain/sanitize-input";
 import { checkVenuePublishReadiness } from "@/src/domain/venue-publish-readiness";
-import { Link, useRouter } from "@/src/i18n/navigation";
+import { useRouter } from "@/src/i18n/navigation";
 import type { PlacesPrefill } from "@/src/integrations/google-places";
 import {
   clearWizardSessionCookieHeader,
@@ -108,6 +112,7 @@ type Props = {
   accountEmail: string;
   entertainerDraft: EntertainerDraft;
   venueDraft: VenueDraft;
+  portfolioItems: PortfolioItemRow[];
   legalIdentity: LegalIdentityFields | null;
   /** First incomplete step index for resume within the same wizard session. */
   initialStepIndex?: number;
@@ -123,7 +128,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 function stepCopyId(role: Role, step: WizardStepDef): string {
-  if (role === "venue" && step.id === "description") return "venue_description";
+  if (role === "venue" && step.id === "basics") return "venue_basics";
   return step.id;
 }
 
@@ -141,6 +146,7 @@ export function OnboardingSetupWizard({
   accountEmail,
   entertainerDraft,
   venueDraft,
+  portfolioItems: initialPortfolioItems,
   legalIdentity,
   initialStepIndex = 0,
 }: Props) {
@@ -159,6 +165,7 @@ export function OnboardingSetupWizard({
   const [entertainer, setEntertainer] =
     useState<EntertainerDraft>(entertainerDraft);
   const [venue, setVenue] = useState<VenueDraft>(venueDraft);
+  const [portfolioItems, setPortfolioItems] = useState(initialPortfolioItems);
   const [legalComplete, setLegalComplete] = useState(
     isLegalIdentityComplete(legalIdentity),
   );
@@ -180,6 +187,37 @@ export function OnboardingSetupWizard({
   };
   const patchVenue = (patch: Partial<VenueDraft>) => {
     setVenue((prev) => ({ ...prev, ...patch }));
+  };
+
+  const syncPortfolioImages = (images: PortfolioItemRow[]) => {
+    setPortfolioItems((prev) => {
+      const nonImages = prev.filter((item) => item.kind !== "image");
+      return [...images, ...nonImages];
+    });
+    const heroImageId = images[0]?.id ?? null;
+    if (role === "entertainer") {
+      updateEntertainer({ imageCount: images.length, heroImageId });
+    } else {
+      patchVenue({ imageCount: images.length, heroImageId });
+    }
+  };
+
+  const syncPortfolioYoutube = (youtube: PortfolioItemRow | null) => {
+    setPortfolioItems((prev) => {
+      const withoutYoutube = prev.filter((item) => item.kind !== "youtube");
+      return youtube ? [...withoutYoutube, youtube] : withoutYoutube;
+    });
+    if (role === "entertainer") {
+      setEntertainer((prev) => ({
+        ...prev,
+        hasExternalOrVideoLink: Boolean(
+          youtube ||
+            prev.websiteUrl.trim() ||
+            prev.instagramUrl.trim() ||
+            prev.youtubeUrl.trim(),
+        ),
+      }));
+    }
   };
 
   const applyVenuePlacePrefill = (prefill: PlacesPrefill) => {
@@ -239,8 +277,7 @@ export function OnboardingSetupWizard({
   ): Promise<boolean> {
     const next = { ...entertainer, ...patch };
     const socialLinks: Record<string, string> = {};
-    if (next.instagramUrl.trim())
-      socialLinks.instagram = next.instagramUrl.trim();
+    if (next.instagramUrl.trim()) socialLinks.instagram = next.instagramUrl.trim();
     if (next.youtubeUrl.trim()) socialLinks.youtube = next.youtubeUrl.trim();
 
     const saved = await upsertEntertainerProfile({
@@ -268,8 +305,8 @@ export function OnboardingSetupWizard({
     }
     const hasLink = Boolean(
       next.websiteUrl.trim() ||
-      next.instagramUrl.trim() ||
-      next.youtubeUrl.trim(),
+        next.instagramUrl.trim() ||
+        next.youtubeUrl.trim(),
     );
     setEntertainer({
       ...next,
@@ -279,9 +316,7 @@ export function OnboardingSetupWizard({
     return true;
   }
 
-  async function persistVenue(
-    patch: Partial<VenueDraft> = {},
-  ): Promise<boolean> {
+  async function persistVenue(patch: Partial<VenueDraft> = {}): Promise<boolean> {
     const next = { ...venue, ...patch };
     const payload = {
       name: next.name.trim() || "Untitled venue",
@@ -317,24 +352,21 @@ export function OnboardingSetupWizard({
   }
 
   function currentStepValid(): boolean {
-    if (step.kind === "chapter_intro" || step.kind === "publish") return true;
+    if (step.kind === "publish") return true;
     if (role === "entertainer") {
       switch (step.id) {
-        case "act_name":
-          return entertainer.actName.trim().length >= 2;
-        case "category": {
+        case "basics": {
           const sub = parseSubcategory(entertainer.genres);
-          return (
+          const nameOk = entertainer.actName.trim().length >= 2;
+          const categoryOk =
             entertainer.category.trim().length > 0 &&
-            sub.subcategoryId.trim().length > 0
-          );
-        }
-        case "description": {
-          const check = validateRichTextField(entertainer.description, {
+            sub.subcategoryId.trim().length > 0;
+          const descCheck = validateRichTextField(entertainer.description, {
             min: DESCRIPTION_MIN,
             max: DESCRIPTION_MAX,
+            allowEmpty: true,
           });
-          return check.ok;
+          return nameOk && categoryOk && descCheck.ok;
         }
         case "location":
           return entertainer.berlinBase.trim().length >= 2;
@@ -357,21 +389,18 @@ export function OnboardingSetupWizard({
     }
 
     switch (step.id) {
-      case "venue_name":
-        return venue.name.trim().length >= 2;
-      case "venue_type": {
+      case "basics": {
         const parsed = parseVenueType(venue.venueType);
-        return (
+        const nameOk = venue.name.trim().length >= 2;
+        const typeOk =
           parsed.categoryId.trim().length > 0 &&
-          parsed.subcategoryRaw.trim().length > 0
-        );
-      }
-      case "description": {
-        const check = validateRichTextField(venue.shortDescription, {
+          parsed.subcategoryRaw.trim().length > 0;
+        const descriptionOk = validateRichTextField(venue.shortDescription, {
           min: DESCRIPTION_MIN,
           max: SHORT_DESCRIPTION_MAX,
-        });
-        return check.ok;
+          allowEmpty: true,
+        }).ok;
+        return nameOk && typeOk && descriptionOk;
       }
       case "address":
         return (
@@ -395,15 +424,14 @@ export function OnboardingSetupWizard({
 
   async function saveCurrentStep(): Promise<boolean> {
     setError(null);
-    if (step.kind === "chapter_intro" || step.kind === "legal") {
+    if (step.kind === "legal") {
       return true;
     }
     if (role === "entertainer") {
-      if (step.id === "act_name" || step.id === "category") {
+      if (step.id === "basics") {
         return persistEntertainer();
       }
       if (
-        step.id === "description" ||
         step.id === "location" ||
         step.id === "fee" ||
         step.id === "links" ||
@@ -418,11 +446,10 @@ export function OnboardingSetupWizard({
       return true;
     }
 
-    if (step.id === "venue_name" || step.id === "venue_type") {
+    if (step.id === "basics") {
       return persistVenue();
     }
     if (
-      step.id === "description" ||
       step.id === "address" ||
       step.id === "capacity" ||
       step.id === "notes"
@@ -474,27 +501,6 @@ export function OnboardingSetupWizard({
       }
       setStepIndex((i) => Math.min(i + 1, steps.length - 1));
       setError(null);
-    });
-  }
-
-  function saveAndExit() {
-    startTransition(async () => {
-      if (role === "entertainer") {
-        if (entertainer.actName.trim().length >= 2) {
-          if (!(await persistEntertainer())) return;
-        } else if (!entertainer.profileId) {
-          setError(t("fieldsIncomplete"));
-          return;
-        }
-      } else if (venue.name.trim().length >= 2) {
-        if (!(await persistVenue())) return;
-      } else if (!venue.venueId) {
-        setError(t("fieldsIncomplete"));
-        return;
-      }
-      clearWizardCookie();
-      router.push("/marketplace");
-      router.refresh();
     });
   }
 
@@ -553,16 +559,14 @@ export function OnboardingSetupWizard({
               ? { youtube: entertainer.youtubeUrl }
               : {}),
           },
-          imageCount:
-            entertainer.imageCount || (entertainer.heroImageId ? 1 : 0),
+          imageCount: entertainer.imageCount || (entertainer.heroImageId ? 1 : 0),
           hasExternalOrVideoLink:
             entertainer.hasExternalOrVideoLink ||
             Boolean(
               entertainer.websiteUrl.trim() ||
-              entertainer.instagramUrl.trim() ||
-              entertainer.youtubeUrl.trim(),
+                entertainer.instagramUrl.trim() ||
+                entertainer.youtubeUrl.trim(),
             ),
-          legalIdentityComplete: legalComplete,
         })
       : checkVenuePublishReadiness({
           name: venue.name,
@@ -573,46 +577,34 @@ export function OnboardingSetupWizard({
           venueType: venue.venueType,
           audienceDescription: venue.audienceDescription,
           capacity: venue.capacity,
-          legalIdentityComplete: legalComplete,
         });
 
   const copyId = stepCopyId(role, step);
   const title =
-    step.kind === "chapter_intro"
+    step.id === "basics"
       ? t(`chapters.${step.chapter}.${chapterRoleKey}.title`)
       : t(`steps.${copyId}.title`);
   const body =
-    step.kind === "chapter_intro"
+    step.id === "basics"
       ? t(`chapters.${step.chapter}.${chapterRoleKey}.body`)
       : t(`steps.${copyId}.body`);
 
   const canSkip = step.skippable && step.kind !== "publish";
-  const nextDisabled =
-    pending ||
-    (!step.skippable && !currentStepValid() && step.kind !== "publish");
+  const stepValid = currentStepValid();
+  /** Skippable + incomplete → one primary CTA labeled Skip; otherwise Next (saves when valid). */
+  const showAsSkip = canSkip && !stepValid;
+  const continueDisabled =
+    pending || (!showAsSkip && !step.skippable && !stepValid);
+  const chapterIdx = chapterNumber(step.chapter);
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-lg flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <Link
-          href="/marketplace/help"
-          className="text-sm font-medium text-[var(--text-muted)] underline-offset-4 hover:text-[var(--ink)] hover:underline"
-        >
-          {t("questions")}
-        </Link>
-        <button
-          type="button"
-          onClick={saveAndExit}
-          disabled={pending}
-          className="text-sm font-medium text-[var(--ink)] underline-offset-4 hover:underline disabled:opacity-60"
-        >
-          {t("saveAndExit")}
-        </button>
-      </div>
-
+    <div className="mx-auto flex min-h-[70vh] max-w-2xl flex-col gap-6">
       <div
         className="grid gap-2"
-        aria-label={t("chapterProgress", { chapter: step.chapter })}
+        aria-label={t("chapterOf", {
+          current: chapterIdx,
+          total: chapters.length,
+        })}
       >
         <ol className="flex gap-2">
           {chapters.map((chapter) => {
@@ -630,8 +622,11 @@ export function OnboardingSetupWizard({
           })}
         </ol>
         <p className="text-xs font-medium text-[var(--text-muted)]">
-          {t("stepOf", { current: stepIndex + 1, total: steps.length })} ·{" "}
-          {role === "entertainer" ? t("entertainerPath") : t("venuePath")}
+          {t("chapterOf", {
+            current: chapterIdx,
+            total: chapters.length,
+          })}{" "}
+          · {role === "entertainer" ? t("entertainerPath") : t("venuePath")}
         </p>
       </div>
 
@@ -645,79 +640,123 @@ export function OnboardingSetupWizard({
         <p className="mt-2 text-[var(--text-muted)]">{body}</p>
       </div>
 
-      <div className="panel grid flex-1 gap-4 p-6">
-        {step.id === "act_name" ? (
-          <Field label={t("fields.actName")}>
-            <input
-              className="field"
-              value={entertainer.actName}
-              onChange={(e) => updateEntertainer({ actName: e.target.value })}
-              autoFocus
+      <div className="panel grid flex-1 content-start gap-4 p-6">
+        {step.id === "basics" && role === "entertainer" ? (
+          <>
+            <Field label={t("fields.actName")}>
+              <input
+                className="field"
+                value={entertainer.actName}
+                onChange={(e) => updateEntertainer({ actName: e.target.value })}
+                autoFocus
+              />
+            </Field>
+            <CategorySubcategorySelect
+              kind="entertainer"
+              categoryName="category"
+              subcategoryName="genres"
+              otherName="subcategoryOther"
+              defaultCategory={entertainer.category}
+              defaultSubcategoryRaw={entertainer.genres}
+              categoryLabel={tProfile("category")}
+              subcategoryLabel={tProfile("subcategory")}
+              otherLabel={tProfile("subcategoryOther")}
+              onSelectionChange={({
+                categoryId,
+                subcategoryId,
+                otherLabel,
+              }) => {
+                updateEntertainer({
+                  category: categoryId,
+                  genres: encodeSubcategory(subcategoryId, otherLabel),
+                });
+              }}
             />
-          </Field>
+            <ParagraphTextField
+              label={t("fields.description")}
+              defaultValue={toParagraphEditorHtml(entertainer.description)}
+              min={DESCRIPTION_MIN}
+              max={DESCRIPTION_MAX}
+              placeholder={tProfile("descriptionPlaceholder")}
+              onChange={(html) => updateEntertainer({ description: html })}
+              size="tall"
+            />
+          </>
         ) : null}
 
-        {step.id === "category" && role === "entertainer" ? (
-          <CategorySubcategorySelect
-            kind="entertainer"
-            categoryName="category"
-            subcategoryName="genres"
-            otherName="subcategoryOther"
-            defaultCategory={entertainer.category}
-            defaultSubcategoryRaw={entertainer.genres}
-            categoryLabel={tProfile("category")}
-            subcategoryLabel={tProfile("subcategory")}
-            otherLabel={tProfile("subcategoryOther")}
-            onSelectionChange={({ categoryId, subcategoryId, otherLabel }) => {
-              updateEntertainer({
-                category: categoryId,
-                genres: encodeSubcategory(subcategoryId, otherLabel),
-              });
-            }}
-          />
-        ) : null}
-
-        {step.id === "description" && role === "entertainer" ? (
-          <ParagraphTextField
-            label={t("fields.description")}
-            defaultValue={toParagraphEditorHtml(entertainer.description)}
-            min={DESCRIPTION_MIN}
-            max={DESCRIPTION_MAX}
-            placeholder={tProfile("descriptionPlaceholder")}
-            onChange={(html) => updateEntertainer({ description: html })}
-            size="tall"
-          />
+        {step.id === "basics" && role === "venue" ? (
+          <>
+            <Field label={t("fields.venueName")}>
+              <input
+                className="field"
+                value={venue.name}
+                onChange={(e) => patchVenue({ name: e.target.value })}
+                autoFocus
+              />
+            </Field>
+            <CategorySubcategorySelect
+              key={venueTypeKey}
+              kind="venue"
+              categoryName="venueCategory"
+              subcategoryName="venueSubcategory"
+              otherName="venueSubcategoryOther"
+              defaultCategory={parseVenueType(venue.venueType).categoryId}
+              defaultSubcategoryRaw={
+                parseVenueType(venue.venueType).subcategoryRaw
+              }
+              categoryLabel={tProfile("venueType")}
+              subcategoryLabel={tProfile("subcategory")}
+              otherLabel={tProfile("subcategoryOther")}
+              onSelectionChange={({
+                categoryId,
+                subcategoryId,
+                otherLabel,
+              }) => {
+                patchVenue({
+                  venueType: encodeVenueType(
+                    categoryId,
+                    encodeSubcategory(subcategoryId, otherLabel),
+                  ),
+                });
+              }}
+            />
+            <ParagraphTextField
+              key={shortDescriptionKey}
+              label={t("fields.shortDescription")}
+              defaultValue={toParagraphEditorHtml(venue.shortDescription)}
+              min={DESCRIPTION_MIN}
+              max={SHORT_DESCRIPTION_MAX}
+              placeholder={tProfile("descriptionPlaceholder")}
+              onChange={(html) => patchVenue({ shortDescription: html })}
+              size="medium"
+            />
+          </>
         ) : null}
 
         {step.id === "hero_photo" ? (
-          <WizardHeroUpload
-            entertainerProfileId={
-              role === "entertainer"
-                ? (entertainer.profileId ?? undefined)
-                : undefined
-            }
-            venueId={
-              role === "venue" ? (venue.venueId ?? undefined) : undefined
-            }
-            existingImageId={
-              role === "entertainer"
-                ? entertainer.heroImageId
-                : venue.heroImageId
-            }
-            onUploaded={(id) => {
-              if (role === "entertainer") {
-                updateEntertainer({
-                  heroImageId: id,
-                  imageCount: Math.max(1, entertainer.imageCount),
-                });
-              } else {
-                patchVenue({
-                  heroImageId: id,
-                  imageCount: Math.max(1, venue.imageCount),
-                });
-              }
-            }}
-          />
+          role === "entertainer" && entertainer.profileId ? (
+            <PortfolioEditor
+              locale={locale}
+              entertainerProfileId={entertainer.profileId}
+              items={portfolioItems}
+              onImagesChange={syncPortfolioImages}
+              onYoutubeChange={syncPortfolioYoutube}
+            />
+          ) : role === "venue" && venue.venueId ? (
+            <PortfolioEditor
+              locale={locale}
+              venueId={venue.venueId}
+              items={portfolioItems}
+              onImagesChange={syncPortfolioImages}
+              onYoutubeChange={syncPortfolioYoutube}
+            />
+          ) : (
+            <p className="text-sm text-[var(--text-muted)]">
+              {role === "venue"
+                ? tProfile("portfolioNeedVenue")
+                : tProfile("portfolioNeedProfile")}
+            </p>
+          )
         ) : null}
 
         {step.id === "location" && role === "entertainer" ? (
@@ -757,39 +796,76 @@ export function OnboardingSetupWizard({
         ) : null}
 
         {step.id === "fee" && role === "entertainer" ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={t("fields.priceMinEur")}>
+          <div className="grid gap-3 self-start">
+            <p className="text-sm font-medium text-[var(--ink)]">
+              {t("fields.feeRange")}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="text-sm font-medium text-[var(--text-muted)]"
+                aria-hidden
+              >
+                €
+              </span>
+              <label className="sr-only" htmlFor="wizard-fee-min">
+                {t("fields.priceMinEur")}
+              </label>
               <input
-                className="field"
+                id="wizard-fee-min"
+                className="field w-[7.5rem] shrink-0"
                 type="number"
+                inputMode="numeric"
                 min={0}
-                value={Math.round(entertainer.priceMinCents / 100)}
-                onChange={(e) =>
-                  updateEntertainer({
-                    priceMinCents: Math.max(
-                      0,
-                      Math.round(Number(e.target.value) * 100),
-                    ),
-                  })
+                step={1}
+                placeholder={t("fields.priceFromPlaceholder")}
+                value={
+                  entertainer.priceMinCents > 0
+                    ? Math.round(entertainer.priceMinCents / 100)
+                    : ""
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  updateEntertainer({
+                    priceMinCents:
+                      raw === ""
+                        ? 0
+                        : Math.max(0, Math.round(Number(raw) * 100)),
+                  });
+                }}
               />
-            </Field>
-            <Field label={t("fields.priceMaxEur")}>
+              <span className="text-sm text-[var(--text-muted)]" aria-hidden>
+                –
+              </span>
+              <label className="sr-only" htmlFor="wizard-fee-max">
+                {t("fields.priceMaxEur")}
+              </label>
               <input
-                className="field"
+                id="wizard-fee-max"
+                className="field w-[7.5rem] shrink-0"
                 type="number"
+                inputMode="numeric"
                 min={0}
-                value={Math.round(entertainer.priceMaxCents / 100)}
-                onChange={(e) =>
-                  updateEntertainer({
-                    priceMaxCents: Math.max(
-                      0,
-                      Math.round(Number(e.target.value) * 100),
-                    ),
-                  })
+                step={1}
+                placeholder={t("fields.priceToPlaceholder")}
+                value={
+                  entertainer.priceMaxCents > 0
+                    ? Math.round(entertainer.priceMaxCents / 100)
+                    : ""
                 }
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  updateEntertainer({
+                    priceMaxCents:
+                      raw === ""
+                        ? 0
+                        : Math.max(0, Math.round(Number(raw) * 100)),
+                  });
+                }}
               />
-            </Field>
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">
+              {t("fields.feeRangeHint")}
+            </p>
           </div>
         ) : null}
 
@@ -801,9 +877,7 @@ export function OnboardingSetupWizard({
               name="websiteUrl"
               label={tProfile("websiteUrl")}
               defaultValue={entertainer.websiteUrl}
-              onValueChange={(value) =>
-                updateEntertainer({ websiteUrl: value })
-              }
+              onValueChange={(value) => updateEntertainer({ websiteUrl: value })}
             />
             <PrefixedUrlInput
               platform="instagram"
@@ -819,9 +893,7 @@ export function OnboardingSetupWizard({
               name="youtube"
               label={tProfile("socialYoutube")}
               defaultValue={entertainer.youtubeUrl}
-              onValueChange={(value) =>
-                updateEntertainer({ youtubeUrl: value })
-              }
+              onValueChange={(value) => updateEntertainer({ youtubeUrl: value })}
             />
           </div>
         ) : null}
@@ -841,55 +913,6 @@ export function OnboardingSetupWizard({
           />
         ) : null}
 
-        {step.id === "venue_name" ? (
-          <Field label={t("fields.venueName")}>
-            <input
-              className="field"
-              value={venue.name}
-              onChange={(e) => patchVenue({ name: e.target.value })}
-              autoFocus
-            />
-          </Field>
-        ) : null}
-
-        {step.id === "venue_type" ? (
-          <CategorySubcategorySelect
-            key={venueTypeKey}
-            kind="venue"
-            categoryName="venueCategory"
-            subcategoryName="venueSubcategory"
-            otherName="venueSubcategoryOther"
-            defaultCategory={parseVenueType(venue.venueType).categoryId}
-            defaultSubcategoryRaw={
-              parseVenueType(venue.venueType).subcategoryRaw
-            }
-            categoryLabel={tProfile("venueType")}
-            subcategoryLabel={tProfile("subcategory")}
-            otherLabel={tProfile("subcategoryOther")}
-            onSelectionChange={({ categoryId, subcategoryId, otherLabel }) => {
-              patchVenue({
-                venueType: encodeVenueType(
-                  categoryId,
-                  encodeSubcategory(subcategoryId, otherLabel),
-                ),
-              });
-            }}
-          />
-        ) : null}
-
-        {step.id === "description" && role === "venue" ? (
-          <ParagraphTextField
-            key={shortDescriptionKey}
-            label={t("fields.shortDescription")}
-            defaultValue={toParagraphEditorHtml(venue.shortDescription)}
-            min={DESCRIPTION_MIN}
-            max={SHORT_DESCRIPTION_MAX}
-            placeholder={tProfile("descriptionPlaceholder")}
-            onChange={(html) => patchVenue({ shortDescription: html })}
-            size="medium"
-          />
-        ) : null}
-
         {step.id === "address" && role === "venue" ? (
           <div className="grid gap-4">
             <VenuePlacesSearch
@@ -898,9 +921,7 @@ export function OnboardingSetupWizard({
             />
             {addressConfirmOpen || venue.addressLine1 ? (
               <div className="grid gap-3 rounded-[var(--radius-md)] border border-[var(--rule)] p-4">
-                <p className="text-sm font-medium">
-                  {t("addressConfirmTitle")}
-                </p>
+                <p className="text-sm font-medium">{t("addressConfirmTitle")}</p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {t("addressConfirmBody")}
                 </p>
@@ -992,18 +1013,14 @@ export function OnboardingSetupWizard({
         ) : null}
 
         {step.id === "legal" ? (
-          <div className="grid gap-3">
-            <p className="text-sm text-[var(--text-muted)]">
-              {t("legalPrivacy")}
-            </p>
-            <LegalIdentityForm
-              locale={locale}
-              initial={legalIdentity}
-              onSaved={(fields) => {
-                setLegalComplete(isLegalIdentityComplete(fields));
-              }}
-            />
-          </div>
+          <LegalIdentityForm
+            locale={locale}
+            initial={legalIdentity}
+            embedded
+            onSaved={(fields) => {
+              setLegalComplete(isLegalIdentityComplete(fields));
+            }}
+          />
         ) : null}
 
         {step.id === "go_live" ? (
@@ -1064,10 +1081,6 @@ export function OnboardingSetupWizard({
           </div>
         ) : null}
 
-        {step.kind === "chapter_intro" ? (
-          <p className="text-sm text-[var(--text-muted)]">{body}</p>
-        ) : null}
-
         {error ? (
           <p role="alert" className="text-sm text-[var(--danger)]">
             {error}
@@ -1088,28 +1101,16 @@ export function OnboardingSetupWizard({
           >
             {t("back")}
           </Button>
-          <div className="flex flex-wrap gap-2">
-            {canSkip ? (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={pending}
-                onClick={goSkip}
-              >
-                {t("skip")}
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="primary"
-              pending={pending}
-              pendingLabel={ui("working")}
-              disabled={nextDisabled}
-              onClick={goNext}
-            >
-              {t("next")}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="primary"
+            pending={pending}
+            pendingLabel={ui("working")}
+            disabled={continueDisabled}
+            onClick={showAsSkip ? goSkip : goNext}
+          >
+            {showAsSkip ? t("skip") : t("next")}
+          </Button>
         </div>
       ) : null}
     </div>

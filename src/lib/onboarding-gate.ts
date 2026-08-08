@@ -30,9 +30,9 @@ async function hasOwnedVenueProfile(userId: string): Promise<boolean> {
  * Decide where a signed-in member belongs in the XOR onboarding flow.
  * Staff skip onboarding. Members need a role, then a minimum draft
  * (profile/venue row with at least a name). Publication is independent.
- * The Airbnb-style wizard is one-shot: after Save & exit the setup route
- * redirects to `/profile` when the draft exists and the wizard session cookie
- * is absent.
+ * The Airbnb-style wizard is one-shot: after go-live exit (Publish or Explore)
+ * the setup route redirects to `/profile` when the draft exists and the wizard
+ * session cookie is absent.
  */
 export async function resolveOnboardingDestination(input: {
   userId: string;

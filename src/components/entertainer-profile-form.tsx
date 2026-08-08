@@ -437,39 +437,60 @@ export function EntertainerProfileForm({
               className="field"
             />
           </label>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium">{t("priceMinEur")}</span>
+          <div className="grid gap-2">
+            <span className="text-sm font-medium text-[var(--ink)]">
+              {t("feeRange")}
+            </span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="text-sm font-medium text-[var(--text-muted)]"
+                aria-hidden
+              >
+                €
+              </span>
+              <label className="sr-only" htmlFor="profile-fee-min">
+                {t("priceMinEur")}
+              </label>
               <input
+                id="profile-fee-min"
                 name="priceMinEur"
                 type="number"
+                inputMode="numeric"
                 min={0}
-                step="1"
+                step={1}
                 required
+                placeholder={t("priceFromPlaceholder")}
                 defaultValue={
-                  defaultValues
+                  defaultValues && defaultValues.priceMinCents > 0
                     ? Math.round(defaultValues.priceMinCents / 100)
-                    : 0
+                    : undefined
                 }
-                className="field"
+                className="field w-[7.5rem] shrink-0"
               />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium">{t("priceMaxEur")}</span>
+              <span className="text-sm text-[var(--text-muted)]" aria-hidden>
+                –
+              </span>
+              <label className="sr-only" htmlFor="profile-fee-max">
+                {t("priceMaxEur")}
+              </label>
               <input
+                id="profile-fee-max"
                 name="priceMaxEur"
                 type="number"
+                inputMode="numeric"
                 min={0}
-                step="1"
+                step={1}
                 required
+                placeholder={t("priceToPlaceholder")}
                 defaultValue={
-                  defaultValues
+                  defaultValues && defaultValues.priceMaxCents > 0
                     ? Math.round(defaultValues.priceMaxCents / 100)
-                    : 0
+                    : undefined
                 }
-                className="field"
+                className="field w-[7.5rem] shrink-0"
               />
-            </label>
+            </div>
+            <p className="text-xs text-[var(--text-muted)]">{t("feeRangeHint")}</p>
           </div>
 
           <LanguageMultiSelect

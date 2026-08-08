@@ -24,8 +24,6 @@ export type EntertainerPublishSnapshot = {
   socialLinks: Record<string, string> | null;
   imageCount: number;
   hasExternalOrVideoLink: boolean;
-  /** Required to appear in the marketplace; private until terms are agreed. */
-  legalIdentityComplete: boolean;
 };
 
 export type PublishReadinessResult =
@@ -100,11 +98,11 @@ export function checkEntertainerPublishReadiness(
     snapshot.priceMinCents < 0 ||
     snapshot.priceMaxCents < 0
   ) {
-    reasons.push("Set indicative price minimum and maximum.");
+    reasons.push("Set a typical fee minimum and maximum.");
   } else if (snapshot.priceMaxCents < snapshot.priceMinCents) {
     reasons.push("Price maximum must be at least the minimum.");
   } else if (snapshot.priceMaxCents <= 0) {
-    reasons.push("Set an indicative price range greater than zero.");
+    reasons.push("Set a typical fee range greater than zero.");
   }
 
   if (snapshot.imageCount < 1) {
@@ -114,12 +112,6 @@ export function checkEntertainerPublishReadiness(
   if (!hasPublicUrl(snapshot)) {
     reasons.push(
       "Add at least one public link (website, social, or featured video).",
-    );
-  }
-
-  if (!snapshot.legalIdentityComplete) {
-    reasons.push(
-      "Complete legal and payment identity before publishing to the marketplace.",
     );
   }
 

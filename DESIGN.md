@@ -89,8 +89,8 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 - No live preview panel beside the form.
 
 ### Layout
-- **Onboarding:** One-shot chaptered wizard (shell without app rail): segmented chapter progress, **Save & exit**, **Skip** on non-minimum steps, Back / Next, final Publish checklist. Soft exit lands in the app shell (search OK; contact blocked until published). After any exit, profile edits and publish continue **only** on `/profile` — the wizard is not re-entered.
-- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later; **legal & payment identity** near the end (required to publish; hidden from counterparties until terms are agreed). Account language/deletion live under `/account`, not profile.
+- **Onboarding:** One-shot chaptered wizard (shell without app rail): segmented chapter progress, Back + one adaptive primary CTA (**Skip for now** when a skippable step is empty/incomplete, **Next** when valid), final Publish checklist. No mid-flow help or Save & exit — soft exit only via Publish or Explore at go-live. After exit, profile edits and publish continue **only** on `/profile` — the wizard is not re-entered.
+- **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later; **legal & payment identity** near the end (needed to send/accept/counter offers; hidden from counterparties until terms are agreed). Account language/deletion live under `/account`, not profile.
 
 ### Autosave & publication status
 - Autosave while editing. Status copy: **Unsaved changes**, **Saving…**, and **Saved.** (no clock time). Warn before leaving the page when there are unsaved changes.
@@ -157,4 +157,4 @@ No live marketplace preview rail on profile edit.
 | 2026-08-07 | Offer cards: status dots (pending ochre / accepted primary / declined danger) + fee-first layout | Match URL-validity status language; current offer above chronological history |
 | 2026-08-06 | Marketplace IA: Marketplace / Bookings / Calendar | Collapse Leads+Bookings lists; open calls live on profiles; availability is a discovery filter |
 | 2026-08-06 | Public Help + Contact; member help hub | Thin public FAQ; ops guides stay signed-in; Spamblock-backed contact form in footer and app |
-| 2026-08-08 | One-shot Airbnb-style onboarding wizard | Chapter progress, Save & exit, Skip; publish in wizard or soft-exit; post-exit edits only on `/profile`; Agency → Contact |
+| 2026-08-08 | One-shot Airbnb-style onboarding wizard | Chapter progress, Skip; no mid-flow help/Save & exit; publish or Explore at go-live; post-exit edits only on `/profile`; Agency → Contact |

@@ -1,4 +1,4 @@
-/** Session cookie: active first-pass wizard. Cleared on Save & exit / publish / explore. */
+/** Session cookie: active first-pass wizard. Cleared on publish / explore at go-live. */
 export const ONBOARDING_WIZARD_COOKIE = "salon_onboarding_wizard";
 
 export const ONBOARDING_WIZARD_COOKIE_VALUE = "1";

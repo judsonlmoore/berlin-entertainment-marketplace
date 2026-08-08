@@ -204,7 +204,7 @@ export function ParagraphTextField({
       },
       editorProps: {
         attributes: {
-          class: `${SIZE_CLASS[size]} px-3 py-3 text-sm leading-relaxed text-[var(--ink)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--text-muted)]`,
+          class: `${SIZE_CLASS[size]} px-3 py-3 text-base leading-relaxed text-[var(--ink)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--text-muted)]`,
         },
       },
     },
@@ -217,7 +217,7 @@ export function ParagraphTextField({
     editor.setOptions({
       editorProps: {
         attributes: {
-          class: `${SIZE_CLASS[size]} px-3 py-3 text-sm leading-relaxed text-[var(--ink)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--text-muted)]`,
+          class: `${SIZE_CLASS[size]} px-3 py-3 text-base leading-relaxed text-[var(--ink)] outline-none [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--rule)] [&_blockquote]:pl-3 [&_blockquote]:text-[var(--text-muted)]`,
         },
       },
     });

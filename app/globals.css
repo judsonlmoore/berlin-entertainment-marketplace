@@ -237,7 +237,8 @@
   border-radius: var(--radius-md);
   width: 100%;
   font: inherit;
-  font-size: 0.95rem;
+  /* ≥16px so iOS Safari does not zoom the viewport on focus */
+  font-size: 1rem;
 }
 
 .field:disabled {
@@ -247,6 +248,31 @@
 .field[aria-invalid="true"],
 .field-error {
   border-color: var(--danger);
+}
+
+/*
+ * Catch text controls that skip .field (Tailwind text-sm, TipTap, etc.).
+ * iOS Safari zooms the page when a focused control computes under 16px.
+ */
+@media (max-width: 1023px) {
+  input:not(
+    [type="checkbox"],
+    [type="radio"],
+    [type="range"],
+    [type="file"],
+    [type="hidden"],
+    [type="button"],
+    [type="submit"],
+    [type="reset"],
+    [type="image"],
+    [type="color"]
+  ),
+  textarea,
+  select,
+  .ProseMirror,
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
 }
 
 .label {
