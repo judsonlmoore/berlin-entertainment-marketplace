@@ -10,8 +10,12 @@ import {
   HowItWorksFlow,
   ProblemSolutionBlock,
 } from "@/src/components/marketing";
-import { Monogram } from "@/src/components/ui/monogram";
-import { Button } from "@/src/components/ui/button";
+import { Avatar } from "@/src/components/ui/monogram";
+
+const primaryCtaClass =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--primary)] bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] no-underline";
+const secondaryCtaClass =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--ink)] no-underline";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -49,15 +53,16 @@ export default async function ForTalentPage({ params }: Props) {
             {t("body")}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild>
-              <Link href={session?.user ? "/onboarding/role-selection" : "/sign-in"}>
-                {t("ctaPrimary")}
-              </Link>
-            </Button>
+            <Link
+              href={session?.user ? "/onboarding/role-selection" : "/sign-in"}
+              className={primaryCtaClass}
+            >
+              {t("ctaPrimary")}
+            </Link>
             {!session?.user && (
-              <Button asChild variant="secondary">
-                <Link href="/sign-in">{t("ctaSecondary")}</Link>
-              </Button>
+              <Link href="/sign-in" className={secondaryCtaClass}>
+                {t("ctaSecondary")}
+              </Link>
             )}
           </div>
         </div>
@@ -78,11 +83,8 @@ export default async function ForTalentPage({ params }: Props) {
         visual={
           <div className="grid gap-3">
             {["Venue A", "Venue B", "Venue C"].map((name, i) => (
-              <div
-                key={name}
-                className="panel flex items-center gap-4 p-4"
-              >
-                <Monogram name={name} size="sm" colorSeed={`venue-${i}`} />
+              <div key={name} className="panel flex items-center gap-4 p-4">
+                <Avatar name={name} size={40} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{name}</p>
                   <p className="text-xs text-[var(--text-muted)]">
@@ -104,7 +106,7 @@ export default async function ForTalentPage({ params }: Props) {
         visual={
           <div className="panel p-6 sm:p-8">
             <div className="mb-4 flex items-center gap-3">
-              <Monogram name="Your Act" size="sm" colorSeed="you" />
+              <Avatar name="Your Act" size={40} />
               <div>
                 <p className="text-sm font-semibold">Your Profile</p>
                 <p className="text-xs text-[var(--text-muted)]">
@@ -132,7 +134,7 @@ export default async function ForTalentPage({ params }: Props) {
         background="surface"
         visual={
           <div className="panel p-6 sm:p-8">
-            <div className="mb-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+            <div className="mb-4 text-xs font-semibold tracking-wider text-[var(--text-muted)] uppercase">
               Your Calendar
             </div>
             <div className="grid grid-cols-7 gap-2">
@@ -209,11 +211,12 @@ export default async function ForTalentPage({ params }: Props) {
           <h2 className="page-title mb-4 text-2xl sm:text-[1.75rem]">
             {t("finalCtaTitle")}
           </h2>
-          <Button asChild size="lg">
-            <Link href={session?.user ? "/onboarding/role-selection" : "/sign-in"}>
-              {t("finalCtaButton")}
-            </Link>
-          </Button>
+          <Link
+            href={session?.user ? "/onboarding/role-selection" : "/sign-in"}
+            className={primaryCtaClass}
+          >
+            {t("finalCtaButton")}
+          </Link>
         </div>
       </section>
     </div>

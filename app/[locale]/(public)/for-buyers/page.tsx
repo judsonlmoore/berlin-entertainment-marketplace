@@ -10,8 +10,12 @@ import {
   HowItWorksFlow,
   ProblemSolutionBlock,
 } from "@/src/components/marketing";
-import { Monogram } from "@/src/components/ui/monogram";
-import { Button } from "@/src/components/ui/button";
+import { Avatar } from "@/src/components/ui/monogram";
+
+const primaryCtaClass =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--primary)] bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-[var(--primary-foreground)] no-underline";
+const secondaryCtaClass =
+  "inline-flex min-h-11 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] px-4 py-2.5 text-sm font-semibold text-[var(--ink)] no-underline";
 
 type Props = { params: Promise<{ locale: string }> };
 
@@ -49,15 +53,16 @@ export default async function ForBuyersPage({ params }: Props) {
             {t("body")}
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild>
-              <Link href={session?.user ? "/onboarding/role-selection" : "/sign-in"}>
-                {t("ctaPrimary")}
-              </Link>
-            </Button>
+            <Link
+              href={session?.user ? "/onboarding/role-selection" : "/sign-in"}
+              className={primaryCtaClass}
+            >
+              {t("ctaPrimary")}
+            </Link>
             {!session?.user && (
-              <Button asChild variant="secondary">
-                <Link href="/sign-in">{t("ctaSecondary")}</Link>
-              </Button>
+              <Link href="/sign-in" className={secondaryCtaClass}>
+                {t("ctaSecondary")}
+              </Link>
             )}
           </div>
         </div>
@@ -78,11 +83,8 @@ export default async function ForBuyersPage({ params }: Props) {
         visual={
           <div className="grid gap-3">
             {["Jazz Trio", "Comedy Act", "Dance Ensemble"].map((name, i) => (
-              <div
-                key={name}
-                className="panel flex items-center gap-4 p-4"
-              >
-                <Monogram name={name} size="sm" colorSeed={`talent-${i}`} />
+              <div key={name} className="panel flex items-center gap-4 p-4">
+                <Avatar name={name} size={40} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{name}</p>
                   <p className="text-xs text-[var(--text-muted)]">
@@ -118,7 +120,7 @@ export default async function ForBuyersPage({ params }: Props) {
                   key={name}
                   className="flex items-center gap-3 rounded bg-[var(--canvas)] p-2"
                 >
-                  <Monogram name={name} size="xs" colorSeed={`app-${i}`} />
+                  <Avatar name={name} size={28} />
                   <span className="text-xs">{name}</span>
                 </div>
               ))}
@@ -143,8 +145,8 @@ export default async function ForBuyersPage({ params }: Props) {
                 </p>
               </div>
               <div className="flex -space-x-2">
-                <Monogram name="Venue" size="xs" colorSeed="venue-agree" />
-                <Monogram name="Talent" size="xs" colorSeed="talent-agree" />
+                <Avatar name="Venue" size={28} />
+                <Avatar name="Talent" size={28} />
               </div>
             </div>
             <div className="h-px bg-[var(--rule)]" />
@@ -158,7 +160,9 @@ export default async function ForBuyersPage({ params }: Props) {
                 <span className="font-medium text-[var(--primary)]">✓</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-muted)]">Calendars blocked</span>
+                <span className="text-[var(--text-muted)]">
+                  Calendars blocked
+                </span>
                 <span className="font-medium text-[var(--primary)]">✓</span>
               </div>
             </div>
@@ -216,11 +220,12 @@ export default async function ForBuyersPage({ params }: Props) {
           <h2 className="page-title mb-4 text-2xl sm:text-[1.75rem]">
             {t("finalCtaTitle")}
           </h2>
-          <Button asChild size="lg">
-            <Link href={session?.user ? "/onboarding/role-selection" : "/sign-in"}>
-              {t("finalCtaButton")}
-            </Link>
-          </Button>
+          <Link
+            href={session?.user ? "/onboarding/role-selection" : "/sign-in"}
+            className={primaryCtaClass}
+          >
+            {t("finalCtaButton")}
+          </Link>
         </div>
       </section>
     </div>
