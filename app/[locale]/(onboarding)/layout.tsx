@@ -26,9 +26,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * Sidebar-free shell for XOR onboarding (role + profile setup).
- * Destination redirects live on individual pages so the setup completion
- * screen can stay mounted after profile submit until the user continues.
+ * Sidebar-free shell for XOR onboarding (role + one-shot publish wizard).
+ * Destination redirects live on individual pages. After Save & exit, setup
+ * redirects to `/profile` when the draft exists and the wizard cookie is gone.
  */
 export default async function OnboardingLayout({ children, params }: Props) {
   const { locale } = await params;

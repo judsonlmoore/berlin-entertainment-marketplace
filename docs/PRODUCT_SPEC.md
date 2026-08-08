@@ -68,7 +68,9 @@ Published profiles stay published across edits. Owners may **unpublish** (back t
 
 ### 4.1 Shared onboarding
 
-After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Collect preferred locale and at least one contact method during profile setup. Email ownership comes from the configured authentication provider. Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Agency may appear on the role picker as a non-selectable coming-soon option.
+After OAuth sign-in, the member chooses talent or buyer (XOR; stored as `entertainer` / `venue`), accepts terms/privacy, and receives an active account. Agency may appear on the role picker as a non-selectable coming-soon option with a link to Contact.
+
+A one-shot chaptered setup wizard (Airbnb-inspired interaction: one focus per step, chapter progress, Save & exit, Skip) collects publish-path fields. Soft exit is allowed after a minimum draft (role + display name): unpublished members may search the opposite side; contact stays blocked until published. After any wizard exit, further edits and publish happen only on `/profile` (wizard is not resumed). Profile publication is owner self-serve with a built-in checklist (not staff identity verification). Email ownership comes from the configured authentication provider.
 
 Buyer onboarding may search Google Places (New) to prefill venue name/address/coords/website; all prefilled fields remain editable. Places is optional — manual entry always works.
 

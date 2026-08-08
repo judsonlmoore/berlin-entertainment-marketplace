@@ -12,9 +12,15 @@ type Props = {
   initial: LegalIdentityFields | null;
   /** Publish-gate field error shown on the section. */
   error?: string | null;
+  onSaved?: (fields: LegalIdentityFields) => void;
 };
 
-export function LegalIdentityForm({ locale, initial, error = null }: Props) {
+export function LegalIdentityForm({
+  locale,
+  initial,
+  error = null,
+  onSaved,
+}: Props) {
   const t = useTranslations("profile");
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -52,7 +58,28 @@ export function LegalIdentityForm({ locale, initial, error = null }: Props) {
         return null;
       return payload;
     },
-    save: (payload) => saveLegalIdentityAction(payload),
+    save: async (payload) => {
+      const result = await saveLegalIdentityAction(payload);
+      if (result.ok) {
+        onSaved?.({
+          entityType: payload.entityType,
+          legalName: payload.legalName,
+          tradingName: payload.tradingName,
+          addressLine1: payload.addressLine1,
+          addressLine2: payload.addressLine2,
+          postalCode: payload.postalCode,
+          city: payload.city,
+          countryCode: payload.countryCode,
+          taxId: payload.taxId,
+          companyRegisterId: payload.companyRegisterId,
+          invoiceEmail: payload.invoiceEmail,
+          iban: payload.iban,
+          bic: payload.bic,
+          paymentNote: payload.paymentNote,
+        });
+      }
+      return result;
+    },
     debounceMs: 2500,
   });
 

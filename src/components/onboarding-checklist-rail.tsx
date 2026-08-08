@@ -55,16 +55,28 @@ export function OnboardingChecklistRail({ checklist }: Props) {
       <ol className="mt-3 grid gap-2.5">
         {ONBOARDING_CHECKLIST_STEPS.map((step) => {
           const done = checklist[step];
+          const label = (
+            <span
+              className={`text-xs leading-snug ${
+                done ? "text-white/55 line-through" : "text-white/85"
+              }`}
+            >
+              {t(`steps.${step}`)}
+            </span>
+          );
           return (
             <li key={step} className="flex items-start gap-2.5">
               <CheckIcon done={done} />
-              <span
-                className={`text-xs leading-snug ${
-                  done ? "text-white/55 line-through" : "text-white/85"
-                }`}
-              >
-                {t(`steps.${step}`)}
-              </span>
+              {!done && step === "published" ? (
+                <Link
+                  href="/profile"
+                  className="text-xs leading-snug text-white/85 no-underline hover:underline"
+                >
+                  {t(`steps.${step}`)}
+                </Link>
+              ) : (
+                label
+              )}
             </li>
           );
         })}

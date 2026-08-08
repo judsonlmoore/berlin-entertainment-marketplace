@@ -206,20 +206,21 @@ Reference: [calendar.png](./design-reference/calendar.png)
 
 Reference preview: `~/.gstack/projects/judsonlmoore-berlin-entertainment-marketplace/designs/profile-builder-20260805/preview.html` (also see historical [dual-role-profile.png](./design-reference/dual-role-profile.png) for older dual-role chrome — XOR accounts supersede dual-role).
 
-**Purpose:** Build and maintain the marketplace act/venue identity. Onboarding is the first pass; Profile is the ongoing single-page editor.
+**Purpose:** Build and maintain the marketplace act/venue identity. Onboarding is a one-shot chaptered publish-path wizard; Profile is the ongoing single-page editor after exit.
 
-**Hierarchy (profile):** eyebrow → display name title → soft publication status tag + autosave status → optional one-line outcome copy → display-name strip → sectioned form (Media → Basics → Details → Links). No private-contact section; no Submit for review; no live preview rail.
+**Hierarchy (profile):** eyebrow → display name title → soft publication status tag + autosave status → optional one-line outcome copy → display-name strip → sectioned form (Media → Basics → Details → Links → Legal). No private-contact section; no Submit for review; no live preview rail.
 
-**Hierarchy (onboarding):** step progress → eyebrow → title → short body → panel fields → Next / Submit path → done screen with Continue (manual).
+**Hierarchy (onboarding):** chapter progress → Save & exit / Questions → eyebrow → title → short body → step fields → sticky Back / Skip / Next → go-live checklist with Publish or Explore. After exit, returning to setup redirects to `/profile`.
 
 **Required modules:**
-- Autosave with `Saving…` / `Saved.` (`aria-live="polite"`)
-- Soft tags: Under review (warning soft) / Verified (success soft)
+- Autosave with `Saving…` / `Saved.` (`aria-live="polite"`) on `/profile`; wizard persists on Next / Skip / Save & exit
+- Soft tags for publication state (draft / published / suspended)
 - Dashed empty media slots; filled tiles with remove + loading; YouTube thumb → embed modal
 - Rich-text description with counter (shared with onboarding)
 - Full-URL social/website fields with placeholders + platform host validation; Valid/Invalid inside the field
 - Account settings (locale, deletion) on `/account`, not profile
-- Legal & payment identity on `/profile` (required to publish; counterparty-hidden until terms agreed)
+- Legal & payment identity on `/profile` and in the wizard booking-readiness chapter (required to publish; counterparty-hidden until terms agreed)
+- Role picker: Agency Coming soon + Contact link (no waitlist form)
 
 **Responsive:** single column on mobile; media grid 2-up; keep 44px targets and label/error association.
 

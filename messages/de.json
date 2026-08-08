@@ -73,7 +73,7 @@
   "onboardingChecklist": {
     "title": "Erste Schritte",
     "steps": {
-      "published": "Profil veröffentlichen",
+      "published": "Profil fertigstellen & veröffentlichen",
       "searched": "Marktplatz durchsuchen",
       "openedResult": "Ein Marktplatz-Profil öffnen",
       "enquiry": "Erste Anfrage senden"
@@ -185,43 +185,144 @@
     "talentDesc": "Künstler und kleine Acts, die Buchungen bei Venues und Events suchen.",
     "buyerDesc": "Venue-Betreiber und Booker, die Talente suchen und Auftrittsanfragen senden.",
     "agencyDesc": "Agenturen und Manager, die mehrere Acts auf Salon vertreten.",
-    "agencyHint": "Früher Zugang gewünscht? Schreiben Sie uns und nennen Sie, wie viele Acts Sie betreuen.",
+    "agencyHint": "Früher Zugang gewünscht? Kontaktieren Sie uns und nennen Sie, wie viele Acts Sie betreuen.",
+    "agencyContact": "Kontakt aufnehmen",
     "comingSoon": "Demnächst",
     "continue": "Weiter",
     "required": "Bitte wählen Sie eine Rolle aus, um fortzufahren",
     "signInFirst": "Zum Fortfahren anmelden",
-    "stepOf": "Schritt 1 von 3"
+    "stepOf": "Schritt 1 · Rolle"
   },
   "onboardingFlow": {
-    "entertainerPath": "Entertainer-Einrichtung",
-    "venuePath": "Venue-Einrichtung",
+    "entertainerPath": "Talent-Einrichtung",
+    "venuePath": "Buyer-Einrichtung",
     "stepOf": "Schritt {current} von {total}",
+    "chapterProgress": "Kapitel {chapter}",
     "next": "Weiter",
     "back": "Zurück",
-    "submitForReview": "Zur Prüfung einreichen",
-    "continueToOverview": "Zur Übersicht",
+    "skip": "Vorerst überspringen",
+    "saveAndExit": "Speichern & beenden",
+    "questions": "Fragen?",
+    "publish": "Profil veröffentlichen",
+    "exploreMarketplace": "Marktplatz erkunden",
     "continueToProfile": "Weiter zum Profil",
-    "doneTitle": "Sie sind dabei",
-    "doneBody": "Ihr Salon-Konto ist bereit. Vervollständigen Sie als Nächstes Ihr Marktplatz-Profil — Medien, Details und Links.",
-    "doneHighlight": "Konto erstellt",
-    "donePending": "Weiter zum Profil, um Medien und weitere Details zu ergänzen.",
-    "fieldsIncomplete": "Bitte füllen Sie alle erforderlichen Felder aus.",
+    "fieldsIncomplete": "Bitte füllen Sie die erforderlichen Felder für diesen Schritt aus.",
+    "saveFailed": "Speichern fehlgeschlagen — bitte erneut versuchen.",
+    "publishGapsTitle": "Noch nötig zum Veröffentlichen",
+    "publishReadyTitle": "Bereit zum Veröffentlichen",
+    "publishReadyBody": "Ihre Checkliste ist erfüllt. Veröffentlichen Sie, um in der Discovery zu erscheinen und andere Mitglieder zu kontaktieren.",
+    "publishGapsBody": "Sie können den Marktplatz jetzt erkunden (nur Suche). Fehlende Felder hier oder später im Profil ergänzen.",
+    "addressConfirmTitle": "Adresse bestätigen",
+    "addressConfirmBody": "Prüfen Sie die Angaben, bevor Sie weitergehen.",
+    "heroUploadHint": "Hero-Foto ablegen oder klicken zum Auswählen.",
+    "linksHint": "Mindestens einen öffentlichen Link — Website, Instagram oder YouTube.",
+    "legalPrivacy": "Rechtliche und Zahlungsdaten bleiben privat, bis beide Seiten Konditionen vereinbaren.",
+    "valueActName": "So erscheinen Sie in der Discovery.",
+    "valueCategory": "Hilft Buyern beim passenden Match.",
+    "valueDescription": "Was zur Shortlist führt.",
+    "valueHero": "Visuelles Vertrauen auf einen Blick.",
+    "valueLocation": "Passung und Logistik für Berlin-Buchungen.",
+    "valueFee": "Kommerzielles Signal — nur Richtwert.",
+    "valueLinks": "Nachweis, dem Buyer folgen können.",
+    "valueLegal": "Zum Veröffentlichen nötig; bis zum Vertrag verborgen.",
+    "valueNotes": "Optionale Produktions- oder Technikhinweise.",
+    "valueVenueName": "So erscheint Ihr Raum in der Discovery.",
+    "valueVenueType": "Hilft Talent, den Raum zu verstehen.",
+    "valueVenueDescription": "Was Talent shortlistet.",
+    "valueAddress": "Wo der Raum liegt — zum Veröffentlichen nötig.",
+    "valueCapacity": "Publikumsgröße und Kontext.",
+    "chapters": {
+      "A": {
+        "entertainer": {
+          "title": "Erzählen Sie von Ihrem Act",
+          "body": "Name, Kategorie und die Basics, die Buyer zur Shortlist nutzen."
+        },
+        "venue": {
+          "title": "Erzählen Sie von Ihrem Venue",
+          "body": "Name, Typ und die Basics, die Talent zur Shortlist nutzt."
+        }
+      },
+      "B": {
+        "entertainer": {
+          "title": "Buchungsbereitschaft",
+          "body": "Rechtliche Identität und optionale Hinweise, damit Sie veröffentlichen und Gigs bestätigen können."
+        },
+        "venue": {
+          "title": "Buchungsbereitschaft",
+          "body": "Rechtliche Identität und optionale Produktionshinweise, damit Sie veröffentlichen und Gigs bestätigen können."
+        }
+      },
+      "C": {
+        "entertainer": {
+          "title": "Live gehen",
+          "body": "Veröffentlichen, wenn die Checkliste passt — oder zuerst erkunden und im Profil fertigstellen."
+        },
+        "venue": {
+          "title": "Live gehen",
+          "body": "Veröffentlichen, wenn die Checkliste passt — oder zuerst erkunden und im Profil fertigstellen."
+        }
+      }
+    },
     "steps": {
-      "basics": {
-        "title": "Erzählen Sie, wer Sie sind",
-        "body": "Name, Kategorie und eine kurze Beschreibung. Den Rest erledigen Sie auf Ihrem Profil."
+      "act_name": {
+        "title": "Wie heißt Ihr Act?",
+        "body": "So erscheinen Sie in der Discovery."
+      },
+      "category": {
+        "title": "Welche Art von Act?",
+        "body": "Kategorie und Unterkategorie für Matching."
+      },
+      "description": {
+        "title": "Beschreiben Sie Ihren Act",
+        "body": "Kurze Bio, die Buyer beim Shortlisten lesen."
+      },
+      "hero_photo": {
+        "title": "Hero-Foto hinzufügen",
+        "body": "Ein starkes Bild für Discovery-Karten."
       },
       "location": {
+        "title": "Wo sind Sie basiert?",
+        "body": "Berlin-Basis und Reiseradius."
+      },
+      "fee": {
+        "title": "Preisrichtwert",
+        "body": "EUR-Spanne — das finale Honorar steht in den Buchungskonditionen."
+      },
+      "links": {
+        "title": "Öffentliche Links",
+        "body": "Website, Social oder Video, damit Buyer mehr erfahren."
+      },
+      "legal": {
+        "title": "Rechtliche & Zahlungsidentität",
+        "body": "Zum Veröffentlichen nötig. Für Gegenparteien verborgen, bis Konditionen vereinbart sind."
+      },
+      "notes": {
+        "title": "Noch etwas?",
+        "body": "Optionale technische oder Produktionshinweise."
+      },
+      "go_live": {
+        "title": "Veröffentlichen, wenn bereit",
+        "body": "Checkliste prüfen, dann live gehen oder zuerst erkunden."
+      },
+      "venue_name": {
+        "title": "Wie heißt das Venue?",
+        "body": "So erscheint Ihr Raum in der Discovery."
+      },
+      "venue_type": {
+        "title": "Welcher Venue-Typ?",
+        "body": "Kategorie, die Talent den Raum verstehen lässt."
+      },
+      "venue_description": {
+        "title": "Beschreiben Sie den Raum",
+        "body": "Kurze Beschreibung, die Talent beim Shortlisten liest."
+      },
+      "address": {
         "title": "Wo liegt das Venue?",
-        "body": "Berliner Adressdaten helfen Entertainern, die richtigen Räume zu finden."
+        "body": "Places suchen oder Berliner Adresse eingeben."
       },
-      "details": {
-        "title": "Noch ein paar Details",
-        "body": "Diese Felder helfen der anderen Seite, vor dem Kontakt zu prüfen, ob es passt."
-      },
-      "done": {
-        "title": "Sie sind dabei",
-        "body": "Ihr Salon-Konto ist bereit."
+      "capacity": {
+        "title": "Kapazität & Publikum",
+        "body": "Wie viele Menschen, und wer kommt üblicherweise."
       }
     },
     "fields": {
@@ -239,6 +340,7 @@
       "venueType": "Venue-Typ",
       "shortDescription": "Beschreibung",
       "addressLine1": "Adresszeile 1",
+      "addressLine2": "Adresszeile 2",
       "district": "Bezirk",
       "postalCode": "Postleitzahl",
       "audienceDescription": "Publikumsbeschreibung",

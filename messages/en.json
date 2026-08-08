@@ -73,7 +73,7 @@
   "onboardingChecklist": {
     "title": "Getting started",
     "steps": {
-      "published": "Publish your profile",
+      "published": "Finish & publish profile",
       "searched": "Search the marketplace",
       "openedResult": "Open a marketplace profile",
       "enquiry": "Send your first enquiry"
@@ -185,43 +185,144 @@
     "talentDesc": "Performers and small acts seeking bookings at venues and events.",
     "buyerDesc": "Venue operators and bookers who search talent and send performance requests.",
     "agencyDesc": "Agencies and managers who represent multiple acts on Salon.",
-    "agencyHint": "Want early access? Reach out and tell us how many acts you manage.",
+    "agencyHint": "Want early access? Contact us and tell us how many acts you manage.",
+    "agencyContact": "Contact us",
     "comingSoon": "Coming soon",
     "continue": "Continue",
     "required": "Please select a role to continue",
     "signInFirst": "Sign in to continue",
-    "stepOf": "Step 1 of 3"
+    "stepOf": "Step 1 · Role"
   },
   "onboardingFlow": {
-    "entertainerPath": "Entertainer setup",
-    "venuePath": "Venue setup",
+    "entertainerPath": "Talent setup",
+    "venuePath": "Buyer setup",
     "stepOf": "Step {current} of {total}",
-    "next": "Continue",
+    "chapterProgress": "Chapter {chapter}",
+    "next": "Next",
     "back": "Back",
-    "submitForReview": "Submit for verification",
-    "continueToOverview": "Continue to overview",
+    "skip": "Skip for now",
+    "saveAndExit": "Save & exit",
+    "questions": "Questions?",
+    "publish": "Publish profile",
+    "exploreMarketplace": "Explore marketplace",
     "continueToProfile": "Continue to profile",
-    "doneTitle": "You're in",
-    "doneBody": "Your Salon account is ready. Finish your marketplace profile next — media, details, and links.",
-    "doneHighlight": "Account created",
-    "donePending": "Continue to your profile to add media and the rest of your details.",
-    "fieldsIncomplete": "Please fill in all required fields.",
+    "fieldsIncomplete": "Please fill in the required fields for this step.",
+    "saveFailed": "Could not save — try again.",
+    "publishGapsTitle": "Still needed to publish",
+    "publishReadyTitle": "Ready to publish",
+    "publishReadyBody": "Your checklist passes. Publish to appear in discovery and contact other members.",
+    "publishGapsBody": "You can explore the marketplace now (search only). Finish remaining fields here or later on your profile.",
+    "addressConfirmTitle": "Confirm address",
+    "addressConfirmBody": "Check the details before continuing.",
+    "heroUploadHint": "Drop a hero photo, or click to browse.",
+    "linksHint": "Add at least one public link — website, Instagram, or YouTube.",
+    "legalPrivacy": "Legal & payment details stay private until both sides agree terms.",
+    "valueActName": "How you appear in discovery.",
+    "valueCategory": "Helps buyers find the right fit.",
+    "valueDescription": "What shortlists you.",
+    "valueHero": "Visual trust at a glance.",
+    "valueLocation": "Fit and logistics for Berlin bookings.",
+    "valueFee": "Commercial signal — indicative only.",
+    "valueLinks": "Proof buyers can follow.",
+    "valueLegal": "Required to publish; hidden until contract.",
+    "valueNotes": "Optional production or technical notes.",
+    "valueVenueName": "How your room appears in discovery.",
+    "valueVenueType": "Helps talent understand the room.",
+    "valueVenueDescription": "What talent shortlists.",
+    "valueAddress": "Where the room is — required to publish.",
+    "valueCapacity": "Audience size and context.",
+    "chapters": {
+      "A": {
+        "entertainer": {
+          "title": "Tell us about your act",
+          "body": "Name, category, and the basics buyers use to shortlist."
+        },
+        "venue": {
+          "title": "Tell us about your venue",
+          "body": "Name, type, and the basics talent uses to shortlist."
+        }
+      },
+      "B": {
+        "entertainer": {
+          "title": "Booking readiness",
+          "body": "Legal identity and optional notes so you can publish and confirm gigs."
+        },
+        "venue": {
+          "title": "Booking readiness",
+          "body": "Legal identity and optional production notes so you can publish and confirm gigs."
+        }
+      },
+      "C": {
+        "entertainer": {
+          "title": "Go live",
+          "body": "Publish when the checklist passes — or explore first and finish on your profile."
+        },
+        "venue": {
+          "title": "Go live",
+          "body": "Publish when the checklist passes — or explore first and finish on your profile."
+        }
+      }
+    },
     "steps": {
-      "basics": {
-        "title": "Tell us who you are",
-        "body": "Name, category, and a short description. You can finish everything else on your profile."
+      "act_name": {
+        "title": "What’s your act name?",
+        "body": "How you appear in discovery."
+      },
+      "category": {
+        "title": "What kind of act?",
+        "body": "Category and subcategory for matching."
+      },
+      "description": {
+        "title": "Describe your act",
+        "body": "A short bio buyers read when shortlisting."
+      },
+      "hero_photo": {
+        "title": "Add a hero photo",
+        "body": "One strong image for discovery cards."
       },
       "location": {
+        "title": "Where are you based?",
+        "body": "Berlin base and how far you’ll travel."
+      },
+      "fee": {
+        "title": "Indicative fee range",
+        "body": "EUR range — final fee is agreed in booking terms."
+      },
+      "links": {
+        "title": "Public links",
+        "body": "Website, social, or video so buyers can learn more."
+      },
+      "legal": {
+        "title": "Legal & payment identity",
+        "body": "Required to publish. Hidden from counterparties until terms are agreed."
+      },
+      "notes": {
+        "title": "Anything else?",
+        "body": "Optional technical or production notes."
+      },
+      "go_live": {
+        "title": "Publish when ready",
+        "body": "Review the checklist, then go live or explore first."
+      },
+      "venue_name": {
+        "title": "What’s the venue name?",
+        "body": "How your room appears in discovery."
+      },
+      "venue_type": {
+        "title": "What type of venue?",
+        "body": "Category that helps talent understand the room."
+      },
+      "venue_description": {
+        "title": "Describe the room",
+        "body": "A short description talent reads when shortlisting."
+      },
+      "address": {
         "title": "Where is the venue?",
-        "body": "Berlin address details help entertainers find the right rooms."
+        "body": "Search Places or enter the Berlin address."
       },
-      "details": {
-        "title": "A few more details",
-        "body": "These fields help the other side understand fit before they reach out."
-      },
-      "done": {
-        "title": "You're in",
-        "body": "Your Salon account is ready."
+      "capacity": {
+        "title": "Capacity & audience",
+        "body": "How many people, and who usually comes."
       }
     },
     "fields": {
@@ -239,6 +340,7 @@
       "venueType": "Venue type",
       "shortDescription": "Description",
       "addressLine1": "Address line 1",
+      "addressLine2": "Address line 2",
       "district": "District",
       "postalCode": "Postal code",
       "audienceDescription": "Audience description",

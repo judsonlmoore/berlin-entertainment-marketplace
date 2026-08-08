@@ -89,7 +89,7 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 - No live preview panel beside the form.
 
 ### Layout
-- **Onboarding:** Narrow focused steps (shell without app rail). Short path. Final “you’re in / pending verification” screen stays until the user clicks Continue (no auto-redirect).
+- **Onboarding:** One-shot chaptered wizard (shell without app rail): segmented chapter progress, **Save & exit**, **Skip** on non-minimum steps, Back / Next, final Publish checklist. Soft exit lands in the app shell (search OK; contact blocked until published). After any exit, profile edits and publish continue **only** on `/profile` — the wizard is not re-entered.
 - **Profile:** Single long page. Form column ~720–800px. Display-name strip near top; it sticks under the mobile chrome (and to the top on desktop) so Publish, autosave status, and errors stay visible while scrolling. Section hairline rules. Media high; logistics later; **legal & payment identity** near the end (required to publish; hidden from counterparties until terms are agreed). Account language/deletion live under `/account`, not profile.
 
 ### Autosave & publication status
@@ -125,7 +125,7 @@ Surfaces: `/[locale]/onboarding/setup` and `/[locale]/profile`. Same tokens as t
 - Mobile &lt;768px: compact header + drawer navigation (same rail menu); no sticky bottom nav. Drawer header is brand + close on one row; act/venue context and account menu live in the sticky header only (not duplicated in the drawer).
 - Modals: on mobile, edge-to-edge full-height sheets (no radius) with sticky close in the header and sticky CTAs in the footer; desktop keeps a centered rounded panel.
 - Member rail ops: **Marketplace** (directory), **Bookings** (match pipeline), **Calendar** (time), plus Overview and Profile. No top-level Opportunities or separate Leads.
-- Member rail may show a quiet **Getting started** checklist (publish → search → open a result → send an enquiry). When all steps are done, show a one-line congrats + dismiss; dismiss hides it permanently. Staff and support-mode overlays never see it.
+- Member rail may show a quiet **Getting started** checklist (finish & publish on `/profile` → search → open a result → send an enquiry). When all steps are done, show a one-line congrats + dismiss; dismiss hides it permanently. Staff and support-mode overlays never see it.
 - Venue profiles (talent-facing) include **Send offer** and listed **open calls** (dated + standing) with 1-click apply. Accept or Counter on an offer unlocks contacts and opens the shared booking. No in-app chat.
 - Logged-out surfaces share one public footer (help, contact, privacy, terms, cookies, sign-in)
 - Help/contact prose reuses the legal markdown chrome (`legal-prose` / `MarkdownDocument`); no separate help visual system
@@ -157,3 +157,4 @@ No live marketplace preview rail on profile edit.
 | 2026-08-07 | Offer cards: status dots (pending ochre / accepted primary / declined danger) + fee-first layout | Match URL-validity status language; current offer above chronological history |
 | 2026-08-06 | Marketplace IA: Marketplace / Bookings / Calendar | Collapse Leads+Bookings lists; open calls live on profiles; availability is a discovery filter |
 | 2026-08-06 | Public Help + Contact; member help hub | Thin public FAQ; ops guides stay signed-in; Spamblock-backed contact form in footer and app |
+| 2026-08-08 | One-shot Airbnb-style onboarding wizard | Chapter progress, Save & exit, Skip; publish in wizard or soft-exit; post-exit edits only on `/profile`; Agency → Contact |

@@ -4,7 +4,11 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { selectInitialRole } from "@/src/actions/onboarding";
 import { Button } from "@/src/components/ui/button";
-import { useRouter } from "@/src/i18n/navigation";
+import { Link, useRouter } from "@/src/i18n/navigation";
+import {
+  ONBOARDING_WIZARD_COOKIE,
+  ONBOARDING_WIZARD_COOKIE_VALUE,
+} from "@/src/lib/onboarding-wizard-session";
 
 type Props = {
   locale: "en" | "de";
@@ -50,6 +54,8 @@ export function RoleSelectionForm({ locale }: Props) {
             return;
           }
 
+          // Start one-shot wizard session before navigating to setup.
+          document.cookie = `${ONBOARDING_WIZARD_COOKIE}=${ONBOARDING_WIZARD_COOKIE_VALUE}; Path=/; SameSite=Lax`;
           router.push("/onboarding/setup");
           router.refresh();
         });
@@ -133,7 +139,15 @@ export function RoleSelectionForm({ locale }: Props) {
             <div className="mt-1 text-sm text-[var(--text-muted)]">
               {t("agencyDesc")}
             </div>
-            <p className="mt-2 text-sm text-[var(--ink)]">{t("agencyHint")}</p>
+            <p className="mt-2 text-sm text-[var(--ink)]">
+              {t("agencyHint")}{" "}
+              <Link
+                href="/contact"
+                className="font-medium text-[var(--primary)] underline-offset-4 hover:underline"
+              >
+                {t("agencyContact")}
+              </Link>
+            </p>
           </div>
         </div>
       </fieldset>
