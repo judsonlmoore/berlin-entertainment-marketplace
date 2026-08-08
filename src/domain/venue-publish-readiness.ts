@@ -37,8 +37,7 @@ export type VenuePublishSnapshot = {
 };
 
 export type VenuePublishReadinessResult =
-  | { ok: true }
-  | { ok: false; issues: VenuePublishIssue[] };
+  { ok: true } | { ok: false; issues: VenuePublishIssue[] };
 
 /**
  * Built-in QA gate for self-serve venue publish.

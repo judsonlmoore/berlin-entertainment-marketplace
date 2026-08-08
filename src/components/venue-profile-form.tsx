@@ -339,7 +339,9 @@ export function VenueProfileForm({
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
       const focusable = target?.matches("input,select,textarea")
         ? target
-        : target?.querySelector<HTMLElement>("input,select,textarea,.ProseMirror");
+        : target?.querySelector<HTMLElement>(
+            "input,select,textarea,.ProseMirror",
+          );
       focusable?.focus?.();
     });
   }
@@ -467,12 +469,16 @@ export function VenueProfileForm({
         <Section title={t("sectionBasics")}>
           <VenuePlacesSearch locale={locale} onPrefill={applyPrefill} />
 
-          <label className="grid gap-1 text-sm" id="field-name" data-field="name">
+          <label
+            className="grid gap-1 text-sm"
+            id="field-name"
+            data-field="name"
+          >
             <span className="font-medium">{t("venueName")}</span>
             <input
               name="name"
               required
-              className={`field${fieldErrors.name ? " border-[var(--danger)]" : ""}`}
+              className={`field${fieldErrors.name ? "border-[var(--danger)]" : ""}`}
               aria-invalid={fieldErrors.name ? true : undefined}
               value={displayName}
               onChange={(event) => {
@@ -545,7 +551,7 @@ export function VenueProfileForm({
             <span className="font-medium">{t("addressLine1")}</span>
             <input
               name="addressLine1"
-              className={`field${fieldErrors.addressLine1 ? " border-[var(--danger)]" : ""}`}
+              className={`field${fieldErrors.addressLine1 ? "border-[var(--danger)]" : ""}`}
               aria-invalid={fieldErrors.addressLine1 ? true : undefined}
               value={addressLine1}
               onChange={(event) => {
@@ -582,7 +588,7 @@ export function VenueProfileForm({
               <span className="font-medium">{t("district")}</span>
               <input
                 name="district"
-                className={`field${fieldErrors.district ? " border-[var(--danger)]" : ""}`}
+                className={`field${fieldErrors.district ? "border-[var(--danger)]" : ""}`}
                 aria-invalid={fieldErrors.district ? true : undefined}
                 value={district}
                 onChange={(event) => {
@@ -609,7 +615,7 @@ export function VenueProfileForm({
               <span className="font-medium">{t("postalCode")}</span>
               <input
                 name="postalCode"
-                className={`field${fieldErrors.postalCode ? " border-[var(--danger)]" : ""}`}
+                className={`field${fieldErrors.postalCode ? "border-[var(--danger)]" : ""}`}
                 aria-invalid={fieldErrors.postalCode ? true : undefined}
                 value={postalCode}
                 onChange={(event) => {
@@ -648,7 +654,7 @@ export function VenueProfileForm({
                 min={1}
                 required
                 defaultValue={defaultValues?.capacity ?? 50}
-                className={`field${fieldErrors.capacity ? " border-[var(--danger)]" : ""}`}
+                className={`field${fieldErrors.capacity ? "border-[var(--danger)]" : ""}`}
                 aria-invalid={fieldErrors.capacity ? true : undefined}
                 onChange={() => {
                   setFieldErrors((prev) => {

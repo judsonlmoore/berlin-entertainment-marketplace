@@ -239,7 +239,8 @@ export function OnboardingSetupWizard({
   ): Promise<boolean> {
     const next = { ...entertainer, ...patch };
     const socialLinks: Record<string, string> = {};
-    if (next.instagramUrl.trim()) socialLinks.instagram = next.instagramUrl.trim();
+    if (next.instagramUrl.trim())
+      socialLinks.instagram = next.instagramUrl.trim();
     if (next.youtubeUrl.trim()) socialLinks.youtube = next.youtubeUrl.trim();
 
     const saved = await upsertEntertainerProfile({
@@ -267,8 +268,8 @@ export function OnboardingSetupWizard({
     }
     const hasLink = Boolean(
       next.websiteUrl.trim() ||
-        next.instagramUrl.trim() ||
-        next.youtubeUrl.trim(),
+      next.instagramUrl.trim() ||
+      next.youtubeUrl.trim(),
     );
     setEntertainer({
       ...next,
@@ -278,7 +279,9 @@ export function OnboardingSetupWizard({
     return true;
   }
 
-  async function persistVenue(patch: Partial<VenueDraft> = {}): Promise<boolean> {
+  async function persistVenue(
+    patch: Partial<VenueDraft> = {},
+  ): Promise<boolean> {
     const next = { ...venue, ...patch };
     const payload = {
       name: next.name.trim() || "Untitled venue",
@@ -550,13 +553,14 @@ export function OnboardingSetupWizard({
               ? { youtube: entertainer.youtubeUrl }
               : {}),
           },
-          imageCount: entertainer.imageCount || (entertainer.heroImageId ? 1 : 0),
+          imageCount:
+            entertainer.imageCount || (entertainer.heroImageId ? 1 : 0),
           hasExternalOrVideoLink:
             entertainer.hasExternalOrVideoLink ||
             Boolean(
               entertainer.websiteUrl.trim() ||
-                entertainer.instagramUrl.trim() ||
-                entertainer.youtubeUrl.trim(),
+              entertainer.instagramUrl.trim() ||
+              entertainer.youtubeUrl.trim(),
             ),
           legalIdentityComplete: legalComplete,
         })
@@ -584,7 +588,8 @@ export function OnboardingSetupWizard({
 
   const canSkip = step.skippable && step.kind !== "publish";
   const nextDisabled =
-    pending || (!step.skippable && !currentStepValid() && step.kind !== "publish");
+    pending ||
+    (!step.skippable && !currentStepValid() && step.kind !== "publish");
 
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-lg flex-col gap-6">
@@ -605,11 +610,15 @@ export function OnboardingSetupWizard({
         </button>
       </div>
 
-      <div className="grid gap-2" aria-label={t("chapterProgress", { chapter: step.chapter })}>
+      <div
+        className="grid gap-2"
+        aria-label={t("chapterProgress", { chapter: step.chapter })}
+      >
         <ol className="flex gap-2">
           {chapters.map((chapter) => {
             const active = chapter === step.chapter;
-            const past = chapters.indexOf(chapter) < chapters.indexOf(step.chapter);
+            const past =
+              chapters.indexOf(chapter) < chapters.indexOf(step.chapter);
             return (
               <li
                 key={chapter}
@@ -687,7 +696,9 @@ export function OnboardingSetupWizard({
                 ? (entertainer.profileId ?? undefined)
                 : undefined
             }
-            venueId={role === "venue" ? (venue.venueId ?? undefined) : undefined}
+            venueId={
+              role === "venue" ? (venue.venueId ?? undefined) : undefined
+            }
             existingImageId={
               role === "entertainer"
                 ? entertainer.heroImageId
@@ -755,7 +766,10 @@ export function OnboardingSetupWizard({
                 value={Math.round(entertainer.priceMinCents / 100)}
                 onChange={(e) =>
                   updateEntertainer({
-                    priceMinCents: Math.max(0, Math.round(Number(e.target.value) * 100)),
+                    priceMinCents: Math.max(
+                      0,
+                      Math.round(Number(e.target.value) * 100),
+                    ),
                   })
                 }
               />
@@ -768,7 +782,10 @@ export function OnboardingSetupWizard({
                 value={Math.round(entertainer.priceMaxCents / 100)}
                 onChange={(e) =>
                   updateEntertainer({
-                    priceMaxCents: Math.max(0, Math.round(Number(e.target.value) * 100)),
+                    priceMaxCents: Math.max(
+                      0,
+                      Math.round(Number(e.target.value) * 100),
+                    ),
                   })
                 }
               />
@@ -784,7 +801,9 @@ export function OnboardingSetupWizard({
               name="websiteUrl"
               label={tProfile("websiteUrl")}
               defaultValue={entertainer.websiteUrl}
-              onValueChange={(value) => updateEntertainer({ websiteUrl: value })}
+              onValueChange={(value) =>
+                updateEntertainer({ websiteUrl: value })
+              }
             />
             <PrefixedUrlInput
               platform="instagram"
@@ -800,7 +819,9 @@ export function OnboardingSetupWizard({
               name="youtube"
               label={tProfile("socialYoutube")}
               defaultValue={entertainer.youtubeUrl}
-              onValueChange={(value) => updateEntertainer({ youtubeUrl: value })}
+              onValueChange={(value) =>
+                updateEntertainer({ youtubeUrl: value })
+              }
             />
           </div>
         ) : null}
@@ -839,7 +860,9 @@ export function OnboardingSetupWizard({
             subcategoryName="venueSubcategory"
             otherName="venueSubcategoryOther"
             defaultCategory={parseVenueType(venue.venueType).categoryId}
-            defaultSubcategoryRaw={parseVenueType(venue.venueType).subcategoryRaw}
+            defaultSubcategoryRaw={
+              parseVenueType(venue.venueType).subcategoryRaw
+            }
             categoryLabel={tProfile("venueType")}
             subcategoryLabel={tProfile("subcategory")}
             otherLabel={tProfile("subcategoryOther")}
@@ -875,7 +898,9 @@ export function OnboardingSetupWizard({
             />
             {addressConfirmOpen || venue.addressLine1 ? (
               <div className="grid gap-3 rounded-[var(--radius-md)] border border-[var(--rule)] p-4">
-                <p className="text-sm font-medium">{t("addressConfirmTitle")}</p>
+                <p className="text-sm font-medium">
+                  {t("addressConfirmTitle")}
+                </p>
                 <p className="text-xs text-[var(--text-muted)]">
                   {t("addressConfirmBody")}
                 </p>
@@ -929,7 +954,9 @@ export function OnboardingSetupWizard({
                 min={1}
                 value={venue.capacity}
                 onChange={(e) =>
-                  patchVenue({ capacity: Math.max(1, Number(e.target.value) || 1) })
+                  patchVenue({
+                    capacity: Math.max(1, Number(e.target.value) || 1),
+                  })
                 }
               />
             </Field>
@@ -966,7 +993,9 @@ export function OnboardingSetupWizard({
 
         {step.id === "legal" ? (
           <div className="grid gap-3">
-            <p className="text-sm text-[var(--text-muted)]">{t("legalPrivacy")}</p>
+            <p className="text-sm text-[var(--text-muted)]">
+              {t("legalPrivacy")}
+            </p>
             <LegalIdentityForm
               locale={locale}
               initial={legalIdentity}
@@ -997,7 +1026,9 @@ export function OnboardingSetupWizard({
                   {t("publishGapsBody")}
                 </p>
                 <ul className="grid gap-1 text-sm text-[var(--danger)]">
-                  {role === "entertainer" && !readiness.ok && "reasons" in readiness
+                  {role === "entertainer" &&
+                  !readiness.ok &&
+                  "reasons" in readiness
                     ? readiness.reasons.map((reason) => (
                         <li key={reason}>{reason}</li>
                       ))

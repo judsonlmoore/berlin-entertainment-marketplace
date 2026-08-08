@@ -63,9 +63,9 @@ describe("checkEntertainerPublishReadiness", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.reasons.some((r) => /legal and payment identity/i.test(r))).toBe(
-        true,
-      );
+      expect(
+        result.reasons.some((r) => /legal and payment identity/i.test(r)),
+      ).toBe(true);
     }
   });
 });

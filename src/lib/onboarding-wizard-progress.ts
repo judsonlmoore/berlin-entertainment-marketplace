@@ -2,7 +2,10 @@ import {
   wizardStepsForRole,
   type WizardRole,
 } from "@/src/domain/onboarding-wizard-steps";
-import { parseSubcategory, parseVenueType } from "@/src/domain/profile-taxonomy";
+import {
+  parseSubcategory,
+  parseVenueType,
+} from "@/src/domain/profile-taxonomy";
 import {
   DESCRIPTION_MIN,
   NOTES_MAX,

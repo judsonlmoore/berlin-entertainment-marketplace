@@ -87,7 +87,7 @@ export function CategorySubcategorySelect({
         <select
           name={categoryName}
           required
-          className={`field${error ? " border-[var(--danger)]" : ""}`}
+          className={`field${error ? "border-[var(--danger)]" : ""}`}
           aria-invalid={error ? true : undefined}
           value={categoryId}
           onChange={(event) => {
@@ -115,7 +115,7 @@ export function CategorySubcategorySelect({
         </span>
         <select
           required
-          className={`field${error ? " border-[var(--danger)]" : ""}`}
+          className={`field${error ? "border-[var(--danger)]" : ""}`}
           value={subcategoryId}
           disabled={!categoryId}
           onChange={(event) => {

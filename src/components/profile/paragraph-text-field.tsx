@@ -259,9 +259,7 @@ export function ParagraphTextField({
       </div>
       <div
         className={`overflow-hidden rounded-[var(--radius-md)] border bg-[var(--surface)] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--primary)] ${
-          error
-            ? "border-[var(--danger)]"
-            : "border-[var(--rule)]"
+          error ? "border-[var(--danger)]" : "border-[var(--rule)]"
         }`}
       >
         <div

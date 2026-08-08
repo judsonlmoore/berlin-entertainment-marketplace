@@ -59,7 +59,10 @@ export function OAuthSignInButton({ provider, label }: Props) {
       >
         <span className="oauth-btn__content">
           {pending ? (
-            <span className="oauth-btn__spinner oauth-btn__spinner--dark" aria-hidden />
+            <span
+              className="oauth-btn__spinner oauth-btn__spinner--dark"
+              aria-hidden
+            />
           ) : (
             <span className="oauth-btn__icon oauth-btn__icon--microsoft">
               <MicrosoftLogo />

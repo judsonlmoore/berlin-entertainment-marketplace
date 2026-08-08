@@ -28,9 +28,7 @@ export function LegalIdentityForm({
     (form: FormData) => {
       return {
         entityType: String(form.get("entityType") ?? "individual") as
-          | "individual"
-          | "freelancer"
-          | "registered_business",
+          "individual" | "freelancer" | "registered_business",
         legalName: String(form.get("legalName") ?? ""),
         tradingName: String(form.get("tradingName") ?? "") || null,
         addressLine1: String(form.get("addressLine1") ?? ""),
@@ -88,7 +86,7 @@ export function LegalIdentityForm({
       ref={formRef}
       id="field-legalIdentity"
       data-field="legalIdentity"
-      className={`panel grid gap-4 p-6${error ? " border-[var(--danger)]" : ""}`}
+      className={`panel grid gap-4 p-6${error ? "border-[var(--danger)]" : ""}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>

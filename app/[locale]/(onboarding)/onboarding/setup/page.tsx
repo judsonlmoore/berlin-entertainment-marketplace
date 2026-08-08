@@ -250,9 +250,9 @@ export default async function OnboardingSetupPage({ params }: Props) {
           priceMaxCents: entertainerDraft.priceMaxCents,
           hasLink: Boolean(
             entertainerDraft.websiteUrl.trim() ||
-              entertainerDraft.instagramUrl.trim() ||
-              entertainerDraft.youtubeUrl.trim() ||
-              entertainerDraft.hasExternalOrVideoLink,
+            entertainerDraft.instagramUrl.trim() ||
+            entertainerDraft.youtubeUrl.trim() ||
+            entertainerDraft.hasExternalOrVideoLink,
           ),
           imageCount: entertainerDraft.imageCount,
           legalComplete,
