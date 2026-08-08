@@ -140,7 +140,13 @@
     "principle2Body": "Applications and direct requests share one terms, agreement, and confirmation flow.",
     "principle3Title": "Availability everyone can trust",
     "principle3Body": "Native holds and confirmed blocks keep both calendars honest before the night.",
-    "footerNote": "Salon is a private B2B marketplace. Not a consumer event platform."
+    "footerNote": "Salon is a private B2B marketplace. Not a consumer event platform.",
+    "footerNavLabel": "Footer",
+    "footerHelp": "Help",
+    "footerContact": "Contact",
+    "footerLegal": "Privacy",
+    "footerTerms": "Terms",
+    "footerCookies": "Cookies"
   },
   "forTalent": {
     "metaTitle": "For Talent — Salon",
