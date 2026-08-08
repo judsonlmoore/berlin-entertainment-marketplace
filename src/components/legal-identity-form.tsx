@@ -89,7 +89,11 @@ export function LegalIdentityForm({
       ref={formRef}
       id="field-legalIdentity"
       data-field="legalIdentity"
-      className={`panel grid gap-4 p-6${error ? "border-[var(--danger)]" : ""}`}
+      className={
+        error
+          ? "panel grid gap-4 border-[var(--danger)] p-6"
+          : "panel grid gap-4 p-6"
+      }
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -99,7 +103,11 @@ export function LegalIdentityForm({
             </h3>
           )}
           <p
-            className={`text-sm text-[var(--text-muted)]${embedded ? "" : "mt-1"}`}
+            className={
+              embedded
+                ? "text-sm text-[var(--text-muted)]"
+                : "mt-1 text-sm text-[var(--text-muted)]"
+            }
           >
             {t("legalBody")}
           </p>
