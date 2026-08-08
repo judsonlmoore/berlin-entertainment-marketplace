@@ -137,10 +137,10 @@ export default async function HomePage({ params }: Props) {
         visual={
           <div className="grid gap-3 rounded-lg border border-[var(--rule)] bg-white p-6 sm:p-8">
             {[
-              { step: "01", label: "Discover" },
-              { step: "02", label: "Connect" },
-              { step: "03", label: "Agree" },
-              { step: "04", label: "Confirmed" },
+              { step: "01", label: t("mockupStep1") },
+              { step: "02", label: t("mockupStep2") },
+              { step: "03", label: t("mockupStep3") },
+              { step: "04", label: t("mockupStep4") },
             ].map((item) => (
               <div
                 key={item.step}

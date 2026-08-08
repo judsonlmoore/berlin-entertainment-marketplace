@@ -77,18 +77,20 @@ export default async function ForBuyersPage({ params }: Props) {
         background="surface"
         visual={
           <div className="grid gap-3">
-            {["Jazz Trio", "Comedy Act", "Dance Ensemble"].map((name, i) => (
+            {[
+              { key: "jazz", name: t("mockupJazzTrio"), format: t("mockupJazzFormat") },
+              { key: "comedy", name: t("mockupComedyAct"), format: t("mockupComedyFormat") },
+              { key: "dance", name: t("mockupDanceEnsemble"), format: t("mockupDanceFormat") },
+            ].map((act, i) => (
               <div
-                key={name}
+                key={act.key}
                 className="panel flex items-center gap-4 p-4"
               >
-                <Monogram name={name} size="sm" colorSeed={`talent-${i}`} />
+                <Monogram name={act.name} size="sm" colorSeed={`talent-${i}`} />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{name}</p>
+                  <p className="truncate text-sm font-semibold">{act.name}</p>
                   <p className="text-xs text-[var(--text-muted)]">
-                    {i === 0 && "Music · 3 members"}
-                    {i === 1 && "Comedy · Solo"}
-                    {i === 2 && "Dance · 4-6 members"}
+                    {act.format}
                   </p>
                 </div>
               </div>
@@ -106,22 +108,25 @@ export default async function ForBuyersPage({ params }: Props) {
         visual={
           <div className="panel p-6 sm:p-8">
             <div className="mb-4">
-              <p className="text-sm font-semibold">Friday Night Music</p>
+              <p className="text-sm font-semibold">{t("mockupOpenCallTitle")}</p>
               <p className="text-xs text-[var(--text-muted)]">
-                Open Call · March 15, 2026
+                {t("mockupOpenCallType")} · {t("mockupOpenCallDate")}
               </p>
             </div>
             <div className="h-px bg-[var(--rule)]" />
             <div className="mt-4 space-y-3">
-              {["Act A", "Act B", "Act C"].map((name, i) => (
-                <div
-                  key={name}
-                  className="flex items-center gap-3 rounded bg-[var(--canvas)] p-2"
-                >
-                  <Monogram name={name} size="xs" colorSeed={`app-${i}`} />
-                  <span className="text-xs">{name}</span>
-                </div>
-              ))}
+              {[1, 2, 3].map((n, i) => {
+                const name = t("mockupActName", { n: String.fromCharCode(64 + n) });
+                return (
+                  <div
+                    key={n}
+                    className="flex items-center gap-3 rounded bg-[var(--canvas)] p-2"
+                  >
+                    <Monogram name={name} size="xs" colorSeed={`app-${i}`} />
+                    <span className="text-xs">{name}</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         }
@@ -137,9 +142,9 @@ export default async function ForBuyersPage({ params }: Props) {
           <div className="panel p-6 sm:p-8">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold">Booking Agreement</p>
+                <p className="text-sm font-semibold">{t("mockupAgreementTitle")}</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  March 15 · 20:00-22:00
+                  {t("mockupAgreementDate")}
                 </p>
               </div>
               <div className="flex -space-x-2">
@@ -150,15 +155,15 @@ export default async function ForBuyersPage({ params }: Props) {
             <div className="h-px bg-[var(--rule)]" />
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-muted)]">Terms agreed</span>
+                <span className="text-[var(--text-muted)]">{t("mockupAgreementTermsAgreed")}</span>
                 <span className="font-medium text-[var(--primary)]">✓</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-muted)]">Both signed</span>
+                <span className="text-[var(--text-muted)]">{t("mockupAgreementBothSigned")}</span>
                 <span className="font-medium text-[var(--primary)]">✓</span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-[var(--text-muted)]">Calendars blocked</span>
+                <span className="text-[var(--text-muted)]">{t("mockupAgreementCalendarsBlocked")}</span>
                 <span className="font-medium text-[var(--primary)]">✓</span>
               </div>
             </div>

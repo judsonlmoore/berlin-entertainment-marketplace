@@ -28,22 +28,39 @@ function toneFromName(name: string): Tone {
   return tones[hash % tones.length]!;
 }
 
+type MonogramSize = "xs" | "sm" | "md" | "lg";
+
+const sizeClass: Record<MonogramSize, string> = {
+  xs: "size-6 text-xs rounded",
+  sm: "size-10 text-sm rounded",
+  md: "size-16 text-lg rounded-md",
+  lg: "size-24 text-2xl rounded-lg",
+};
+
 export function Monogram({
   name,
   className = "",
   tone,
+  size = "md",
+  colorSeed,
 }: {
   name: string;
   className?: string;
   tone?: Tone;
+  size?: MonogramSize;
+  colorSeed?: string;
 }) {
-  const resolved = tone ?? toneFromName(name);
+  const resolved = tone ?? toneFromName(colorSeed ?? name);
+  const sizeClasses = size === "md" && !className.includes("size-") && !className.includes("text-")
+    ? "text-[clamp(2.5rem,6vw,4.5rem)] leading-none"
+    : sizeClass[size];
+  
   return (
     <div
       aria-hidden="true"
-      className={`flex items-center justify-center ${toneClass[resolved]} ${className}`}
+      className={`flex shrink-0 items-center justify-center ${toneClass[resolved]} ${sizeClasses} ${className}`}
     >
-      <span className="display text-[clamp(2.5rem,6vw,4.5rem)] leading-none">
+      <span className="display leading-none">
         {initialsFromName(name)}
       </span>
     </div>

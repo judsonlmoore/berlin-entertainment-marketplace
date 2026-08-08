@@ -77,20 +77,23 @@ export default async function ForTalentPage({ params }: Props) {
         background="surface"
         visual={
           <div className="grid gap-3">
-            {["Venue A", "Venue B", "Venue C"].map((name, i) => (
-              <div
-                key={name}
-                className="panel flex items-center gap-4 p-4"
-              >
-                <Monogram name={name} size="sm" colorSeed={`venue-${i}`} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{name}</p>
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Bar & Club · 80 capacity
-                  </p>
+            {[1, 2, 3].map((n, i) => {
+              const name = t("mockupVenue", { n: String.fromCharCode(64 + n) });
+              return (
+                <div
+                  key={n}
+                  className="panel flex items-center gap-4 p-4"
+                >
+                  <Monogram name={name} size="sm" colorSeed={`venue-${i}`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{name}</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {t("mockupVenueType")} · {t("mockupCapacity", { capacity: "80" })}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         }
       />
@@ -104,18 +107,18 @@ export default async function ForTalentPage({ params }: Props) {
         visual={
           <div className="panel p-6 sm:p-8">
             <div className="mb-4 flex items-center gap-3">
-              <Monogram name="Your Act" size="sm" colorSeed="you" />
+              <Monogram name={t("mockupYourAct")} size="sm" colorSeed="you" />
               <div>
-                <p className="text-sm font-semibold">Your Profile</p>
+                <p className="text-sm font-semibold">{t("mockupYourProfile")}</p>
                 <p className="text-xs text-[var(--text-muted)]">
-                  Music · 1-3 members
+                  {t("mockupActFormat", { min: "1", max: "3" })}
                 </p>
               </div>
             </div>
             <div className="h-px bg-[var(--rule)]" />
             <div className="mt-4 space-y-2">
               <div className="text-xs font-medium text-[var(--text-muted)]">
-                Terms · Agreement · Confirmation
+                {t("mockupTermsFlow")}
               </div>
               <div className="h-8 rounded bg-[var(--canvas)]" />
               <div className="h-8 rounded bg-[var(--canvas)]" />
@@ -133,7 +136,7 @@ export default async function ForTalentPage({ params }: Props) {
         visual={
           <div className="panel p-6 sm:p-8">
             <div className="mb-4 text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
-              Your Calendar
+              {t("mockupYourCalendar")}
             </div>
             <div className="grid grid-cols-7 gap-2">
               {Array.from({ length: 28 }, (_, i) => {

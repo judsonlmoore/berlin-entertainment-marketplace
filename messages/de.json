@@ -140,7 +140,17 @@
     "principle2Body": "Bewerbungen und Direct Requests teilen einen Konditions-, Vereinbarungs- und Bestätigungsflow.",
     "principle3Title": "Verfügbarkeit, der man trauen kann",
     "principle3Body": "Native Holds und bestätigte Blöcke halten beide Kalender vor dem Abend ehrlich.",
-    "footerNote": "Salon ist ein privater B2B-Marktplatz. Keine Consumer-Event-Plattform."
+    "footerNote": "Salon ist ein privater B2B-Marktplatz. Keine Consumer-Event-Plattform.",
+    "footerNavLabel": "Footer-Navigation",
+    "footerHelp": "Hilfe",
+    "footerContact": "Kontakt",
+    "footerLegal": "Datenschutz",
+    "footerTerms": "Nutzungsbedingungen",
+    "footerCookies": "Cookies",
+    "mockupStep1": "Entdecken",
+    "mockupStep2": "Verbinden",
+    "mockupStep3": "Vereinbaren",
+    "mockupStep4": "Bestätigt"
   },
   "forTalent": {
     "metaTitle": "Für Acts — Salon",
@@ -171,7 +181,15 @@
     "howItWorksStep4Body": "Beide Kalender geblockt, Kontakte freigeschaltet",
     "socialProof": "{count} Künstler:innen und Venues bauen lokale Entertainment-Szenen auf.",
     "finalCtaTitle": "Bereit, mit lokalen Venues zu verbinden?",
-    "finalCtaButton": "Konto erstellen"
+    "finalCtaButton": "Konto erstellen",
+    "mockupVenue": "Venue {n}",
+    "mockupVenueType": "Bar & Club",
+    "mockupCapacity": "{capacity} Kapazität",
+    "mockupYourAct": "Dein Act",
+    "mockupYourProfile": "Dein Profil",
+    "mockupActFormat": "Musik · {min}-{max} Mitglieder",
+    "mockupTermsFlow": "Konditionen · Vereinbarung · Bestätigung",
+    "mockupYourCalendar": "Dein Kalender"
   },
   "forBuyers": {
     "metaTitle": "Für Venues — Salon",
@@ -202,7 +220,22 @@
     "howItWorksStep4Body": "Beide Kalender geblockt, Booking festgelegt",
     "socialProof": "{count} Venues und Künstler:innen stärken lokale Entertainment-Communities.",
     "finalCtaTitle": "Bereit, lokale Acts zu entdecken?",
-    "finalCtaButton": "Konto erstellen"
+    "finalCtaButton": "Konto erstellen",
+    "mockupActName": "Act {n}",
+    "mockupJazzTrio": "Jazz-Trio",
+    "mockupComedyAct": "Comedy-Act",
+    "mockupDanceEnsemble": "Tanz-Ensemble",
+    "mockupJazzFormat": "Musik · 3 Mitglieder",
+    "mockupComedyFormat": "Comedy · Solo",
+    "mockupDanceFormat": "Tanz · 4-6 Mitglieder",
+    "mockupOpenCallTitle": "Freitagabend Musik",
+    "mockupOpenCallType": "Open Call",
+    "mockupOpenCallDate": "15. März 2026",
+    "mockupAgreementTitle": "Booking-Vereinbarung",
+    "mockupAgreementDate": "15. März · 20:00-22:00",
+    "mockupAgreementTermsAgreed": "Konditionen vereinbart",
+    "mockupAgreementBothSigned": "Beide unterschrieben",
+    "mockupAgreementCalendarsBlocked": "Kalender geblockt"
   },
   "apply": {
     "title": "Salon-Konto erstellen",

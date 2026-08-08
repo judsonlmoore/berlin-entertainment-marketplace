@@ -28,13 +28,9 @@ export function FeaturedSection({
   return (
     <section className={`${bgClass} py-12 sm:py-16`}>
       <div className="shell">
-        <div
-          className={`grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-12 ${
-            imagePosition === "right" ? "lg:grid-flow-dense" : ""
-          }`}
-        >
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
           {/* Text content */}
-          <div className={imagePosition === "right" ? "lg:col-start-1" : ""}>
+          <div className={imagePosition === "left" ? "lg:col-start-2" : "lg:col-start-1"}>
             {eyebrow && <p className="eyebrow mb-3">{eyebrow}</p>}
             <h2 className="page-title mb-4 text-2xl sm:text-[1.75rem]">
               {title}
@@ -45,9 +41,7 @@ export function FeaturedSection({
           </div>
 
           {/* Visual element */}
-          <div
-            className={`${imagePosition === "right" ? "lg:col-start-2" : ""}`}
-          >
+          <div className={imagePosition === "left" ? "lg:col-start-1" : "lg:col-start-2"}>
             {visual}
           </div>
         </div>

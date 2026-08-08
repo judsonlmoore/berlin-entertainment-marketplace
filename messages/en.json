@@ -140,7 +140,17 @@
     "principle2Body": "Applications and direct requests share one terms, agreement, and confirmation flow.",
     "principle3Title": "Availability everyone can trust",
     "principle3Body": "Native holds and confirmed blocks keep both calendars honest before the night.",
-    "footerNote": "Salon is a private B2B marketplace. Not a consumer event platform."
+    "footerNote": "Salon is a private B2B marketplace. Not a consumer event platform.",
+    "footerNavLabel": "Footer navigation",
+    "footerHelp": "Help",
+    "footerContact": "Contact",
+    "footerLegal": "Privacy",
+    "footerTerms": "Terms",
+    "footerCookies": "Cookies",
+    "mockupStep1": "Discover",
+    "mockupStep2": "Connect",
+    "mockupStep3": "Agree",
+    "mockupStep4": "Confirmed"
   },
   "forTalent": {
     "metaTitle": "For Talent — Salon",
@@ -171,7 +181,15 @@
     "howItWorksStep4Body": "Both calendars blocked, contacts unlocked",
     "socialProof": "{count} artists and venues building local entertainment scenes.",
     "finalCtaTitle": "Ready to connect with local venues?",
-    "finalCtaButton": "Create your account"
+    "finalCtaButton": "Create your account",
+    "mockupVenue": "Venue {n}",
+    "mockupVenueType": "Bar & Club",
+    "mockupCapacity": "{capacity} capacity",
+    "mockupYourAct": "Your Act",
+    "mockupYourProfile": "Your Profile",
+    "mockupActFormat": "Music · {min}-{max} members",
+    "mockupTermsFlow": "Terms · Agreement · Confirmation",
+    "mockupYourCalendar": "Your Calendar"
   },
   "forBuyers": {
     "metaTitle": "For Venues — Salon",
@@ -202,7 +220,22 @@
     "howItWorksStep4Body": "Both calendars blocked, booking locked in",
     "socialProof": "{count} venues and artists strengthening local entertainment communities.",
     "finalCtaTitle": "Ready to discover local talent?",
-    "finalCtaButton": "Create your account"
+    "finalCtaButton": "Create your account",
+    "mockupActName": "Act {n}",
+    "mockupJazzTrio": "Jazz Trio",
+    "mockupComedyAct": "Comedy Act",
+    "mockupDanceEnsemble": "Dance Ensemble",
+    "mockupJazzFormat": "Music · 3 members",
+    "mockupComedyFormat": "Comedy · Solo",
+    "mockupDanceFormat": "Dance · 4-6 members",
+    "mockupOpenCallTitle": "Friday Night Music",
+    "mockupOpenCallType": "Open Call",
+    "mockupOpenCallDate": "March 15, 2026",
+    "mockupAgreementTitle": "Booking Agreement",
+    "mockupAgreementDate": "March 15 · 20:00-22:00",
+    "mockupAgreementTermsAgreed": "Terms agreed",
+    "mockupAgreementBothSigned": "Both signed",
+    "mockupAgreementCalendarsBlocked": "Calendars blocked"
   },
   "apply": {
     "title": "Create your Salon account",
