@@ -17,7 +17,8 @@
     "db:studio": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs studio --config=drizzle.config.ts",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "db:reset-dev": "tsx --env-file=.env scripts/reset-dev-data.ts",
-    "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build"
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build",
+    "prepare": "husky || true"
   },
   "engines": {
     "node": ">=22"
@@ -67,6 +68,8 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.12",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "pg": "^8.22.0",
     "postcss": "^8.5.25",
     "prettier": "^3.9.6",
@@ -75,5 +78,14 @@
     "tsx": "^4.23.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,mjs,cjs}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
   }
 }

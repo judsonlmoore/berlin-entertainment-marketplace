@@ -41,7 +41,9 @@ function assertSafeToReset() {
     throw new Error("Refusing to reset: NODE_ENV=production");
   }
   if (process.env.ALLOW_DB_RESET !== "true") {
-    throw new Error("Set ALLOW_DB_RESET=true to run the non-prod database wipe");
+    throw new Error(
+      "Set ALLOW_DB_RESET=true to run the non-prod database wipe",
+    );
   }
   if (looksLikeProductionAppOrigin(process.env.AUTH_URL)) {
     throw new Error(
@@ -55,7 +57,10 @@ function assertSafeToReset() {
   }
 }
 
-async function countRows(client: pg.Client, table: string): Promise<number | null> {
+async function countRows(
+  client: pg.Client,
+  table: string,
+): Promise<number | null> {
   try {
     const result = await client.query<{ n: string }>(
       `select count(*)::text as n from ${table}`,
@@ -70,7 +75,12 @@ async function listBlobUrls(prefix: string, token: string): Promise<string[]> {
   const urls: string[] = [];
   let cursor: string | undefined;
   do {
-    const page = await list({ prefix, token, cursor, limit: 1000 });
+    const page = await list({
+      prefix,
+      token,
+      ...(cursor ? { cursor } : {}),
+      limit: 1000,
+    });
     for (const blob of page.blobs) {
       urls.push(blob.url);
     }
@@ -190,7 +200,9 @@ async function main() {
       );
     }
     if (users !== 0 || entertainers !== 0) {
-      throw new Error("Expected empty users and entertainer_profiles after reset");
+      throw new Error(
+        "Expected empty users and entertainer_profiles after reset",
+      );
     }
   } finally {
     await verify.end();
