@@ -490,7 +490,9 @@ export function EntertainerProfileForm({
                 className="field w-[7.5rem] shrink-0"
               />
             </div>
-            <p className="text-xs text-[var(--text-muted)]">{t("feeRangeHint")}</p>
+            <p className="text-xs text-[var(--text-muted)]">
+              {t("feeRangeHint")}
+            </p>
           </div>
 
           <LanguageMultiSelect

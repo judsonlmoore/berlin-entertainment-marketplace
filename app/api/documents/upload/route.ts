@@ -31,6 +31,13 @@ class DocumentLimitError extends Error {
   }
 }
 
+class DocumentsLockedError extends Error {
+  constructor() {
+    super("documents_locked");
+    this.name = "DocumentsLockedError";
+  }
+}
+
 type DocumentOwner =
   | {
       kind: "entertainer";
@@ -262,11 +269,17 @@ export async function POST(request: Request) {
 
     const created = await db.transaction(async (tx) => {
       if (bookingId) {
-        await tx
-          .select({ id: bookings.id })
+        const [lockedBooking] = await tx
+          .select({ id: bookings.id, state: bookings.state })
           .from(bookings)
           .where(eq(bookings.id, bookingId))
           .for("update");
+        if (!lockedBooking) {
+          throw new Error("booking_not_found");
+        }
+        if (bookingDocumentsLocked(lockedBooking.state)) {
+          throw new DocumentsLockedError();
+        }
       } else if (owner.kind === "entertainer") {
         await tx
           .select({ id: entertainerProfiles.id })
@@ -359,6 +372,17 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { ok: false, error: "document_limit" },
         { status: 400 },
+      );
+    }
+    if (error instanceof DocumentsLockedError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "documents_locked",
+          message:
+            "Documents are locked after the agreement package is generated",
+        },
+        { status: 409 },
       );
     }
     return NextResponse.json(

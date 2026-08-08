@@ -130,12 +130,8 @@ export const VENUE_WIZARD_STEPS: readonly WizardStepDef[] = [
   },
 ] as const;
 
-export function wizardStepsForRole(
-  role: WizardRole,
-): readonly WizardStepDef[] {
-  return role === "entertainer"
-    ? ENTERTAINER_WIZARD_STEPS
-    : VENUE_WIZARD_STEPS;
+export function wizardStepsForRole(role: WizardRole): readonly WizardStepDef[] {
+  return role === "entertainer" ? ENTERTAINER_WIZARD_STEPS : VENUE_WIZARD_STEPS;
 }
 
 export function wizardChapters(

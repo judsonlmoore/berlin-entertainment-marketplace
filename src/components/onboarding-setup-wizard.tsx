@@ -210,9 +210,9 @@ export function OnboardingSetupWizard({
         ...prev,
         hasExternalOrVideoLink: Boolean(
           youtube ||
-            prev.websiteUrl.trim() ||
-            prev.instagramUrl.trim() ||
-            prev.youtubeUrl.trim(),
+          prev.websiteUrl.trim() ||
+          prev.instagramUrl.trim() ||
+          prev.youtubeUrl.trim(),
         ),
       }));
     }
@@ -275,7 +275,8 @@ export function OnboardingSetupWizard({
   ): Promise<boolean> {
     const next = { ...entertainer, ...patch };
     const socialLinks: Record<string, string> = {};
-    if (next.instagramUrl.trim()) socialLinks.instagram = next.instagramUrl.trim();
+    if (next.instagramUrl.trim())
+      socialLinks.instagram = next.instagramUrl.trim();
     if (next.youtubeUrl.trim()) socialLinks.youtube = next.youtubeUrl.trim();
 
     const saved = await upsertEntertainerProfile({
@@ -303,8 +304,8 @@ export function OnboardingSetupWizard({
     }
     const hasLink = Boolean(
       next.websiteUrl.trim() ||
-        next.instagramUrl.trim() ||
-        next.youtubeUrl.trim(),
+      next.instagramUrl.trim() ||
+      next.youtubeUrl.trim(),
     );
     setEntertainer({
       ...next,
@@ -314,7 +315,9 @@ export function OnboardingSetupWizard({
     return true;
   }
 
-  async function persistVenue(patch: Partial<VenueDraft> = {}): Promise<boolean> {
+  async function persistVenue(
+    patch: Partial<VenueDraft> = {},
+  ): Promise<boolean> {
     const next = { ...venue, ...patch };
     const payload = {
       name: next.name.trim() || "Untitled venue",
@@ -557,13 +560,14 @@ export function OnboardingSetupWizard({
               ? { youtube: entertainer.youtubeUrl }
               : {}),
           },
-          imageCount: entertainer.imageCount || (entertainer.heroImageId ? 1 : 0),
+          imageCount:
+            entertainer.imageCount || (entertainer.heroImageId ? 1 : 0),
           hasExternalOrVideoLink:
             entertainer.hasExternalOrVideoLink ||
             Boolean(
               entertainer.websiteUrl.trim() ||
-                entertainer.instagramUrl.trim() ||
-                entertainer.youtubeUrl.trim(),
+              entertainer.instagramUrl.trim() ||
+              entertainer.youtubeUrl.trim(),
             ),
         })
       : checkVenuePublishReadiness({
@@ -599,8 +603,7 @@ export function OnboardingSetupWizard({
   /** Skippable + incomplete → one primary CTA labeled Skip; otherwise Next (saves when valid). */
   const showAsSkip = canSkip && !stepValid;
   const continueDisabled =
-    pending ||
-    (!isFinale && !showAsSkip && !step.skippable && !stepValid);
+    pending || (!isFinale && !showAsSkip && !step.skippable && !stepValid);
   const progressPercent = Math.round(
     ((stepIndex + 1) / Math.max(steps.length, 1)) * 100,
   );
@@ -625,423 +628,435 @@ export function OnboardingSetupWizard({
         </div>
 
         <div className="panel grid content-start gap-4 p-6">
-        {step.id === "basics" && role === "entertainer" ? (
-          <>
-            <Field label={t("fields.actName")}>
-              <input
-                className="field"
-                value={entertainer.actName}
-                onChange={(e) => updateEntertainer({ actName: e.target.value })}
-                autoFocus
-              />
-            </Field>
-            <CategorySubcategorySelect
-              kind="entertainer"
-              categoryName="category"
-              subcategoryName="genres"
-              otherName="subcategoryOther"
-              defaultCategory={entertainer.category}
-              defaultSubcategoryRaw={entertainer.genres}
-              categoryLabel={tProfile("category")}
-              subcategoryLabel={tProfile("subcategory")}
-              otherLabel={tProfile("subcategoryOther")}
-              onSelectionChange={({
-                categoryId,
-                subcategoryId,
-                otherLabel,
-              }) => {
-                updateEntertainer({
-                  category: categoryId,
-                  genres: encodeSubcategory(subcategoryId, otherLabel),
-                });
-              }}
-            />
-            <ParagraphTextField
-              label={t("fields.description")}
-              defaultValue={toParagraphEditorHtml(entertainer.description)}
-              min={DESCRIPTION_MIN}
-              max={DESCRIPTION_MAX}
-              placeholder={tProfile("descriptionPlaceholder")}
-              onChange={(html) => updateEntertainer({ description: html })}
-              size="tall"
-            />
-          </>
-        ) : null}
-
-        {step.id === "basics" && role === "venue" ? (
-          <>
-            <Field label={t("fields.venueName")}>
-              <input
-                className="field"
-                value={venue.name}
-                onChange={(e) => patchVenue({ name: e.target.value })}
-                autoFocus
-              />
-            </Field>
-            <CategorySubcategorySelect
-              key={venueTypeKey}
-              kind="venue"
-              categoryName="venueCategory"
-              subcategoryName="venueSubcategory"
-              otherName="venueSubcategoryOther"
-              defaultCategory={parseVenueType(venue.venueType).categoryId}
-              defaultSubcategoryRaw={
-                parseVenueType(venue.venueType).subcategoryRaw
-              }
-              categoryLabel={tProfile("venueType")}
-              subcategoryLabel={tProfile("subcategory")}
-              otherLabel={tProfile("subcategoryOther")}
-              onSelectionChange={({
-                categoryId,
-                subcategoryId,
-                otherLabel,
-              }) => {
-                patchVenue({
-                  venueType: encodeVenueType(
-                    categoryId,
-                    encodeSubcategory(subcategoryId, otherLabel),
-                  ),
-                });
-              }}
-            />
-            <ParagraphTextField
-              key={shortDescriptionKey}
-              label={t("fields.shortDescription")}
-              defaultValue={toParagraphEditorHtml(venue.shortDescription)}
-              min={DESCRIPTION_MIN}
-              max={SHORT_DESCRIPTION_MAX}
-              placeholder={tProfile("descriptionPlaceholder")}
-              onChange={(html) => patchVenue({ shortDescription: html })}
-              size="medium"
-            />
-          </>
-        ) : null}
-
-        {step.id === "hero_photo" ? (
-          role === "entertainer" && entertainer.profileId ? (
-            <PortfolioEditor
-              locale={locale}
-              entertainerProfileId={entertainer.profileId}
-              items={portfolioItems}
-              onImagesChange={syncPortfolioImages}
-              onYoutubeChange={syncPortfolioYoutube}
-            />
-          ) : role === "venue" && venue.venueId ? (
-            <PortfolioEditor
-              locale={locale}
-              venueId={venue.venueId}
-              items={portfolioItems}
-              onImagesChange={syncPortfolioImages}
-              onYoutubeChange={syncPortfolioYoutube}
-            />
-          ) : (
-            <p className="text-sm text-[var(--text-muted)]">
-              {role === "venue"
-                ? tProfile("portfolioNeedVenue")
-                : tProfile("portfolioNeedProfile")}
-            </p>
-          )
-        ) : null}
-
-        {step.id === "location" && role === "entertainer" ? (
-          <>
-            <LocationAutocomplete
-              label={tProfile("baseLocation")}
-              hint={tProfile("baseLocationHint")}
-              nameLabel="berlinBase"
-              nameLatitude="baseLatitude"
-              nameLongitude="baseLongitude"
-              defaultLabel={entertainer.berlinBase}
-              defaultLatitude={entertainer.baseLatitude}
-              defaultLongitude={entertainer.baseLongitude}
-              onConfirmedChange={(value) => {
-                updateEntertainer({
-                  berlinBase: value.label,
-                  baseLatitude: value.latitude,
-                  baseLongitude: value.longitude,
-                });
-              }}
-            />
-            <Field label={t("fields.travelRadiusKm")}>
-              <input
-                className="field"
-                type="number"
-                min={0}
-                max={500}
-                value={entertainer.travelRadiusKm}
-                onChange={(e) =>
+          {step.id === "basics" && role === "entertainer" ? (
+            <>
+              <Field label={t("fields.actName")}>
+                <input
+                  className="field"
+                  value={entertainer.actName}
+                  onChange={(e) =>
+                    updateEntertainer({ actName: e.target.value })
+                  }
+                  autoFocus
+                />
+              </Field>
+              <CategorySubcategorySelect
+                kind="entertainer"
+                categoryName="category"
+                subcategoryName="genres"
+                otherName="subcategoryOther"
+                defaultCategory={entertainer.category}
+                defaultSubcategoryRaw={entertainer.genres}
+                categoryLabel={tProfile("category")}
+                subcategoryLabel={tProfile("subcategory")}
+                otherLabel={tProfile("subcategoryOther")}
+                onSelectionChange={({
+                  categoryId,
+                  subcategoryId,
+                  otherLabel,
+                }) => {
                   updateEntertainer({
-                    travelRadiusKm: Number(e.target.value) || 0,
-                  })
-                }
-              />
-            </Field>
-          </>
-        ) : null}
-
-        {step.id === "fee" && role === "entertainer" ? (
-          <div className="grid gap-3 self-start">
-            <p className="text-sm font-medium text-[var(--ink)]">
-              {t("fields.feeRange")}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="text-sm font-medium text-[var(--text-muted)]"
-                aria-hidden
-              >
-                €
-              </span>
-              <label className="sr-only" htmlFor="wizard-fee-min">
-                {t("fields.priceMinEur")}
-              </label>
-              <input
-                id="wizard-fee-min"
-                className="field w-[7.5rem] shrink-0"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1}
-                placeholder={t("fields.priceFromPlaceholder")}
-                value={
-                  entertainer.priceMinCents > 0
-                    ? Math.round(entertainer.priceMinCents / 100)
-                    : ""
-                }
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  updateEntertainer({
-                    priceMinCents:
-                      raw === ""
-                        ? 0
-                        : Math.max(0, Math.round(Number(raw) * 100)),
+                    category: categoryId,
+                    genres: encodeSubcategory(subcategoryId, otherLabel),
                   });
                 }}
               />
-              <span className="text-sm text-[var(--text-muted)]" aria-hidden>
-                –
-              </span>
-              <label className="sr-only" htmlFor="wizard-fee-max">
-                {t("fields.priceMaxEur")}
-              </label>
-              <input
-                id="wizard-fee-max"
-                className="field w-[7.5rem] shrink-0"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                step={1}
-                placeholder={t("fields.priceToPlaceholder")}
-                value={
-                  entertainer.priceMaxCents > 0
-                    ? Math.round(entertainer.priceMaxCents / 100)
-                    : ""
+              <ParagraphTextField
+                label={t("fields.description")}
+                defaultValue={toParagraphEditorHtml(entertainer.description)}
+                min={DESCRIPTION_MIN}
+                max={DESCRIPTION_MAX}
+                placeholder={tProfile("descriptionPlaceholder")}
+                onChange={(html) => updateEntertainer({ description: html })}
+                size="tall"
+              />
+            </>
+          ) : null}
+
+          {step.id === "basics" && role === "venue" ? (
+            <>
+              <Field label={t("fields.venueName")}>
+                <input
+                  className="field"
+                  value={venue.name}
+                  onChange={(e) => patchVenue({ name: e.target.value })}
+                  autoFocus
+                />
+              </Field>
+              <CategorySubcategorySelect
+                key={venueTypeKey}
+                kind="venue"
+                categoryName="venueCategory"
+                subcategoryName="venueSubcategory"
+                otherName="venueSubcategoryOther"
+                defaultCategory={parseVenueType(venue.venueType).categoryId}
+                defaultSubcategoryRaw={
+                  parseVenueType(venue.venueType).subcategoryRaw
                 }
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  updateEntertainer({
-                    priceMaxCents:
-                      raw === ""
-                        ? 0
-                        : Math.max(0, Math.round(Number(raw) * 100)),
+                categoryLabel={tProfile("venueType")}
+                subcategoryLabel={tProfile("subcategory")}
+                otherLabel={tProfile("subcategoryOther")}
+                onSelectionChange={({
+                  categoryId,
+                  subcategoryId,
+                  otherLabel,
+                }) => {
+                  patchVenue({
+                    venueType: encodeVenueType(
+                      categoryId,
+                      encodeSubcategory(subcategoryId, otherLabel),
+                    ),
                   });
                 }}
+              />
+              <ParagraphTextField
+                key={shortDescriptionKey}
+                label={t("fields.shortDescription")}
+                defaultValue={toParagraphEditorHtml(venue.shortDescription)}
+                min={DESCRIPTION_MIN}
+                max={SHORT_DESCRIPTION_MAX}
+                placeholder={tProfile("descriptionPlaceholder")}
+                onChange={(html) => patchVenue({ shortDescription: html })}
+                size="medium"
+              />
+            </>
+          ) : null}
+
+          {step.id === "hero_photo" ? (
+            role === "entertainer" && entertainer.profileId ? (
+              <PortfolioEditor
+                locale={locale}
+                entertainerProfileId={entertainer.profileId}
+                items={portfolioItems}
+                onImagesChange={syncPortfolioImages}
+                onYoutubeChange={syncPortfolioYoutube}
+              />
+            ) : role === "venue" && venue.venueId ? (
+              <PortfolioEditor
+                locale={locale}
+                venueId={venue.venueId}
+                items={portfolioItems}
+                onImagesChange={syncPortfolioImages}
+                onYoutubeChange={syncPortfolioYoutube}
+              />
+            ) : (
+              <p className="text-sm text-[var(--text-muted)]">
+                {role === "venue"
+                  ? tProfile("portfolioNeedVenue")
+                  : tProfile("portfolioNeedProfile")}
+              </p>
+            )
+          ) : null}
+
+          {step.id === "location" && role === "entertainer" ? (
+            <>
+              <LocationAutocomplete
+                label={tProfile("baseLocation")}
+                hint={tProfile("baseLocationHint")}
+                nameLabel="berlinBase"
+                nameLatitude="baseLatitude"
+                nameLongitude="baseLongitude"
+                defaultLabel={entertainer.berlinBase}
+                defaultLatitude={entertainer.baseLatitude}
+                defaultLongitude={entertainer.baseLongitude}
+                onConfirmedChange={(value) => {
+                  updateEntertainer({
+                    berlinBase: value.label,
+                    baseLatitude: value.latitude,
+                    baseLongitude: value.longitude,
+                  });
+                }}
+              />
+              <Field label={t("fields.travelRadiusKm")}>
+                <input
+                  className="field"
+                  type="number"
+                  min={0}
+                  max={500}
+                  value={entertainer.travelRadiusKm}
+                  onChange={(e) =>
+                    updateEntertainer({
+                      travelRadiusKm: Number(e.target.value) || 0,
+                    })
+                  }
+                />
+              </Field>
+            </>
+          ) : null}
+
+          {step.id === "fee" && role === "entertainer" ? (
+            <div className="grid gap-3 self-start">
+              <p className="text-sm font-medium text-[var(--ink)]">
+                {t("fields.feeRange")}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className="text-sm font-medium text-[var(--text-muted)]"
+                  aria-hidden
+                >
+                  €
+                </span>
+                <label className="sr-only" htmlFor="wizard-fee-min">
+                  {t("fields.priceMinEur")}
+                </label>
+                <input
+                  id="wizard-fee-min"
+                  className="field w-[7.5rem] shrink-0"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  placeholder={t("fields.priceFromPlaceholder")}
+                  value={
+                    entertainer.priceMinCents > 0
+                      ? Math.round(entertainer.priceMinCents / 100)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    updateEntertainer({
+                      priceMinCents:
+                        raw === ""
+                          ? 0
+                          : Math.max(0, Math.round(Number(raw) * 100)),
+                    });
+                  }}
+                />
+                <span className="text-sm text-[var(--text-muted)]" aria-hidden>
+                  –
+                </span>
+                <label className="sr-only" htmlFor="wizard-fee-max">
+                  {t("fields.priceMaxEur")}
+                </label>
+                <input
+                  id="wizard-fee-max"
+                  className="field w-[7.5rem] shrink-0"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  placeholder={t("fields.priceToPlaceholder")}
+                  value={
+                    entertainer.priceMaxCents > 0
+                      ? Math.round(entertainer.priceMaxCents / 100)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    updateEntertainer({
+                      priceMaxCents:
+                        raw === ""
+                          ? 0
+                          : Math.max(0, Math.round(Number(raw) * 100)),
+                    });
+                  }}
+                />
+              </div>
+              <p className="text-xs text-[var(--text-muted)]">
+                {t("fields.feeRangeHint")}
+              </p>
+            </div>
+          ) : null}
+
+          {step.id === "links" && role === "entertainer" ? (
+            <div className="grid gap-4">
+              <p className="text-sm text-[var(--text-muted)]">
+                {t("linksHint")}
+              </p>
+              <PrefixedUrlInput
+                platform="website"
+                name="websiteUrl"
+                label={tProfile("websiteUrl")}
+                defaultValue={entertainer.websiteUrl}
+                onValueChange={(value) =>
+                  updateEntertainer({ websiteUrl: value })
+                }
+              />
+              <PrefixedUrlInput
+                platform="instagram"
+                name="instagram"
+                label={tProfile("socialInstagram")}
+                defaultValue={entertainer.instagramUrl}
+                onValueChange={(value) =>
+                  updateEntertainer({ instagramUrl: value })
+                }
+              />
+              <PrefixedUrlInput
+                platform="youtube"
+                name="youtube"
+                label={tProfile("socialYoutube")}
+                defaultValue={entertainer.youtubeUrl}
+                onValueChange={(value) =>
+                  updateEntertainer({ youtubeUrl: value })
+                }
               />
             </div>
-            <p className="text-xs text-[var(--text-muted)]">
-              {t("fields.feeRangeHint")}
-            </p>
-          </div>
-        ) : null}
+          ) : null}
 
-        {step.id === "links" && role === "entertainer" ? (
-          <div className="grid gap-4">
-            <p className="text-sm text-[var(--text-muted)]">{t("linksHint")}</p>
-            <PrefixedUrlInput
-              platform="website"
-              name="websiteUrl"
-              label={tProfile("websiteUrl")}
-              defaultValue={entertainer.websiteUrl}
-              onValueChange={(value) => updateEntertainer({ websiteUrl: value })}
-            />
-            <PrefixedUrlInput
-              platform="instagram"
-              name="instagram"
-              label={tProfile("socialInstagram")}
-              defaultValue={entertainer.instagramUrl}
-              onValueChange={(value) =>
-                updateEntertainer({ instagramUrl: value })
+          {step.id === "notes" && role === "entertainer" ? (
+            <ParagraphTextField
+              label={t("fields.technicalRequirements")}
+              defaultValue={toParagraphEditorHtml(
+                entertainer.technicalRequirements,
+              )}
+              min={0}
+              max={TECHNICAL_MAX}
+              onChange={(html) =>
+                updateEntertainer({ technicalRequirements: html })
               }
+              size="medium"
             />
-            <PrefixedUrlInput
-              platform="youtube"
-              name="youtube"
-              label={tProfile("socialYoutube")}
-              defaultValue={entertainer.youtubeUrl}
-              onValueChange={(value) => updateEntertainer({ youtubeUrl: value })}
-            />
-          </div>
-        ) : null}
+          ) : null}
 
-        {step.id === "notes" && role === "entertainer" ? (
-          <ParagraphTextField
-            label={t("fields.technicalRequirements")}
-            defaultValue={toParagraphEditorHtml(
-              entertainer.technicalRequirements,
-            )}
-            min={0}
-            max={TECHNICAL_MAX}
-            onChange={(html) =>
-              updateEntertainer({ technicalRequirements: html })
-            }
-            size="medium"
-          />
-        ) : null}
-
-        {step.id === "address" && role === "venue" ? (
-          <div className="grid gap-4">
-            <VenuePlacesSearch
-              locale={locale}
-              onPrefill={applyVenuePlacePrefill}
-            />
-            {addressConfirmOpen || venue.addressLine1 ? (
-              <div className="grid gap-3 rounded-[var(--radius-md)] border border-[var(--rule)] p-4">
-                <p className="text-sm font-medium">{t("addressConfirmTitle")}</p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {t("addressConfirmBody")}
-                </p>
-                <Field label={t("fields.addressLine1")}>
-                  <input
-                    className="field"
-                    value={venue.addressLine1}
-                    onChange={(e) =>
-                      patchVenue({ addressLine1: e.target.value })
-                    }
-                  />
-                </Field>
-                <Field label={t("fields.addressLine2")}>
-                  <input
-                    className="field"
-                    value={venue.addressLine2}
-                    onChange={(e) =>
-                      patchVenue({ addressLine2: e.target.value })
-                    }
-                  />
-                </Field>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label={t("fields.postalCode")}>
+          {step.id === "address" && role === "venue" ? (
+            <div className="grid gap-4">
+              <VenuePlacesSearch
+                locale={locale}
+                onPrefill={applyVenuePlacePrefill}
+              />
+              {addressConfirmOpen || venue.addressLine1 ? (
+                <div className="grid gap-3 rounded-[var(--radius-md)] border border-[var(--rule)] p-4">
+                  <p className="text-sm font-medium">
+                    {t("addressConfirmTitle")}
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {t("addressConfirmBody")}
+                  </p>
+                  <Field label={t("fields.addressLine1")}>
                     <input
                       className="field"
-                      value={venue.postalCode}
+                      value={venue.addressLine1}
                       onChange={(e) =>
-                        patchVenue({ postalCode: e.target.value })
+                        patchVenue({ addressLine1: e.target.value })
                       }
                     />
                   </Field>
-                  <Field label={t("fields.district")}>
+                  <Field label={t("fields.addressLine2")}>
                     <input
                       className="field"
-                      value={venue.district}
-                      onChange={(e) => patchVenue({ district: e.target.value })}
+                      value={venue.addressLine2}
+                      onChange={(e) =>
+                        patchVenue({ addressLine2: e.target.value })
+                      }
                     />
                   </Field>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label={t("fields.postalCode")}>
+                      <input
+                        className="field"
+                        value={venue.postalCode}
+                        onChange={(e) =>
+                          patchVenue({ postalCode: e.target.value })
+                        }
+                      />
+                    </Field>
+                    <Field label={t("fields.district")}>
+                      <input
+                        className="field"
+                        value={venue.district}
+                        onChange={(e) =>
+                          patchVenue({ district: e.target.value })
+                        }
+                      />
+                    </Field>
+                  </div>
                 </div>
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+              ) : null}
+            </div>
+          ) : null}
 
-        {step.id === "capacity" && role === "venue" ? (
-          <>
-            <Field label={t("fields.capacity")}>
-              <input
-                className="field"
-                type="number"
-                min={1}
-                value={venue.capacity}
-                onChange={(e) =>
-                  patchVenue({
-                    capacity: Math.max(1, Number(e.target.value) || 1),
-                  })
-                }
+          {step.id === "capacity" && role === "venue" ? (
+            <>
+              <Field label={t("fields.capacity")}>
+                <input
+                  className="field"
+                  type="number"
+                  min={1}
+                  value={venue.capacity}
+                  onChange={(e) =>
+                    patchVenue({
+                      capacity: Math.max(1, Number(e.target.value) || 1),
+                    })
+                  }
+                />
+              </Field>
+              <Field label={t("fields.capacityContext")}>
+                <input
+                  className="field"
+                  value={venue.capacityContext}
+                  onChange={(e) =>
+                    patchVenue({ capacityContext: e.target.value })
+                  }
+                />
+              </Field>
+              <ParagraphTextField
+                label={t("fields.audienceDescription")}
+                defaultValue={toParagraphEditorHtml(venue.audienceDescription)}
+                min={DESCRIPTION_MIN}
+                max={NOTES_MAX}
+                onChange={(html) => patchVenue({ audienceDescription: html })}
+                size="medium"
               />
-            </Field>
-            <Field label={t("fields.capacityContext")}>
-              <input
-                className="field"
-                value={venue.capacityContext}
-                onChange={(e) =>
-                  patchVenue({ capacityContext: e.target.value })
-                }
-              />
-            </Field>
+            </>
+          ) : null}
+
+          {step.id === "notes" && role === "venue" ? (
             <ParagraphTextField
-              label={t("fields.audienceDescription")}
-              defaultValue={toParagraphEditorHtml(venue.audienceDescription)}
-              min={DESCRIPTION_MIN}
+              label={t("fields.productionNotes")}
+              defaultValue={toParagraphEditorHtml(venue.productionNotes)}
+              min={0}
               max={NOTES_MAX}
-              onChange={(html) => patchVenue({ audienceDescription: html })}
+              onChange={(html) => patchVenue({ productionNotes: html })}
               size="medium"
             />
-          </>
-        ) : null}
+          ) : null}
 
-        {step.id === "notes" && role === "venue" ? (
-          <ParagraphTextField
-            label={t("fields.productionNotes")}
-            defaultValue={toParagraphEditorHtml(venue.productionNotes)}
-            min={0}
-            max={NOTES_MAX}
-            onChange={(html) => patchVenue({ productionNotes: html })}
-            size="medium"
-          />
-        ) : null}
+          {step.id === "legal" ? (
+            <LegalIdentityForm
+              locale={locale}
+              initial={legalIdentity}
+              embedded
+              onSaved={(fields) => {
+                setLegalComplete(isLegalIdentityComplete(fields));
+              }}
+            />
+          ) : null}
 
-        {step.id === "legal" ? (
-          <LegalIdentityForm
-            locale={locale}
-            initial={legalIdentity}
-            embedded
-            onSaved={(fields) => {
-              setLegalComplete(isLegalIdentityComplete(fields));
-            }}
-          />
-        ) : null}
-
-        {step.id === "go_live" ? (
-          <div className="grid gap-3">
-            {readiness.ok ? (
-              <p className="text-sm text-[var(--text-muted)]">
-                {t("profileCompletePanel")}
-              </p>
-            ) : (
-              <>
+          {step.id === "go_live" ? (
+            <div className="grid gap-3">
+              {readiness.ok ? (
                 <p className="text-sm text-[var(--text-muted)]">
-                  {t("profileIncompletePanel")}
+                  {t("profileCompletePanel")}
                 </p>
-                <ul className="grid gap-1 text-sm text-[var(--text-muted)]">
-                  {role === "entertainer" &&
-                  !readiness.ok &&
-                  "reasons" in readiness
-                    ? readiness.reasons.map((reason) => (
-                        <li key={reason}>· {reason}</li>
-                      ))
-                    : null}
-                  {role === "venue" && !readiness.ok && "issues" in readiness
-                    ? readiness.issues.map((issue) => (
-                        <li key={issue.field}>· {issue.message}</li>
-                      ))
-                    : null}
-                </ul>
-              </>
-            )}
-          </div>
-        ) : null}
+              ) : (
+                <>
+                  <p className="text-sm text-[var(--text-muted)]">
+                    {t("profileIncompletePanel")}
+                  </p>
+                  <ul className="grid gap-1 text-sm text-[var(--text-muted)]">
+                    {role === "entertainer" &&
+                    !readiness.ok &&
+                    "reasons" in readiness
+                      ? readiness.reasons.map((reason) => (
+                          <li key={reason}>· {reason}</li>
+                        ))
+                      : null}
+                    {role === "venue" && !readiness.ok && "issues" in readiness
+                      ? readiness.issues.map((issue) => (
+                          <li key={issue.field}>· {issue.message}</li>
+                        ))
+                      : null}
+                  </ul>
+                </>
+              )}
+            </div>
+          ) : null}
 
-        {error ? (
-          <p role="alert" className="text-sm text-[var(--danger)]">
-            {error}
-          </p>
-        ) : null}
+          {error ? (
+            <p role="alert" className="text-sm text-[var(--danger)]">
+              {error}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -1080,13 +1095,7 @@ export function OnboardingSetupWizard({
             pending={pending}
             pendingLabel={ui("working")}
             disabled={continueDisabled}
-            onClick={
-              isFinale
-                ? onFinaleContinue
-                : showAsSkip
-                  ? goSkip
-                  : goNext
-            }
+            onClick={isFinale ? onFinaleContinue : showAsSkip ? goSkip : goNext}
           >
             {isFinale
               ? readiness.ok

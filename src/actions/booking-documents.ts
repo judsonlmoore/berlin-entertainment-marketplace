@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/src/db/client";
 import { loadBookingAccess } from "@/src/actions/_booking-access";
-import { auditEvents, riderFiles } from "@/src/db/schema/marketplace";
+import { auditEvents, bookings, riderFiles } from "@/src/db/schema/marketplace";
 import { bookingDocumentsLocked } from "@/src/domain/agreement";
 import { AppError } from "@/src/domain/errors";
 import { deleteDocumentFile } from "@/src/integrations/document-file-store";
@@ -60,17 +60,37 @@ export async function removeBookingDocument(
       throw new AppError("forbidden", "Only the uploader can delete this file");
     }
 
-    await db.delete(riderFiles).where(eq(riderFiles.id, doc.id));
-    await db.insert(auditEvents).values({
-      actorUserId: auditUserId,
-      action: "booking_document.removed",
-      subjectType: "rider_file",
-      subjectId: doc.id,
-      metadata: {
-        bookingId: parsed.data.bookingId,
-        title: doc.title,
-      },
+    // Re-check lock under a booking row lock so concurrent agreement
+    // generation cannot advance state between the early check and delete.
+    await db.transaction(async (tx) => {
+      const [lockedBooking] = await tx
+        .select({ id: bookings.id, state: bookings.state })
+        .from(bookings)
+        .where(eq(bookings.id, parsed.data.bookingId))
+        .for("update");
+      if (!lockedBooking) {
+        throw new AppError("not_found", "Booking not found");
+      }
+      if (bookingDocumentsLocked(lockedBooking.state)) {
+        throw new AppError(
+          "validation",
+          "Documents are locked after the agreement package is generated",
+        );
+      }
+
+      await tx.delete(riderFiles).where(eq(riderFiles.id, doc.id));
+      await tx.insert(auditEvents).values({
+        actorUserId: auditUserId,
+        action: "booking_document.removed",
+        subjectType: "rider_file",
+        subjectId: doc.id,
+        metadata: {
+          bookingId: parsed.data.bookingId,
+          title: doc.title,
+        },
+      });
     });
+
     try {
       await deleteDocumentFile(doc.blobKey);
     } catch {

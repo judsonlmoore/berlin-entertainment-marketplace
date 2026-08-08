@@ -45,9 +45,17 @@ function assertSafeToReset() {
       "Set ALLOW_DB_RESET=true to run the non-prod database wipe",
     );
   }
-  if (looksLikeProductionAppOrigin(process.env.AUTH_URL)) {
+  // Require an explicit local AUTH_URL so an unset value cannot skip the
+  // app-origin guard (README: reset only with AUTH_URL on localhost/LAN).
+  const authUrl = process.env.AUTH_URL?.trim();
+  if (!authUrl) {
     throw new Error(
-      `Refusing to reset: AUTH_URL looks non-local (${process.env.AUTH_URL}). Point AUTH_URL at localhost for this wipe.`,
+      "Set AUTH_URL to a localhost (or LAN) origin before running the wipe",
+    );
+  }
+  if (looksLikeProductionAppOrigin(authUrl)) {
+    throw new Error(
+      `Refusing to reset: AUTH_URL looks non-local (${authUrl}). Point AUTH_URL at localhost for this wipe.`,
     );
   }
   if (looksLikeProductionAppOrigin(process.env.NEXT_PUBLIC_APP_URL)) {

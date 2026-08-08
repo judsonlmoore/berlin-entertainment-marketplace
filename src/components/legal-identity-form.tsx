@@ -99,7 +99,7 @@ export function LegalIdentityForm({
             </h3>
           )}
           <p
-            className={`text-sm text-[var(--text-muted)]${embedded ? "" : " mt-1"}`}
+            className={`text-sm text-[var(--text-muted)]${embedded ? "" : "mt-1"}`}
           >
             {t("legalBody")}
           </p>
