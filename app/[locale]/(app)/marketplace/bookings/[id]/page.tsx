@@ -63,6 +63,9 @@ type Props = {
   params: Promise<{ locale: string; id: string }>;
 };
 
+/** Auth + booking state must never serve a stale notFound. */
+export const dynamic = "force-dynamic";
+
 function docTitle(doc: {
   title: string;
   originalFilename: string | null;

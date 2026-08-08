@@ -501,6 +501,7 @@ export async function publishEntertainerProfile(
 
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/marketplace`);
+    revalidatePath(`/${locale}/marketplace/entertainers/${profile.id}`);
     revalidatePath("/", "layout");
     return { ok: true, id: profile.id };
   } catch (error) {
@@ -553,6 +554,7 @@ export async function unpublishEntertainerProfile(
 
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/marketplace`);
+    revalidatePath(`/${locale}/marketplace/entertainers/${profile.id}`);
     return { ok: true, id: profile.id };
   } catch (error) {
     return toActionError(error);
@@ -830,6 +832,7 @@ export async function publishVenueProfile(
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/profile/venues/${venueId}`);
     revalidatePath(`/${locale}/marketplace`);
+    revalidatePath(`/${locale}/marketplace/venues/${venueId}`);
     revalidatePath("/", "layout");
     return { ok: true, id: venueId };
   } catch (error) {
@@ -877,6 +880,7 @@ export async function unpublishVenueProfile(
     revalidatePath(`/${locale}/profile`);
     revalidatePath(`/${locale}/profile/venues/${venueId}`);
     revalidatePath(`/${locale}/marketplace`);
+    revalidatePath(`/${locale}/marketplace/venues/${venueId}`);
     return { ok: true, id: venueId };
   } catch (error) {
     return toActionError(error);

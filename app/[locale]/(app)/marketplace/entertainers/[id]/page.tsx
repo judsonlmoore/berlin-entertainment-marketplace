@@ -41,6 +41,9 @@ type Props = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+/** Auth + publication state must never serve a stale notFound from pre-publish. */
+export const dynamic = "force-dynamic";
+
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
