@@ -1,15 +1,17 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
-import { ConnectionRequestButton } from "@/src/components/connection-request-button";
+import { SendOfferButton } from "@/src/components/send-offer-button";
 import { PublicProfileView } from "@/src/components/marketplace/public-profile-view";
-import { ProfileDocumentList } from "@/src/components/profile-document-list";
+import { ProfilePreviewExitBanner } from "@/src/components/profile/profile-preview-exit-banner";
 import { getDiscoverableEntertainerDetail } from "@/src/db/queries/discovery";
 import { requireDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
 import { listDocumentsVisibleToActor } from "@/src/db/queries/rider-access";
 import { listVenuesForUser } from "@/src/db/queries/profiles";
 import { listVenueActConnectionStatuses } from "@/src/db/queries/profile-enquiries";
+import { getLegalIdentityForUser } from "@/src/db/queries/legal-identity";
 import { formatLanguageList } from "@/src/domain/languages";
+import { isLegalIdentityComplete } from "@/src/domain/legal-identity";
 import {
   ENTERTAINER_CATEGORIES,
   getCategoryNode,
@@ -36,7 +38,15 @@ const SOCIAL_LABELS: Record<string, string> = {
 
 type Props = {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+/** Auth + publication state must never serve a stale notFound from pre-publish. */
+export const dynamic = "force-dynamic";
+
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function categoryLabel(categoryId: string, locale: "en" | "de"): string {
   const node = getCategoryNode(ENTERTAINER_CATEGORIES, categoryId);
@@ -58,10 +68,16 @@ function subcategoryLabel(
   return child ? taxonomyLabel(child, locale) : genres;
 }
 
-export default async function EntertainerDetailPage({ params }: Props) {
+export default async function EntertainerDetailPage({
+  params,
+  searchParams,
+}: Props) {
   const { locale, id } = await params;
+  const query = await searchParams;
+  const isPreview = first(query.preview) === "1";
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
+  const tProfile = await getTranslations("profile");
   const access = await requireDiscoveryAccess();
   const appLocale = locale as "en" | "de";
 
@@ -78,6 +94,7 @@ export default async function EntertainerDetailPage({ params }: Props) {
     entertainerProfileId: id,
     viewerUserId: access.actor.userId,
     includePortfolio: true,
+    allowOwnerDraft: true,
   });
   if (!profile) {
     notFound();
@@ -93,6 +110,8 @@ export default async function EntertainerDetailPage({ params }: Props) {
       </section>
     );
   }
+
+  const showPreviewBanner = isPreview && isOwnProfile;
 
   const operableVenues = (await listVenuesForUser(access.actor.userId)).filter(
     (venue) =>
@@ -118,6 +137,9 @@ export default async function EntertainerDetailPage({ params }: Props) {
       : [];
   const statusByVenueId = new Map(
     connectionStatuses.map((status) => [status.venueId, status]),
+  );
+  const legalIdentityComplete = isLegalIdentityComplete(
+    await getLegalIdentityForUser(access.actor.userId),
   );
 
   const media = splitPortfolioMedia(profile.portfolio);
@@ -145,47 +167,52 @@ export default async function EntertainerDetailPage({ params }: Props) {
         : `${profile.travelRadiusKm} km`,
     },
   ];
-  if (profile.performanceFormats?.trim()) {
-    facts.push({
-      label: t("performanceFormats"),
-      value: profile.performanceFormats,
-    });
-  }
   if (profile.languages?.trim()) {
     facts.push({
       label: t("languages"),
       value: formatLanguageList(profile.languages, appLocale),
     });
   }
-  if (profile.technicalRequirements?.trim()) {
+  if (profile.performanceFormats?.trim()) {
     facts.push({
+      label: t("performanceFormats"),
+      value: profile.performanceFormats,
+    });
+  }
+
+  const sections: PublicProfileFact[] = [];
+  if (profile.technicalRequirements?.trim()) {
+    sections.push({
       label: t("technicalRequirements"),
       value: profile.technicalRequirements,
     });
   }
   if (profile.equipmentSupplied?.trim()) {
-    facts.push({
+    sections.push({
       label: t("equipmentSupplied"),
       value: profile.equipmentSupplied,
     });
   }
   if (profile.accessibilityNotes?.trim()) {
-    facts.push({
+    sections.push({
       label: t("accessibilityNotes"),
       value: profile.accessibilityNotes,
     });
   }
 
   // Discovery only loads approved profiles; keep list/download gates aligned.
+  // Preview mirrors marketplace discovery (not owner/staff ACL).
   const visibleDocuments = await listDocumentsVisibleToActor({
     actor: access.actor,
     entertainerProfileId: profile.id,
     ownerUserId: profile.userId,
     publicationState: "approved",
+    ...(showPreviewBanner ? { asMarketplacePreview: true } : {}),
   });
 
   const headerAction = isVenueBooker ? (
-    <ConnectionRequestButton
+    <SendOfferButton
+      direction="venue_to_talent"
       locale={appLocale}
       entertainerProfileId={profile.id}
       venues={operableVenues.map((venue) => {
@@ -193,8 +220,8 @@ export default async function EntertainerDetailPage({ params }: Props) {
         return {
           id: venue.id,
           name: venue.name,
-          activeBookingId: status?.activeBookingId ?? null,
-          cooldownDaysRemaining: status?.cooldownDaysRemaining ?? null,
+          openOfferBookingIds: status?.openOfferBookingIds ?? [],
+          legalIdentityComplete,
         };
       })}
       locked={showRequestLocked}
@@ -203,16 +230,20 @@ export default async function EntertainerDetailPage({ params }: Props) {
 
   return (
     <>
+      {showPreviewBanner ? <ProfilePreviewExitBanner /> : null}
       <OnboardingChecklistTracker step="openedResult" />
       <PublicProfileView
-        backHref="/marketplace/entertainers"
-        backLabel={t("backToEntertainers")}
+        backHref={showPreviewBanner ? "/profile" : "/marketplace/entertainers"}
+        backLabel={
+          showPreviewBanner ? t("backToProfile") : t("backToEntertainers")
+        }
         eyebrow={t("entertainerEyebrow")}
         title={profile.actName}
         subtitle={subtitle}
         description={profile.description}
         media={media}
         facts={facts}
+        sections={sections}
         links={socialLinksToList(
           profile.socialLinks,
           (key) => SOCIAL_LABELS[key] ?? key,
@@ -229,18 +260,16 @@ export default async function EntertainerDetailPage({ params }: Props) {
         galleryTitle={t("galleryTitle")}
         videoTitle={t("videoTitle")}
         linksTitle={t("linksTitle")}
+        documentsTitle={tProfile("documentsTitle")}
+        documents={visibleDocuments.map((doc) => ({
+          id: doc.id,
+          title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
+          ...(typeof doc.sizeBytes === "number"
+            ? { sizeBytes: doc.sizeBytes }
+            : {}),
+        }))}
         {...(headerAction ? { headerAction } : {})}
-      >
-        <ProfileDocumentList
-          locale={locale}
-          documents={visibleDocuments.map((doc) => ({
-            id: doc.id,
-            title: doc.title.trim() || doc.originalFilename?.trim() || "PDF",
-            visibility: doc.visibility,
-            sizeBytes: doc.sizeBytes,
-          }))}
-        />
-      </PublicProfileView>
+      />
     </>
   );
 }

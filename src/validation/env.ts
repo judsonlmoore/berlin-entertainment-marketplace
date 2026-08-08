@@ -25,6 +25,14 @@ const serverEnvSchema = z.object({
   AUTH_GITHUB_SECRET: optionalNonEmpty,
   AUTH_GOOGLE_ID: optionalNonEmpty,
   AUTH_GOOGLE_SECRET: optionalNonEmpty,
+  /** Microsoft Entra ID (Azure AD) application (client) ID. */
+  AUTH_MICROSOFT_ENTRA_ID_ID: optionalNonEmpty,
+  AUTH_MICROSOFT_ENTRA_ID_SECRET: optionalNonEmpty,
+  /**
+   * Optional issuer, e.g. `https://login.microsoftonline.com/<tenant>/v2.0/`.
+   * Omit to allow any Microsoft account via the common endpoint.
+   */
+  AUTH_MICROSOFT_ENTRA_ID_ISSUER: optionalNonEmpty,
   /** Server-only Places API (New) key for venue business search / prefill. */
   GOOGLE_PLACES_API_KEY: optionalNonEmpty,
   EMAIL_SERVER: optionalNonEmpty,
@@ -55,14 +63,19 @@ export function hasDatabaseUrl(): boolean {
   return Boolean(getServerEnv().DATABASE_URL);
 }
 
-export function configuredAuthProviders(): Array<"github" | "google"> {
+export type AuthProviderId = "github" | "google" | "microsoft-entra-id";
+
+export function configuredAuthProviders(): AuthProviderId[] {
   const env = getServerEnv();
-  const providers: Array<"github" | "google"> = [];
+  const providers: AuthProviderId[] = [];
   if (env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET) {
     providers.push("github");
   }
   if (env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET) {
     providers.push("google");
+  }
+  if (env.AUTH_MICROSOFT_ENTRA_ID_ID && env.AUTH_MICROSOFT_ENTRA_ID_SECRET) {
+    providers.push("microsoft-entra-id");
   }
   return providers;
 }

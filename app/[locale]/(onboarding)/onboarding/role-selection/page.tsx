@@ -34,7 +34,7 @@ export default async function RoleSelectionPage({ params }: Props) {
 
   return (
     <section className="mx-auto grid max-w-lg gap-6">
-      <div className="flex flex-col gap-2" aria-label="Step 1 of 3">
+      <div className="flex flex-col gap-2" aria-label={t("stepOf")}>
         <ol className="flex gap-2">
           <li className="h-1.5 flex-1 rounded-full bg-[var(--primary)]" />
           <li className="h-1.5 flex-1 rounded-full bg-[var(--rule)]" />

@@ -10,11 +10,11 @@ navGroup: getting-started
 
 Salon keeps preferred contact methods **private** until there is mutual interest:
 
-- A venue marks a profile enquiry **Interested**, or
+- Someone **Accepts** or **Counters** a profile offer, or
 - An application is **shortlisted**, or
 - A direct request is **accepted**
 
-Until then, discovery shows profiles without revealing email or phone.
+Until then, discovery shows profiles without revealing email or phone. An open offer may include the sender’s engagement documents without unlocking contacts.
 
 ## After unlock
 

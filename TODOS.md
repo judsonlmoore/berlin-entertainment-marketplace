@@ -42,17 +42,29 @@
 
 ## Platform
 
-### Venue PDF document library
+### Venue PDF document library (remainder) — superseded by negotiations Phase 2
 
-**What:** Same titled PDF library for venue profiles (house plot, power, load-in packs) with marketplace vs engagement visibility.
+**What:** Venue engagement ACL + booking-page dual docs + booking-scoped uploads + addenda (see negotiations roadmap).
 
-**Why:** Symmetric prep for acts booking a room; venues currently only have text production notes.
+**Why:** Contract package needs both parties’ PDFs.
 
-**Context:** Deferred from eng-review D7 (entertainer-only first). Needs XOR owner on documents (venue vs entertainer) after entertainer path is green.
+**Context:** Marketplace venue PDFs shipped; engagement + booking UI is Phase 2 of negotiations → contract package.
 
 **Effort:** M
-**Priority:** P3
-**Depends on:** Entertainer document library shipped
+**Priority:** P1
+**Depends on:** Phase 0 spec (done)
+
+### Invoice artifact generation (post-confirm)
+
+**What:** Optional invoice PDF/e-invoice after `confirmed` via `InvoiceProvider` (sandbox → @jasy/zugferd for DE).
+
+**Why:** Parties need a downloadable invoice without Salon holding money.
+
+**Context:** `docs/INVOICE_LIBRARY_SPIKE.md`. Requires account legal identity (Phase 3).
+
+**Effort:** L
+**Priority:** P2
+**Depends on:** Account legal identity + confirmed booking
 
 ### City-scoped expansion (beyond Berlin HQ)
 

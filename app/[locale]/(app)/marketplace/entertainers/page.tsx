@@ -14,6 +14,7 @@ import {
 import { requireEntertainerDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
 import { can } from "@/src/domain/permissions";
+import { richTextToPlain } from "@/src/domain/sanitize-input";
 import { Link } from "@/src/i18n/navigation";
 import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
 
@@ -173,7 +174,7 @@ export default async function EntertainersDiscoveryPage({
                     {formatEur(act.priceMaxCents, locale)}
                   </p>
                   <p className="line-clamp-2 text-sm text-[var(--text-muted)]">
-                    {act.description}
+                    {richTextToPlain(act.description)}
                   </p>
                   <div className="mt-auto flex flex-wrap gap-3 pt-2">
                     <Link

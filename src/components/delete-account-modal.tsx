@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { deleteUserAccount } from "@/src/actions/account-deletion";
 import { AppModal } from "@/src/components/ui/app-modal";
@@ -18,6 +18,13 @@ export function DeleteAccountModal({ userEmail, isOpen, onClose }: Props) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmationText, setConfirmationText] = useState("");
+
+  const handleClose = useCallback(() => {
+    if (pending) return;
+    setConfirmationText("");
+    setError(null);
+    onClose();
+  }, [onClose, pending]);
 
   const handleDelete = () => {
     setError(null);
@@ -45,10 +52,7 @@ export function DeleteAccountModal({ userEmail, isOpen, onClose }: Props) {
   return (
     <AppModal
       open={isOpen}
-      onClose={() => {
-        if (pending) return;
-        onClose();
-      }}
+      onClose={handleClose}
       title={t("modalTitle")}
       subtitle={t("modalEyebrow")}
       closeLabel={t("closeButton")}
@@ -57,7 +61,7 @@ export function DeleteAccountModal({ userEmail, isOpen, onClose }: Props) {
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             variant="secondary"
-            onClick={onClose}
+            onClick={handleClose}
             disabled={pending}
             type="button"
             className="w-full sm:w-auto"

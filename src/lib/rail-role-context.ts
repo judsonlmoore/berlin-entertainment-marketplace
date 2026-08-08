@@ -1,4 +1,5 @@
 import type { ActorContext, MarketplaceRole } from "@/src/domain/permissions";
+import { can } from "@/src/domain/permissions";
 
 export type RailRoleContextData = {
   mode: MarketplaceRole;
@@ -23,6 +24,34 @@ export function resolveEffectiveRoleMode(
   if (hasEntertainer) return "entertainer";
   if (hasVenue) return "venue";
   return null;
+}
+
+/**
+ * Discovery nav follows the marketplace role even for platform staff who also
+ * hold a talent/buyer role. Staff dual-browse stays for accounts with no
+ * marketplace role.
+ */
+export function discoveryNavFlags(actor: ActorContext): {
+  canDiscoverEntertainers: boolean;
+  canDiscoverVenues: boolean;
+} {
+  const mode = resolveEffectiveRoleMode(actor);
+  if (mode === "entertainer") {
+    return {
+      canDiscoverEntertainers: false,
+      canDiscoverVenues: can(actor, "discover.venues"),
+    };
+  }
+  if (mode === "venue") {
+    return {
+      canDiscoverEntertainers: can(actor, "discover.entertainers"),
+      canDiscoverVenues: false,
+    };
+  }
+  return {
+    canDiscoverEntertainers: can(actor, "discover.entertainers"),
+    canDiscoverVenues: can(actor, "discover.venues"),
+  };
 }
 
 export async function loadRailRoleContext(

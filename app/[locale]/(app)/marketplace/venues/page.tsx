@@ -9,8 +9,16 @@ import { StatusLabel } from "@/src/components/ui/status-label";
 import { listDiscoverableVenues } from "@/src/db/queries/discovery";
 import { requireVenueDiscoveryAccess } from "@/src/db/queries/discovery-access";
 import { OnboardingChecklistTracker } from "@/src/components/onboarding-checklist-tracker";
+import {
+  getCategoryNode,
+  parseSubcategory,
+  parseVenueType,
+  taxonomyLabel,
+  VENUE_CATEGORIES,
+} from "@/src/domain/profile-taxonomy";
 import { richTextToPlain } from "@/src/domain/sanitize-input";
 import { Link } from "@/src/i18n/navigation";
+import { portfolioImageSrc } from "@/src/lib/portfolio-image-src";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -21,6 +29,21 @@ function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function venueTypeLabel(raw: string, locale: "en" | "de"): string {
+  const parsed = parseVenueType(raw);
+  const category = getCategoryNode(VENUE_CATEGORIES, parsed.categoryId);
+  const catLabel = category
+    ? taxonomyLabel(category, locale)
+    : parsed.categoryId || raw;
+  const sub = parseSubcategory(parsed.subcategoryRaw);
+  if (sub.subcategoryId === "other" && sub.otherLabel) {
+    return `${catLabel} · ${sub.otherLabel}`;
+  }
+  const child = category?.children.find((c) => c.id === sub.subcategoryId);
+  if (child) return `${catLabel} · ${taxonomyLabel(child, locale)}`;
+  return catLabel;
+}
+
 export default async function VenuesDiscoveryPage({
   params,
   searchParams,
@@ -29,6 +52,7 @@ export default async function VenuesDiscoveryPage({
   setRequestLocale(locale);
   const t = await getTranslations("marketplace");
   const access = await requireVenueDiscoveryAccess();
+  const appLocale = locale as "en" | "de";
 
   if (!access.ok) {
     return (
@@ -95,42 +119,75 @@ export default async function VenuesDiscoveryPage({
         <p className="panel p-6 text-[var(--text-muted)]">{t("empty")}</p>
       ) : (
         <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {result.items.map((venue) => (
-            <li key={venue.id}>
-              <Link
-                href={`/marketplace/venues/${venue.id}`}
-                className="panel block h-full overflow-hidden no-underline"
-              >
-                <Monogram
-                  name={venue.name}
-                  className="h-36 w-full"
-                  tone="blue"
-                />
-                <div className="grid gap-2 p-4">
-                  <div className="flex flex-wrap gap-2">
-                    <StatusLabel tone="info">{venue.venueType}</StatusLabel>
-                    {venue.openCallCount > 0 ? (
-                      <StatusLabel tone="warning">
-                        {t("openCallsBadge", { count: venue.openCallCount })}
-                      </StatusLabel>
+          {result.items.map((venue) => {
+            const typeLabel = venueTypeLabel(venue.venueType, appLocale);
+            const capacityLabel = venue.capacityContext?.trim()
+              ? `${venue.capacity} ${t("capacityUnit")} · ${venue.capacityContext.trim()}`
+              : `${venue.capacity} ${t("capacityUnit")}`;
+            const blurb =
+              richTextToPlain(venue.shortDescription) ||
+              richTextToPlain(venue.audienceDescription);
+
+            return (
+              <li key={venue.id}>
+                <article className="panel flex h-full flex-col overflow-hidden">
+                  <Link
+                    href={`/marketplace/venues/${venue.id}`}
+                    className="block no-underline"
+                  >
+                    {venue.heroImageId ? (
+                      // Auth-proxied private portfolio bytes — same-origin /api route.
+                      <img
+                        src={portfolioImageSrc(venue.heroImageId, "thumb")}
+                        alt={venue.name}
+                        className="h-40 w-full object-cover"
+                      />
+                    ) : (
+                      <Monogram
+                        name={venue.name}
+                        className="h-40 w-full"
+                        tone="blue"
+                      />
+                    )}
+                  </Link>
+                  <div className="grid flex-1 gap-2 p-4">
+                    <div className="flex flex-wrap gap-2">
+                      <StatusLabel tone="info">{typeLabel}</StatusLabel>
+                      {venue.openCallCount > 0 ? (
+                        <StatusLabel tone="warning">
+                          {t("openCallsBadge", { count: venue.openCallCount })}
+                        </StatusLabel>
+                      ) : null}
+                    </div>
+                    <h2 className="page-title text-xl leading-tight">
+                      <Link
+                        href={`/marketplace/venues/${venue.id}`}
+                        className="no-underline"
+                      >
+                        {venue.name}
+                      </Link>
+                    </h2>
+                    <p className="text-sm text-[var(--text-muted)]">
+                      {venue.district} · {capacityLabel}
+                    </p>
+                    {blurb ? (
+                      <p className="line-clamp-2 text-sm text-[var(--text-muted)]">
+                        {blurb}
+                      </p>
                     ) : null}
+                    <div className="mt-auto flex flex-wrap gap-3 pt-2">
+                      <Link
+                        href={`/marketplace/venues/${venue.id}`}
+                        className="text-sm text-[var(--primary)]"
+                      >
+                        {t("viewProfile")} →
+                      </Link>
+                    </div>
                   </div>
-                  <h2 className="page-title text-xl leading-tight">
-                    {venue.name}
-                  </h2>
-                  <p className="text-sm text-[var(--text-muted)]">
-                    {venue.district} · {venue.capacity} {t("capacityUnit")}
-                  </p>
-                  <p className="line-clamp-2 text-sm text-[var(--text-muted)]">
-                    {richTextToPlain(venue.shortDescription)}
-                  </p>
-                  <span className="mt-1 text-sm text-[var(--primary)]">
-                    {t("viewProfile")} →
-                  </span>
-                </div>
-              </Link>
-            </li>
-          ))}
+                </article>
+              </li>
+            );
+          })}
         </ul>
       )}
 

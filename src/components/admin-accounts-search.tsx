@@ -85,7 +85,9 @@ export function AdminAccountsSearch({ locale, initialQuery, results }: Props) {
                 {hit.accountStatus ? (
                   <div className="mt-2">
                     <StatusLabel>
-                      {accountStatus(hit.accountStatus as "active")}
+                      {accountStatus(
+                        hit.accountStatus as "active" | "suspended",
+                      )}
                     </StatusLabel>
                   </div>
                 ) : null}

@@ -86,7 +86,7 @@ An entertainer profile must support:
 - Number of performers
 - Berlin base and travel radius
 - Performance formats and typical set duration
-- Indicative price range and currency
+- Typical fee range and currency
 - Technical requirements summary
 - Languages
 - Accessibility information

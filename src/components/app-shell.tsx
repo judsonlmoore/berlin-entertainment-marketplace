@@ -263,9 +263,8 @@ export function AppShell({
           {
             href: "/admin/accounts",
             labelKey: "superAdmin" as const,
-            match: "/admin/accounts",
+            match: "/admin",
           },
-          { href: "/admin", labelKey: "admin" as const, match: "^/admin$" },
         ]
       : []),
   ];
@@ -396,50 +395,52 @@ export function AppShell({
       </div>
 
       <div className="flex min-h-screen flex-col">
-        {supportBanner}
-        {/* Mobile-only chrome: menu + role context + account. No desktop top bar. */}
-        <div className="sticky top-0 z-20 flex min-h-14 items-center justify-between gap-3 border-b border-[var(--rule)] bg-[var(--canvas)] px-4 py-2 sm:px-6 lg:hidden">
-          <button
-            ref={menuButtonRef}
-            type="button"
-            className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] text-[var(--ink)]"
-            aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-nav-drawer"
-            onClick={toggleMenu}
-          >
-            <MenuIcon open={menuOpen} />
-          </button>
-          {roleContext && mobileContextLabel ? (
-            <Link
-              href="/profile"
-              className="flex min-w-0 flex-1 items-center gap-2 no-underline"
-              aria-label={tRole("editProfileAria", {
-                name: mobileContextLabel,
-              })}
+        <div className="sticky top-0 z-30">
+          {supportBanner}
+          {/* Mobile-only chrome: menu + role context + account. No desktop top bar. */}
+          <div className="flex min-h-14 items-center justify-between gap-3 border-b border-[var(--rule)] bg-[var(--canvas)] px-4 py-2 sm:px-6 lg:hidden">
+            <button
+              ref={menuButtonRef}
+              type="button"
+              className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] border border-[var(--rule)] bg-[var(--surface)] text-[var(--ink)]"
+              aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-nav-drawer"
+              onClick={toggleMenu}
             >
-              <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--surface)] px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-[0.1em] text-[var(--ink)] uppercase">
-                {roleContext.mode === "entertainer"
-                  ? tRole("actBadge")
-                  : tRole("venueBadge")}
-              </span>
-              <span className="min-w-0 truncate text-sm font-medium text-[var(--ink)]">
-                {mobileContextLabel}
-              </span>
-              <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
-                {t("editProfile")}
-              </span>
-            </Link>
-          ) : (
-            <div className="flex-1" />
-          )}
-          <AccountMenu
-            userName={userName}
-            userImage={userImage}
-            accountTypeLabel={accountTypeLabel}
-            items={accountItems}
-            variant="header"
-          />
+              <MenuIcon open={menuOpen} />
+            </button>
+            {roleContext && mobileContextLabel ? (
+              <Link
+                href="/profile"
+                className="flex min-w-0 flex-1 items-center gap-2 no-underline"
+                aria-label={tRole("editProfileAria", {
+                  name: mobileContextLabel,
+                })}
+              >
+                <span className="inline-flex shrink-0 items-center rounded-[var(--radius-sm)] border border-[var(--rule)] bg-[var(--surface)] px-1.5 py-0.5 text-[0.65rem] font-semibold tracking-[0.1em] text-[var(--ink)] uppercase">
+                  {roleContext.mode === "entertainer"
+                    ? tRole("actBadge")
+                    : tRole("venueBadge")}
+                </span>
+                <span className="min-w-0 truncate text-sm font-medium text-[var(--ink)]">
+                  {mobileContextLabel}
+                </span>
+                <span className="shrink-0 text-xs font-medium text-[var(--text-muted)]">
+                  {t("editProfile")}
+                </span>
+              </Link>
+            ) : (
+              <div className="flex-1" />
+            )}
+            <AccountMenu
+              userName={userName}
+              userImage={userImage}
+              accountTypeLabel={accountTypeLabel}
+              items={accountItems}
+              variant="header"
+            />
+          </div>
         </div>
 
         <main className="mx-auto w-full max-w-[1480px] flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">

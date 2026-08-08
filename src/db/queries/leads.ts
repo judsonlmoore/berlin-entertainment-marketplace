@@ -1,6 +1,7 @@
-import { desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { getDb } from "@/src/db/client";
 import {
+  agreements,
   applications,
   bookingTerms,
   bookings,
@@ -8,11 +9,15 @@ import {
   entertainerProfiles,
   opportunities,
   profileEnquiries,
+  signatures,
   venues,
 } from "@/src/db/schema/marketplace";
 import type { BookingState } from "@/src/domain/booking";
 import {
   projectLeadStatus,
+  resolveBookingNeedsAction,
+  resolveLeadDirection,
+  type BookingNeedsAction,
   type LeadOriginChannel,
   type LeadStatus,
 } from "@/src/domain/lead";
@@ -28,6 +33,7 @@ export type LeadListItem = {
   actName: string;
   bookingState: BookingState;
   leadStatus: LeadStatus;
+  needsAction: BookingNeedsAction | null;
   createdAt: Date;
   updatedAt: Date;
   performanceStartsAt: Date | null;
@@ -58,6 +64,54 @@ async function latestTermsByBooking(bookingIds: string[]) {
     }
   }
   return map;
+}
+
+async function openOfferProposersByBooking(bookingIds: string[]) {
+  if (bookingIds.length === 0) return new Map<string, string>();
+  const db = getDb();
+  const rows = await db
+    .select({
+      bookingId: bookingTerms.bookingId,
+      proposedByUserId: bookingTerms.proposedByUserId,
+      version: bookingTerms.version,
+    })
+    .from(bookingTerms)
+    .where(
+      and(
+        inArray(bookingTerms.bookingId, bookingIds),
+        isNull(bookingTerms.acceptedAt),
+        isNull(bookingTerms.supersededAt),
+      ),
+    )
+    .orderBy(desc(bookingTerms.version));
+
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    if (!map.has(row.bookingId)) {
+      map.set(row.bookingId, row.proposedByUserId);
+    }
+  }
+  return map;
+}
+
+async function pendingSignatureBookingIds(
+  bookingIds: string[],
+  actorUserId: string,
+) {
+  if (bookingIds.length === 0) return new Set<string>();
+  const db = getDb();
+  const rows = await db
+    .select({ bookingId: agreements.bookingId })
+    .from(signatures)
+    .innerJoin(agreements, eq(agreements.id, signatures.agreementId))
+    .where(
+      and(
+        inArray(agreements.bookingId, bookingIds),
+        eq(signatures.signerUserId, actorUserId),
+        eq(signatures.status, "pending"),
+      ),
+    );
+  return new Set(rows.map((r) => r.bookingId));
 }
 
 /**
@@ -118,8 +172,6 @@ export async function listLeadsForActor(
     .orderBy(desc(bookings.updatedAt));
 
   const bookingIds = rows.map((r) => r.bookingId);
-  const termsMap = await latestTermsByBooking(bookingIds);
-
   const applicationIds = rows
     .filter((r) => r.originType === "application")
     .map((r) => r.originId);
@@ -130,42 +182,48 @@ export async function listLeadsForActor(
     .filter((r) => r.originType === "profile_enquiry")
     .map((r) => r.originId);
 
-  const [apps, drs, enquiries] = await Promise.all([
-    applicationIds.length
-      ? db
-          .select({
-            id: applications.id,
-            opportunityId: applications.opportunityId,
-            message: applications.message,
-          })
-          .from(applications)
-          .where(inArray(applications.id, applicationIds))
-      : Promise.resolve([]),
-    directIds.length
-      ? db
-          .select({
-            id: directRequests.id,
-            startsAt: directRequests.startsAt,
-            endsAt: directRequests.endsAt,
-            notes: directRequests.notes,
-            formatCategory: directRequests.formatCategory,
-          })
-          .from(directRequests)
-          .where(inArray(directRequests.id, directIds))
-      : Promise.resolve([]),
-    enquiryIds.length
-      ? db
-          .select({
-            id: profileEnquiries.id,
-            note: profileEnquiries.note,
-            proposedStartsAt: profileEnquiries.proposedStartsAt,
-            proposedEndsAt: profileEnquiries.proposedEndsAt,
-            proposedFormat: profileEnquiries.proposedFormat,
-          })
-          .from(profileEnquiries)
-          .where(inArray(profileEnquiries.id, enquiryIds))
-      : Promise.resolve([]),
-  ]);
+  const [termsMap, openOfferMap, pendingSigSet, apps, drs, enquiries] =
+    await Promise.all([
+      latestTermsByBooking(bookingIds),
+      openOfferProposersByBooking(bookingIds),
+      pendingSignatureBookingIds(bookingIds, actor.userId),
+      applicationIds.length
+        ? db
+            .select({
+              id: applications.id,
+              opportunityId: applications.opportunityId,
+              message: applications.message,
+            })
+            .from(applications)
+            .where(inArray(applications.id, applicationIds))
+        : Promise.resolve([]),
+      directIds.length
+        ? db
+            .select({
+              id: directRequests.id,
+              startsAt: directRequests.startsAt,
+              endsAt: directRequests.endsAt,
+              notes: directRequests.notes,
+              formatCategory: directRequests.formatCategory,
+              state: directRequests.state,
+            })
+            .from(directRequests)
+            .where(inArray(directRequests.id, directIds))
+        : Promise.resolve([]),
+      enquiryIds.length
+        ? db
+            .select({
+              id: profileEnquiries.id,
+              note: profileEnquiries.note,
+              proposedStartsAt: profileEnquiries.proposedStartsAt,
+              proposedEndsAt: profileEnquiries.proposedEndsAt,
+              proposedFormat: profileEnquiries.proposedFormat,
+              submittedByUserId: profileEnquiries.submittedByUserId,
+            })
+            .from(profileEnquiries)
+            .where(inArray(profileEnquiries.id, enquiryIds))
+        : Promise.resolve([]),
+    ]);
 
   const oppIds = apps.map((a) => a.opportunityId);
   const opportunityRows =
@@ -194,6 +252,7 @@ export async function listLeadsForActor(
     let performanceStartsAt: Date | null = terms?.startsAt ?? null;
     let performanceEndsAt: Date | null = terms?.endsAt ?? null;
     let summary: string | null = null;
+    let directRequestState: string | null = null;
 
     if (row.originType === "application") {
       const app = appMap.get(row.originId);
@@ -211,6 +270,7 @@ export async function listLeadsForActor(
         performanceStartsAt = performanceStartsAt ?? dr.startsAt;
         performanceEndsAt = performanceEndsAt ?? dr.endsAt;
         summary = dr.formatCategory || dr.notes;
+        directRequestState = dr.state;
       }
     } else if (row.originType === "profile_enquiry") {
       const enq = enquiryMap.get(row.originId);
@@ -227,20 +287,32 @@ export async function listLeadsForActor(
       performanceEndsAt,
     });
 
-    let direction: "incoming" | "outgoing" = "outgoing";
-    if (
-      row.originType === "profile_enquiry" ||
-      row.originType === "application"
-    ) {
-      // Act initiated → venue receives
-      direction = venueIdSet.has(row.venueId) ? "incoming" : "outgoing";
-    } else {
-      // Venue initiated DR → act receives
-      direction =
-        actProfileId && row.entertainerProfileId === actProfileId
-          ? "incoming"
-          : "outgoing";
-    }
+    const isVenueParty = venueIdSet.has(row.venueId);
+    const isEntertainerParty = Boolean(
+      actProfileId && row.entertainerProfileId === actProfileId,
+    );
+    const enquiry =
+      row.originType === "profile_enquiry"
+        ? enquiryMap.get(row.originId)
+        : undefined;
+    const direction = resolveLeadDirection({
+      originType: row.originType as LeadOriginChannel,
+      actorUserId: actor.userId,
+      isVenueParty,
+      isEntertainerParty,
+      profileEnquirySubmittedByUserId: enquiry?.submittedByUserId ?? null,
+    });
+
+    const needsAction = resolveBookingNeedsAction({
+      actorUserId: actor.userId,
+      isVenueParty,
+      isEntertainerParty,
+      bookingState,
+      originType: row.originType as LeadOriginChannel,
+      openOfferProposedByUserId: openOfferMap.get(row.bookingId) ?? null,
+      directRequestState,
+      pendingSignatureForActor: pendingSigSet.has(row.bookingId),
+    });
 
     return {
       bookingId: row.bookingId,
@@ -252,6 +324,7 @@ export async function listLeadsForActor(
       actName: row.actName,
       bookingState,
       leadStatus,
+      needsAction,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       performanceStartsAt,
@@ -262,8 +335,17 @@ export async function listLeadsForActor(
   });
 
   const statusFilter = filter?.status ?? "all";
-  if (statusFilter === "all") return items;
-  return items.filter((item) => item.leadStatus === statusFilter);
+  const filtered =
+    statusFilter === "all"
+      ? items
+      : items.filter((item) => item.leadStatus === statusFilter);
+
+  return filtered.sort((a, b) => {
+    const aNeeds = a.needsAction ? 0 : 1;
+    const bNeeds = b.needsAction ? 0 : 1;
+    if (aNeeds !== bNeeds) return aNeeds - bNeeds;
+    return b.updatedAt.getTime() - a.updatedAt.getTime();
+  });
 }
 
 export async function getLeadByBookingId(input: {
@@ -327,21 +409,6 @@ export async function getLeadByBookingId(input: {
   const terms = await latestTermsByBooking([booking.id]);
   const performanceEndsAt = terms.get(booking.id)?.endsAt ?? null;
   const performanceStartsAt = terms.get(booking.id)?.startsAt ?? null;
-
-  // Prefer enquiry proposal dates when no terms yet
-  if (
-    booking.originType === "profile_enquiry" &&
-    originDetail.enquiry &&
-    typeof originDetail.enquiry === "object"
-  ) {
-    const enq = originDetail.enquiry as {
-      proposedStartsAt?: Date | null;
-      proposedEndsAt?: Date | null;
-    };
-    if (!performanceStartsAt && enq.proposedStartsAt) {
-      // leave as proposal in originDetail; projection uses them below
-    }
-  }
 
   const enquiry =
     booking.originType === "profile_enquiry"

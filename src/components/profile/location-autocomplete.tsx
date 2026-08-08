@@ -19,6 +19,11 @@ type Props = {
   defaultLabel?: string;
   defaultLatitude?: string;
   defaultLongitude?: string;
+  onConfirmedChange?: (value: {
+    label: string;
+    latitude: string;
+    longitude: string;
+  }) => void;
 };
 
 export function LocationAutocomplete({
@@ -30,6 +35,7 @@ export function LocationAutocomplete({
   defaultLabel = "",
   defaultLatitude = "",
   defaultLongitude = "",
+  onConfirmedChange,
 }: Props) {
   const t = useTranslations("profile");
   const listId = useId();
@@ -103,6 +109,11 @@ export function LocationAutocomplete({
     setResults([]);
     setOpen(false);
     setError(null);
+    onConfirmedChange?.({
+      label: item.label,
+      latitude: item.latitude,
+      longitude: item.longitude,
+    });
     // Notify the parent form for autosave (hidden fields update on next paint).
     window.setTimeout(() => {
       labelRef.current?.dispatchEvent(new Event("input", { bubbles: true }));

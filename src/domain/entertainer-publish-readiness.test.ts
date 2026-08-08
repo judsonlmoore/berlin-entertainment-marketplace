@@ -54,4 +54,8 @@ describe("checkEntertainerPublishReadiness", () => {
       }).ok,
     ).toBe(true);
   });
+
+  it("does not require legal identity to publish", () => {
+    expect(checkEntertainerPublishReadiness(ready).ok).toBe(true);
+  });
 });
