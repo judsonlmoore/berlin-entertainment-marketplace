@@ -429,8 +429,11 @@ export function PortfolioEditor({
   const persistGeneration = useRef(0);
   const onImagesChangeRef = useRef(onImagesChange);
   const onYoutubeChangeRef = useRef(onYoutubeChange);
-  onImagesChangeRef.current = onImagesChange;
-  onYoutubeChangeRef.current = onYoutubeChange;
+
+  useEffect(() => {
+    onImagesChangeRef.current = onImagesChange;
+    onYoutubeChangeRef.current = onYoutubeChange;
+  }, [onImagesChange, onYoutubeChange]);
 
   const serverImages = useMemo(() => serverImageList(items), [items]);
   const serverImageKey = useMemo(() => imageSignature(items), [items]);

@@ -40,7 +40,10 @@ export function AppModal({
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // Focus close only when the dialog opens — not when parent re-renders with a
   // new onClose identity (e.g. typing in a controlled confirmation field).
