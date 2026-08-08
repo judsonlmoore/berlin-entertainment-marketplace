@@ -174,7 +174,7 @@ export default async function HomePage({ params }: Props) {
               </p>
             </article>
           ))}
-        </section>
+        </div>
       </section>
 
       {/* Audience Cards */}
